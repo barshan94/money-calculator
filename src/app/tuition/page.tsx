@@ -84,13 +84,11 @@ export default function TuitionPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentAccount, setPaymentAccount] = useState("");
 
-
   const [promisedPaymentDate, setPromisedPaymentDate] =
-  useState("");
+    useState("");
 
-const [lateReason, setLateReason] =
-  useState("");
-
+  const [lateReason, setLateReason] =
+    useState("");
 
   const [paymentDate, setPaymentDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -266,12 +264,12 @@ const [lateReason, setLateReason] =
         p_payment_month: paymentMonth,
         p_amount: Number(paymentAmount),
         p_payment_date: paymentDate,
-p_account_id: paymentAccount,
-p_notes: null,
-p_promised_payment_date:
-  promisedPaymentDate || null,
-p_late_reason:
-  lateReason || null,
+        p_account_id: paymentAccount,
+        p_notes: null,
+        p_promised_payment_date:
+          promisedPaymentDate || null,
+        p_late_reason:
+          lateReason || null,
       }
     );
 
@@ -285,12 +283,11 @@ p_late_reason:
       "Tuition payment recorded successfully."
     );
 
-    
     setPaymentStudent(null);
-setPaymentAmount("");
-setPaymentAccount("");
-setPromisedPaymentDate("");
-setLateReason("");
+    setPaymentAmount("");
+    setPaymentAccount("");
+    setPromisedPaymentDate("");
+    setLateReason("");
 
     await loadData();
 
@@ -473,12 +470,12 @@ setLateReason("");
         `Thank you for the payment.`;
     }
 
-   let phone =
-  student.whatsapp_number.replace(/\D/g, "");
+    let phone =
+      student.whatsapp_number.replace(/\D/g, "");
 
-if (phone.startsWith("0")) {
-  phone = "88" + phone;
-}
+    if (phone.startsWith("0")) {
+      phone = "88" + phone;
+    }
 
     window.open(
       `https://wa.me/${phone}?text=${encodeURIComponent(
@@ -958,49 +955,64 @@ if (phone.startsWith("0")) {
                 />
               </div>
 
+              <div className="form-group">
+                <label>
+                  Promised Payment Date (Optional)
+                </label>
 
-
+                <input
+                  type="date"
+                  value={promisedPaymentDate}
+                  onChange={(e) =>
+                    setPromisedPaymentDate(
+                      e.target.value
+                    )
+                  }
+                />
+              </div>
 
               <div className="form-group">
-  <label>Promised Payment Date (Optional)</label>
+                <label>
+                  Late Reason (Optional)
+                </label>
 
-  <input
-    type="date"
-    value={promisedPaymentDate}
-    onChange={(e) =>
-      setPromisedPaymentDate(e.target.value)
-    }
-  />
-</div>
+                <select
+                  value={lateReason}
+                  onChange={(e) =>
+                    setLateReason(
+                      e.target.value
+                    )
+                  }
+                >
+                  <option value="">
+                    No reason provided
+                  </option>
 
-<div className="form-group">
-  <label>Late Reason (Optional)</label>
+                  <option value="Forgot">
+                    Forgot
+                  </option>
 
-  <select
-    value={lateReason}
-    onChange={(e) =>
-      setLateReason(e.target.value)
-    }
-  >
-    <option value="">No reason provided</option>
-    <option value="Forgot">Forgot</option>
-    <option value="Financial difficulty">
-      Financial difficulty
-    </option>
-    <option value="Guardian unavailable">
-      Guardian unavailable
-    </option>
-    <option value="Payment problem">
-      Payment problem
-    </option>
-    <option value="Personal or emergency">
-      Personal or emergency
-    </option>
-    <option value="Other">Other</option>
-  </select>
-</div>
+                  <option value="Financial difficulty">
+                    Financial difficulty
+                  </option>
 
+                  <option value="Guardian unavailable">
+                    Guardian unavailable
+                  </option>
 
+                  <option value="Payment problem">
+                    Payment problem
+                  </option>
+
+                  <option value="Personal or emergency">
+                    Personal or emergency
+                  </option>
+
+                  <option value="Other">
+                    Other
+                  </option>
+                </select>
+              </div>
 
               <div className="form-group">
                 <label>Received Into</label>
@@ -1148,15 +1160,14 @@ if (phone.startsWith("0")) {
                         </td>
 
                         <td>
-  {payment.promised_payment_date ??
-    "—"}
-</td>
+                          {payment.promised_payment_date ??
+                            "—"}
+                        </td>
 
-<td>
-  {payment.late_reason ??
-    "—"}
-</td>
-
+                        <td>
+                          {payment.late_reason ??
+                            "—"}
+                        </td>
 
                       </tr>
                     )
@@ -1324,6 +1335,46 @@ if (phone.startsWith("0")) {
                               setPaymentMonth(
                                 selectedMonth
                               );
+
+                              // Default promised date
+                              // to the student's due date.
+                              if (student.due_day) {
+                                const [
+                                  year,
+                                  month,
+                                ] =
+                                  selectedMonth.split(
+                                    "-"
+                                  );
+
+                                const lastDay =
+                                  new Date(
+                                    Number(year),
+                                    Number(month),
+                                    0
+                                  ).getDate();
+
+                                const actualDueDay =
+                                  Math.min(
+                                    student.due_day,
+                                    lastDay
+                                  );
+
+                                setPromisedPaymentDate(
+                                  `${year}-${month}-${String(
+                                    actualDueDay
+                                  ).padStart(
+                                    2,
+                                    "0"
+                                  )}`
+                                );
+                              } else {
+                                setPromisedPaymentDate(
+                                  ""
+                                );
+                              }
+
+                              setLateReason("");
 
                             }}
                           >
