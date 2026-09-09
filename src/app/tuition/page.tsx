@@ -43,6 +43,18 @@ type PaymentHistory = {
   notes: string | null;
   promised_payment_date: string | null;
   late_reason: string | null;
+  days_late: number | null;
+};
+
+type TuitionReliability = {
+  student_id: string;
+  student_name: string;
+  total_payments: number;
+  on_time_payments: number;
+  late_payments: number;
+  average_days_late: number;
+  reliability_score: number;
+  reliability_rating: string;
 };
 
 export default function TuitionPage() {
@@ -51,6 +63,8 @@ export default function TuitionPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [statuses, setStatuses] = useState<TuitionStatus[]>([]);
+  const [reliability, setReliability] =
+    useState<TuitionReliability[]>([]);
 
   const [historyStudent, setHistoryStudent] =
     useState<Student | null>(null);
@@ -104,6 +118,22 @@ export default function TuitionPage() {
   const [selectedMonth, setSelectedMonth] =
     useState(currentMonth);
 
+  async function loadReliability() {
+    const { data, error } = await supabase.rpc(
+      "get_tuition_reliability"
+    );
+
+    if (error) {
+      console.error(error);
+      setReliability([]);
+      return;
+    }
+
+    setReliability(
+      (data as TuitionReliability[]) ?? []
+    );
+  }
+
   async function loadData() {
     setLoading(true);
 
@@ -137,7 +167,10 @@ export default function TuitionPage() {
     setStudents((studentData as Student[]) ?? []);
     setAccounts((accountData as Account[]) ?? []);
 
-    await loadStatuses(selectedMonth);
+    await Promise.all([
+      loadStatuses(selectedMonth),
+      loadReliability(),
+    ]);
 
     setLoading(false);
   }
@@ -500,6 +533,24 @@ export default function TuitionPage() {
     if (status === "paid") return "Paid";
     if (status === "partial") return "Partial";
     return "Unpaid";
+  }
+
+  function reliabilityBadgeClass(
+    rating: string
+  ) {
+    if (rating === "Excellent") {
+      return "badge-success";
+    }
+
+    if (rating === "Reliable") {
+      return "badge-success";
+    }
+
+    if (rating === "Sometimes late") {
+      return "badge-warning";
+    }
+
+    return "badge-danger";
   }
 
   return (
@@ -1121,6 +1172,7 @@ export default function TuitionPage() {
                     <th>Notes</th>
                     <th>Promised Date</th>
                     <th>Late Reason</th>
+                    <th>Days Late</th>
                   </tr>
                 </thead>
 
@@ -1169,6 +1221,18 @@ export default function TuitionPage() {
                             "—"}
                         </td>
 
+                        <td>
+                          {payment.days_late === null
+                            ? "—"
+                            : payment.days_late === 0
+                            ? "On time"
+                            : `${payment.days_late} day${
+                                payment.days_late === 1
+                                  ? ""
+                                  : "s"
+                              } late`}
+                        </td>
+
                       </tr>
                     )
                   )}
@@ -1182,6 +1246,123 @@ export default function TuitionPage() {
 
         </div>
       )}
+
+      {/* PAYMENT RELIABILITY */}
+
+      <div className="card">
+
+        <div className="section-header">
+
+          <div>
+            <h2>Payment Reliability</h2>
+
+            <p>
+              Reliability based on recorded payment dates.
+            </p>
+          </div>
+
+        </div>
+
+        {reliability.length === 0 ? (
+          <p>
+            No reliability data available yet.
+          </p>
+        ) : (
+          <div className="table-wrapper">
+
+            <table>
+
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Student</th>
+                  <th>Score</th>
+                  <th>Rating</th>
+                  <th>Total Payments</th>
+                  <th>On Time</th>
+                  <th>Late</th>
+                  <th>Avg. Days Late</th>
+                </tr>
+              </thead>
+
+              <tbody>
+
+                {reliability.map(
+                  (student, index) => (
+                    <tr
+                      key={
+                        student.student_id
+                      }
+                    >
+
+                      <td>
+                        #{index + 1}
+                      </td>
+
+                      <td>
+                        <strong>
+                          {student.student_name}
+                        </strong>
+                      </td>
+
+                      <td>
+                        <strong>
+                          {Number(
+                            student.reliability_score
+                          ).toFixed(0)}
+                        </strong>
+                        /100
+                      </td>
+
+                      <td>
+                        <span
+                          className={`badge ${reliabilityBadgeClass(
+                            student.reliability_rating
+                          )}`}
+                        >
+                          {
+                            student.reliability_rating
+                          }
+                        </span>
+                      </td>
+
+                      <td>
+                        {
+                          student.total_payments
+                        }
+                      </td>
+
+                      <td>
+                        {
+                          student.on_time_payments
+                        }
+                      </td>
+
+                      <td>
+                        {
+                          student.late_payments
+                        }
+                      </td>
+
+                      <td>
+                        {Number(
+                          student.average_days_late
+                        ).toFixed(1)}{" "}
+                        days
+                      </td>
+
+                    </tr>
+                  )
+                )}
+
+              </tbody>
+
+            </table>
+
+          </div>
+        )}
+
+      </div>
 
       {/* STUDENTS */}
 
@@ -1336,9 +1517,12 @@ export default function TuitionPage() {
                                 selectedMonth
                               );
 
-                              // Default promised date
-                              // to the student's due date.
-                              if (student.due_day) {
+                              if (
+                                student.due_day !==
+                                  null &&
+                                student.due_day !==
+                                  undefined
+                              ) {
                                 const [
                                   year,
                                   month,

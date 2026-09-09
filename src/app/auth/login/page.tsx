@@ -12,14 +12,17 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
 
-  async function handleLogin(event: FormEvent<HTMLFormElement>) {
+  async function handleLogin(
+    event: FormEvent<HTMLFormElement>,
+  ) {
     event.preventDefault();
     setMessage("");
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
     if (error) {
       setMessage(error.message);
@@ -28,6 +31,35 @@ export default function LoginPage() {
 
     router.push("/");
     router.refresh();
+  }
+
+  async function handleForgotPassword() {
+    setMessage("");
+
+    if (!email.trim()) {
+      setMessage(
+        "Enter your email address first.",
+      );
+      return;
+    }
+
+    const { error } =
+      await supabase.auth.resetPasswordForEmail(
+        email.trim(),
+        {
+          redirectTo:
+  `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+        },
+      );
+
+    if (error) {
+      setMessage(error.message);
+      return;
+    }
+
+    setMessage(
+      "Password reset email sent. Check your inbox.",
+    );
   }
 
   return (
@@ -39,7 +71,9 @@ export default function LoginPage() {
           type="email"
           placeholder="Email"
           value={email}
-          onChange={(event) => setEmail(event.target.value)}
+          onChange={(event) =>
+            setEmail(event.target.value)
+          }
           required
         />
 
@@ -47,7 +81,9 @@ export default function LoginPage() {
           type="password"
           placeholder="Password"
           value={password}
-          onChange={(event) => setPassword(event.target.value)}
+          onChange={(event) =>
+            setPassword(event.target.value)
+          }
           required
         />
 
@@ -56,16 +92,31 @@ export default function LoginPage() {
         </button>
       </form>
 
+      <p>
+        <button
+          type="button"
+          onClick={handleForgotPassword}
+          style={{
+            padding: 0,
+            border: "none",
+            background: "none",
+            color: "var(--primary)",
+            cursor: "pointer",
+            boxShadow: "none",
+          }}
+        >
+          Forgot password?
+        </button>
+      </p>
+
       {message && <p>{message}</p>}
 
-
-    <p>
-  Don't have an account?{" "}
-  <a href="/auth/signup">Create Account</a>
-</p>
-
-
-
+      <p>
+        Don't have an account?{" "}
+        <a href="/auth/signup">
+          Create Account
+        </a>
+      </p>
     </main>
   );
 }

@@ -8,7 +8,9 @@ export function UserMenu() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [email, setEmail] = useState<string | null>(null);
+  const [email, setEmail] = useState<string | null>(
+    null,
+  );
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,7 +40,9 @@ export function UserMenu() {
     return (
       <div className="user-menu">
         <a href="/auth/login">Login</a>
-        <a href="/auth/signup">Create Account</a>
+        <a href="/auth/signup">
+          Create Account
+        </a>
       </div>
     );
   }
@@ -47,7 +51,14 @@ export function UserMenu() {
     <div className="user-menu">
       <span>{email}</span>
 
-      <button type="button" onClick={handleLogout}>
+      <a href="/auth/change-password">
+        Change Password
+      </a>
+
+      <button
+        type="button"
+        onClick={handleLogout}
+      >
         Logout
       </button>
     </div>
