@@ -41,6 +41,8 @@ type PaymentHistory = {
   account_name: string | null;
   currency: string | null;
   notes: string | null;
+  promised_payment_date: string | null;
+  late_reason: string | null;
 };
 
 export default function TuitionPage() {
@@ -81,6 +83,14 @@ export default function TuitionPage() {
 
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentAccount, setPaymentAccount] = useState("");
+
+
+  const [promisedPaymentDate, setPromisedPaymentDate] =
+  useState("");
+
+const [lateReason, setLateReason] =
+  useState("");
+
 
   const [paymentDate, setPaymentDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -256,8 +266,12 @@ export default function TuitionPage() {
         p_payment_month: paymentMonth,
         p_amount: Number(paymentAmount),
         p_payment_date: paymentDate,
-        p_account_id: paymentAccount,
-        p_notes: null,
+p_account_id: paymentAccount,
+p_notes: null,
+p_promised_payment_date:
+  promisedPaymentDate || null,
+p_late_reason:
+  lateReason || null,
       }
     );
 
@@ -271,9 +285,12 @@ export default function TuitionPage() {
       "Tuition payment recorded successfully."
     );
 
+    
     setPaymentStudent(null);
-    setPaymentAmount("");
-    setPaymentAccount("");
+setPaymentAmount("");
+setPaymentAccount("");
+setPromisedPaymentDate("");
+setLateReason("");
 
     await loadData();
 
@@ -941,6 +958,50 @@ if (phone.startsWith("0")) {
                 />
               </div>
 
+
+
+
+              <div className="form-group">
+  <label>Promised Payment Date (Optional)</label>
+
+  <input
+    type="date"
+    value={promisedPaymentDate}
+    onChange={(e) =>
+      setPromisedPaymentDate(e.target.value)
+    }
+  />
+</div>
+
+<div className="form-group">
+  <label>Late Reason (Optional)</label>
+
+  <select
+    value={lateReason}
+    onChange={(e) =>
+      setLateReason(e.target.value)
+    }
+  >
+    <option value="">No reason provided</option>
+    <option value="Forgot">Forgot</option>
+    <option value="Financial difficulty">
+      Financial difficulty
+    </option>
+    <option value="Guardian unavailable">
+      Guardian unavailable
+    </option>
+    <option value="Payment problem">
+      Payment problem
+    </option>
+    <option value="Personal or emergency">
+      Personal or emergency
+    </option>
+    <option value="Other">Other</option>
+  </select>
+</div>
+
+
+
               <div className="form-group">
                 <label>Received Into</label>
 
@@ -1046,6 +1107,8 @@ if (phone.startsWith("0")) {
                     <th>Payment Date</th>
                     <th>Account</th>
                     <th>Notes</th>
+                    <th>Promised Date</th>
+                    <th>Late Reason</th>
                   </tr>
                 </thead>
 
@@ -1083,6 +1146,18 @@ if (phone.startsWith("0")) {
                           {payment.notes ??
                             "—"}
                         </td>
+
+                        <td>
+  {payment.promised_payment_date ??
+    "—"}
+</td>
+
+<td>
+  {payment.late_reason ??
+    "—"}
+</td>
+
+
                       </tr>
                     )
                   )}
