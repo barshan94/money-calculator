@@ -456,11 +456,12 @@ export default function TuitionPage() {
         `Thank you for the payment.`;
     }
 
-    const phone =
-      student.whatsapp_number.replace(
-        /\D/g,
-        ""
-      );
+   let phone =
+  student.whatsapp_number.replace(/\D/g, "");
+
+if (phone.startsWith("0")) {
+  phone = "88" + phone;
+}
 
     window.open(
       `https://wa.me/${phone}?text=${encodeURIComponent(
