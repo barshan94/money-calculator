@@ -35,6 +35,9 @@ type TuitionStatus = {
 
 type PaymentHistory = {
   payment_id: string;
+  student_id: string;
+  transaction_id: string;
+  account_id: string;
   payment_month: string;
   amount: number;
   payment_date: string;
@@ -94,6 +97,31 @@ export default function TuitionPage() {
   // Payment
   const [paymentStudent, setPaymentStudent] =
     useState<Student | null>(null);
+
+  // Edit payment
+const [editingPayment, setEditingPayment] =
+  useState<PaymentHistory | null>(null);
+
+const [editPaymentAmount, setEditPaymentAmount] =
+  useState("");
+
+const [editPaymentAccount, setEditPaymentAccount] =
+  useState("");
+
+const [editPaymentMonth, setEditPaymentMonth] =
+  useState("");
+
+const [editPaymentDate, setEditPaymentDate] =
+  useState("");
+
+const [editPromisedPaymentDate, setEditPromisedPaymentDate] =
+  useState("");
+
+const [editLateReason, setEditLateReason] =
+  useState("");
+
+const [editPaymentNotes, setEditPaymentNotes] =
+  useState("");
 
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentAccount, setPaymentAccount] = useState("");
@@ -353,6 +381,161 @@ export default function TuitionPage() {
 
     setHistoryLoading(false);
   }
+
+
+ function openEditPayment(payment: PaymentHistory) {
+  setEditingPayment(payment);
+
+  setEditPaymentAmount(
+    String(payment.amount)
+  );
+
+  setEditPaymentAccount(
+    payment.account_id
+  );
+
+  setEditPaymentMonth(
+    payment.payment_month
+  );
+
+  setEditPaymentDate(
+    payment.payment_date
+  );
+
+  setEditPromisedPaymentDate(
+    payment.promised_payment_date ?? ""
+  );
+
+  setEditLateReason(
+    payment.late_reason ?? ""
+  );
+
+  setEditPaymentNotes(
+    payment.notes ?? ""
+  );
+} 
+
+async function editPayment(
+  event: FormEvent<HTMLFormElement>
+) {
+  event.preventDefault();
+
+  if (!editingPayment) return;
+
+  if (!editPaymentAccount) {
+    alert(
+      "Please select the account that received the payment."
+    );
+    return;
+  }
+
+  const amount = Number(editPaymentAmount);
+
+  if (!amount || amount <= 0) {
+    alert(
+      "Payment amount must be greater than zero."
+    );
+    return;
+  }
+
+  setSaving(true);
+
+  const { error } = await supabase.rpc(
+    "update_tuition_payment",
+    {
+      p_payment_id:
+        editingPayment.payment_id,
+
+      p_payment_month:
+        editPaymentMonth,
+
+      p_amount:
+        amount,
+
+      p_payment_date:
+        editPaymentDate,
+
+      p_account_id:
+        editPaymentAccount,
+
+      p_notes:
+        editPaymentNotes || null,
+
+      p_promised_payment_date:
+        editPromisedPaymentDate || null,
+
+      p_late_reason:
+        editLateReason || null,
+    }
+  );
+
+  if (error) {
+    alert(error.message);
+    setSaving(false);
+    return;
+  }
+
+  alert(
+    "Tuition payment updated successfully."
+  );
+
+  setEditingPayment(null);
+
+  if (historyStudent) {
+    await loadPaymentHistory(historyStudent);
+  }
+
+  await loadData();
+
+  setSaving(false);
+}
+
+async function cancelPayment(
+  payment: PaymentHistory
+) {
+  const confirmed = window.confirm(
+    `Cancel this tuition payment of ${
+      payment.currency ?? "BDT"
+    } ${Number(payment.amount).toLocaleString()}?`
+  );
+
+  if (!confirmed) return;
+
+  setSaving(true);
+
+  const { error } = await supabase.rpc(
+    "cancel_tuition_payment",
+    {
+      p_payment_id: payment.payment_id,
+    }
+  );
+
+  if (error) {
+    alert(error.message);
+    setSaving(false);
+    return;
+  }
+
+  alert(
+    "Tuition payment cancelled successfully."
+  );
+
+  if (
+    editingPayment?.payment_id ===
+    payment.payment_id
+  ) {
+    setEditingPayment(null);
+  }
+
+  if (historyStudent) {
+    await loadPaymentHistory(historyStudent);
+  }
+
+  await loadData();
+
+  setSaving(false);
+}
+
 
   async function archiveStudent(id: string) {
     const confirmed = window.confirm(
@@ -1150,6 +1333,205 @@ export default function TuitionPage() {
 
           </div>
 
+
+{editingPayment && (
+  <div className="card">
+
+    <div className="section-header">
+      <div>
+        <h2>Edit Tuition Payment</h2>
+
+        <p>
+          Update the recorded payment details.
+        </p>
+      </div>
+    </div>
+
+    <form onSubmit={editPayment}>
+
+      <div className="form-grid">
+
+        <div className="form-group">
+          <label>Payment Amount</label>
+
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={editPaymentAmount}
+            onChange={(e) =>
+              setEditPaymentAmount(
+                e.target.value
+              )
+            }
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Payment Month</label>
+
+          <input
+            type="date"
+            value={editPaymentMonth}
+            onChange={(e) =>
+              setEditPaymentMonth(
+                e.target.value
+              )
+            }
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Payment Date</label>
+
+          <input
+            type="date"
+            value={editPaymentDate}
+            onChange={(e) =>
+              setEditPaymentDate(
+                e.target.value
+              )
+            }
+            required
+          />
+        </div>
+
+        <div className="form-group">
+          <label>
+            Promised Payment Date (Optional)
+          </label>
+
+          <input
+            type="date"
+            value={
+              editPromisedPaymentDate
+            }
+            onChange={(e) =>
+              setEditPromisedPaymentDate(
+                e.target.value
+              )
+            }
+          />
+        </div>
+
+        <div className="form-group">
+          <label>
+            Late Reason (Optional)
+          </label>
+
+          <select
+            value={editLateReason}
+            onChange={(e) =>
+              setEditLateReason(
+                e.target.value
+              )
+            }
+          >
+            <option value="">
+              No reason provided
+            </option>
+
+            <option value="Forgot">
+              Forgot
+            </option>
+
+            <option value="Financial difficulty">
+              Financial difficulty
+            </option>
+
+            <option value="Guardian unavailable">
+              Guardian unavailable
+            </option>
+
+            <option value="Payment problem">
+              Payment problem
+            </option>
+
+            <option value="Personal or emergency">
+              Personal or emergency
+            </option>
+
+            <option value="Other">
+              Other
+            </option>
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>Received Into</label>
+
+          <select
+            value={editPaymentAccount}
+            onChange={(e) =>
+              setEditPaymentAccount(
+                e.target.value
+              )
+            }
+            required
+          >
+            <option value="">
+              Select account
+            </option>
+
+            {accounts.map((account) => (
+              <option
+                key={account.id}
+                value={account.id}
+              >
+                {account.name} (
+                {account.currency})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="form-group">
+          <label>Notes</label>
+
+          <input
+            value={editPaymentNotes}
+            onChange={(e) =>
+              setEditPaymentNotes(
+                e.target.value
+              )
+            }
+            placeholder="Optional notes"
+          />
+        </div>
+
+      </div>
+
+      <div className="action-buttons">
+
+        <button
+          type="submit"
+          disabled={saving}
+        >
+          {saving
+            ? "Saving..."
+            : "Save Payment Changes"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            setEditingPayment(null)
+          }
+          disabled={saving}
+        >
+          Cancel
+        </button>
+
+      </div>
+
+    </form>
+
+  </div>
+)}
+
+
           {historyLoading ? (
             <p>
               Loading payment history...
@@ -1173,6 +1555,7 @@ export default function TuitionPage() {
                     <th>Promised Date</th>
                     <th>Late Reason</th>
                     <th>Days Late</th>
+<th>Actions</th>
                   </tr>
                 </thead>
 
@@ -1232,6 +1615,35 @@ export default function TuitionPage() {
                                   : "s"
                               } late`}
                         </td>
+
+
+                      <td>
+  <div className="action-buttons">
+
+    <button
+      type="button"
+      onClick={() =>
+        openEditPayment(payment)
+      }
+      disabled={saving}
+    >
+      Edit
+    </button>
+
+    <button
+      type="button"
+      onClick={() =>
+        cancelPayment(payment)
+      }
+      disabled={saving}
+    >
+      Cancel
+    </button>
+
+  </div>
+</td>
+
+
 
                       </tr>
                     )

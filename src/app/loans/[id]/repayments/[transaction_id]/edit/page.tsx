@@ -19,26 +19,38 @@ type Loan = {
   status: "active" | "settled" | "cancelled";
 };
 
+type Repayment = {
+  transaction_id: string;
+  transaction_date: string;
+  amount: number;
+  account_id: string;
+  account_name: string;
+  description: string | null;
+  status: "posted" | "cancelled";
+};
+
 type Account = {
   id: string;
   name: string;
   currency: string;
 };
 
-function getCurrentDateTime() {
-  const now = new Date();
+function toDatetimeLocal(
+  timestamp: string,
+) {
+  const date = new Date(timestamp);
 
   const offset =
-    now.getTimezoneOffset() * 60000;
+    date.getTimezoneOffset() * 60000;
 
   return new Date(
-    now.getTime() - offset,
+    date.getTime() - offset,
   )
     .toISOString()
     .slice(0, 16);
 }
 
-export default function RecordLoanRepaymentPage() {
+export default function EditLoanRepaymentPage() {
   const supabase = useMemo(
     () => createClient(),
     [],
@@ -48,9 +60,14 @@ export default function RecordLoanRepaymentPage() {
   const params = useParams();
 
   const loanId = params.id as string;
+  const transactionId =
+    params.transaction_id as string;
 
   const [loan, setLoan] =
     useState<Loan | null>(null);
+
+  const [repayment, setRepayment] =
+    useState<Repayment | null>(null);
 
   const [accounts, setAccounts] =
     useState<Account[]>([]);
@@ -62,7 +79,7 @@ export default function RecordLoanRepaymentPage() {
     useState("");
 
   const [paymentDatetime, setPaymentDatetime] =
-    useState(getCurrentDateTime());
+    useState("");
 
   const [description, setDescription] =
     useState("");
@@ -83,14 +100,7 @@ export default function RecordLoanRepaymentPage() {
       } = await supabase
         .from("loans")
         .select(
-          `
-            id,
-            person_name,
-            loan_type,
-            currency,
-            principal_amount,
-            status
-          `,
+          "id, person_name, loan_type, currency, principal_amount, status",
         )
         .eq("id", loanId)
         .single();
@@ -110,6 +120,73 @@ export default function RecordLoanRepaymentPage() {
       setLoan(loadedLoan);
 
       const {
+        data: repaymentData,
+        error: repaymentError,
+      } = await supabase.rpc(
+        "get_loan_repayments",
+        {
+          p_loan_id: loanId,
+        },
+      );
+
+      if (repaymentError) {
+        setMessage(
+          repaymentError.message,
+        );
+        return;
+      }
+
+      const foundRepayment = (
+        repaymentData ?? []
+      ).find(
+        (item: Repayment) =>
+          item.transaction_id ===
+          transactionId,
+      );
+
+      if (!foundRepayment) {
+        setMessage(
+          "Loan repayment not found.",
+        );
+        return;
+      }
+
+      if (
+        foundRepayment.status !==
+        "posted"
+      ) {
+        setMessage(
+          "This repayment has already been cancelled.",
+        );
+        return;
+      }
+
+      setRepayment(
+        foundRepayment,
+      );
+
+      setAmount(
+        Number(
+          foundRepayment.amount,
+        ).toString(),
+      );
+
+      setAccountId(
+        foundRepayment.account_id,
+      );
+
+      setPaymentDatetime(
+        toDatetimeLocal(
+          foundRepayment.transaction_date,
+        ),
+      );
+
+      setDescription(
+        foundRepayment.description ??
+          "",
+      );
+
+      const {
         data: accountData,
         error: accountError,
       } = await supabase
@@ -126,15 +203,23 @@ export default function RecordLoanRepaymentPage() {
         .order("name");
 
       if (accountError) {
-        setMessage(accountError.message);
+        setMessage(
+          accountError.message,
+        );
         return;
       }
 
-      setAccounts(accountData ?? []);
+      setAccounts(
+        accountData ?? [],
+      );
     }
 
     loadData();
-  }, [loanId, supabase]);
+  }, [
+    loanId,
+    transactionId,
+    supabase,
+  ]);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -179,9 +264,10 @@ export default function RecordLoanRepaymentPage() {
 
     const { error } =
       await supabase.rpc(
-        "record_loan_repayment",
+        "update_loan_repayment",
         {
-          p_loan_id: loanId,
+          p_transaction_id:
+            transactionId,
           p_amount: numericAmount,
           p_account_id: accountId,
           p_payment_datetime:
@@ -203,11 +289,11 @@ export default function RecordLoanRepaymentPage() {
     router.refresh();
   }
 
-  if (!loan) {
+  if (!loan || !repayment) {
     return (
       <main>
         <h1>
-          Record Repayment
+          Edit Repayment
         </h1>
 
         {message && (
@@ -219,22 +305,20 @@ export default function RecordLoanRepaymentPage() {
 
   return (
     <main>
-      <div>
-        <button
-          type="button"
-          onClick={() =>
-            router.push(
-              `/loans/${loanId}`,
-            )
-          }
-          disabled={saving}
-        >
-          ← Back to Loan
-        </button>
-      </div>
+      <button
+        type="button"
+        onClick={() =>
+          router.push(
+            `/loans/${loanId}`,
+          )
+        }
+        disabled={saving}
+      >
+        ← Back to Loan
+      </button>
 
       <h1>
-        Record Repayment
+        Edit Repayment
       </h1>
 
       <p>
@@ -258,9 +342,7 @@ export default function RecordLoanRepaymentPage() {
         <p>{message}</p>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-      >
+      <form onSubmit={handleSubmit}>
         <div>
           <label>
             Repayment Amount
@@ -301,8 +383,7 @@ export default function RecordLoanRepaymentPage() {
 
         <div>
           <label>
-            {loan.loan_type ===
-            "lent"
+            {loan.loan_type === "lent"
               ? "Receive Into"
               : "Pay From"}
           </label>
@@ -356,7 +437,7 @@ export default function RecordLoanRepaymentPage() {
           >
             {saving
               ? "Saving..."
-              : "Record Repayment"}
+              : "Save Changes"}
           </button>
 
           <button

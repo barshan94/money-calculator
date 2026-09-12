@@ -339,63 +339,183 @@ main {
    USER MENU
 ========================================================= */
 
+/* =========================================================
+   USER MENU
+========================================================= */
+
 .user-menu {
+  position: relative;
+
   display: flex;
   align-items: center;
-  gap: 14px;
 
   font-size: 13px;
-  color: var(--muted);
 }
 
-.user-menu::before {
-  content: "👤";
-
-  width: 34px;
-  height: 34px;
-
+.user-profile-button {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 9px;
 
-  border-radius: 50%;
+  min-height: 40px;
 
-  background: var(--primary-soft);
+  padding: 4px 8px 4px 5px;
 
-  font-size: 14px;
-}
+  border: 1px solid transparent;
 
-.user-menu a,
-.user-menu button {
-  font: inherit;
-
-  border: 0;
+  border-radius: 10px;
 
   background: transparent;
 
   color: var(--foreground);
 
+  font-size: 13px;
+  font-weight: 600;
+
+  box-shadow: none;
+}
+
+.user-profile-button:hover {
+  background: #f8fafc;
+
+  border-color: var(--border);
+
+  box-shadow: none;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+
+  background: var(--primary-soft);
+
+  color: var(--primary);
+
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.user-avatar.large {
+  width: 38px;
+  height: 38px;
+}
+
+.user-email {
+  max-width: 220px;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.user-chevron {
+  color: var(--muted);
+
+  font-size: 8px;
+}
+
+.user-dropdown {
+  position: absolute;
+
+  top: calc(100% + 8px);
+
+  right: 0;
+
+  width: 240px;
+
+  padding: 8px;
+
+  background: var(--card);
+
+  border: 1px solid var(--border);
+
+  border-radius: 12px;
+
+  box-shadow: var(--shadow-lg);
+
+  z-index: 100;
+}
+
+.user-dropdown-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  padding: 8px;
+}
+
+.user-dropdown-email {
+  min-width: 0;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+
+  color: var(--foreground);
+
+  font-size: 13px;
   font-weight: 600;
 }
 
-.user-menu button {
-  padding: 8px 12px;
+.user-dropdown-divider {
+  height: 1px;
+
+  margin: 6px 0;
+
+  background: var(--border-light);
+}
+
+.user-dropdown a,
+.user-dropdown .logout-button {
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+
+  min-height: 40px;
+
+  padding: 9px 10px;
+
+  border: 0;
 
   border-radius: 8px;
 
-  color: var(--danger);
+  background: transparent;
 
-  transition:
-    background 0.15s ease,
-    color 0.15s ease;
+  color: var(--foreground);
+
+  font-size: 13px;
+  font-weight: 600;
+
+  text-align: left;
 }
 
-.user-menu button:hover {
-  background: var(--danger-soft);
-}
+.user-dropdown a:hover {
+  background: var(--primary-soft);
 
-.user-menu a:hover {
   color: var(--primary);
+}
+
+.user-dropdown .logout-button {
+  color: var(--danger);
+}
+
+.user-dropdown .logout-button:hover {
+  background: var(--danger-soft);
+
+  color: var(--danger);
 }
 
 /* =========================================================
@@ -881,6 +1001,10 @@ progress::-moz-progress-bar {
   }
 }
 
+/* =========================================================
+   MOBILE
+========================================================= */
+
 @media (max-width: 768px) {
   .app-shell {
     display: block;
@@ -893,7 +1017,7 @@ progress::-moz-progress-bar {
 
     position: relative;
 
-    padding: 16px;
+    padding: 12px;
 
     border-right: 0;
 
@@ -901,23 +1025,38 @@ progress::-moz-progress-bar {
   }
 
   .brand {
-    margin-bottom: 16px;
+    margin-bottom: 12px;
+
+    padding: 4px 8px;
+
+    font-size: 19px;
   }
 
   .sidebar nav {
-    flex-direction: row;
+    display: grid;
 
-    flex-wrap: wrap;
+    grid-template-columns: repeat(
+      auto-fit,
+      minmax(105px, 1fr)
+    );
 
-    gap: 6px;
+    gap: 5px;
   }
 
   .sidebar nav a {
     min-height: 38px;
 
-    padding: 8px 10px;
+    padding: 8px 9px;
 
-    font-size: 13px;
+    font-size: 12px;
+
+    gap: 7px;
+  }
+
+  .sidebar nav a span:first-child {
+    width: 18px;
+
+    font-size: 14px;
   }
 
   .main-content {
@@ -927,23 +1066,31 @@ progress::-moz-progress-bar {
   }
 
   .topbar {
-    min-height: 60px;
+    min-height: 58px;
 
-    padding: 10px 16px;
+    padding: 8px 14px;
+
+    justify-content: flex-end;
   }
 
   main {
-    padding: 22px 16px 36px;
+    padding: 20px 14px 36px;
   }
 
   h1 {
-    margin-bottom: 20px;
+    font-size: 27px;
+
+    margin-bottom: 18px;
+  }
+
+  h2 {
+    font-size: 20px;
   }
 
   section {
-    padding: 18px;
+    padding: 16px;
 
-    margin-bottom: 18px;
+    margin-bottom: 16px;
 
     border-radius: var(--radius);
   }
@@ -953,7 +1100,7 @@ progress::-moz-progress-bar {
   .grid-4 {
     grid-template-columns: 1fr;
 
-    gap: 14px;
+    gap: 12px;
   }
 
   table {
@@ -964,8 +1111,18 @@ progress::-moz-progress-bar {
     white-space: nowrap;
   }
 
-  .user-menu {
-    font-size: 12px;
+  .user-profile-button {
+    min-height: 38px;
+
+    padding-right: 5px;
+  }
+
+  .user-email {
+    max-width: 180px;
+  }
+
+  .user-dropdown {
+    width: min(240px, calc(100vw - 28px));
   }
 }
 
@@ -975,11 +1132,11 @@ progress::-moz-progress-bar {
 
 @media (max-width: 480px) {
   .sidebar {
-    padding: 14px 10px;
+    padding: 10px;
   }
 
   .brand {
-    padding: 4px 8px;
+    margin-bottom: 10px;
 
     font-size: 18px;
   }
@@ -991,22 +1148,49 @@ progress::-moz-progress-bar {
     border-radius: 8px;
   }
 
-  .sidebar nav a {
-    padding: 8px;
+  .sidebar nav {
+    grid-template-columns: repeat(
+      3,
+      minmax(0, 1fr)
+    );
 
-    font-size: 12px;
+    gap: 4px;
+  }
+
+  .sidebar nav a {
+    justify-content: center;
+
+    min-height: 36px;
+
+    padding: 7px 4px;
+
+    font-size: 11px;
+
+    gap: 4px;
   }
 
   .sidebar nav a span:first-child {
-    font-size: 15px;
+    width: auto;
+
+    font-size: 14px;
+  }
+
+  .topbar {
+    min-height: 54px;
+
+    padding: 7px 10px;
+  }
+
+  .user-email {
+    max-width: 150px;
   }
 
   main {
-    padding: 18px 12px 30px;
+    padding: 16px 10px 28px;
   }
 
   h1 {
-    font-size: 25px;
+    font-size: 24px;
   }
 
   h2 {
@@ -1014,20 +1198,9 @@ progress::-moz-progress-bar {
   }
 
   section {
-    padding: 15px;
-  }
+    padding: 14px;
 
-  .topbar {
-    padding: 8px 12px;
-  }
-
-  .user-menu {
-    gap: 8px;
-  }
-
-  .user-menu::before {
-    width: 30px;
-    height: 30px;
+    border-radius: 11px;
   }
 }
 

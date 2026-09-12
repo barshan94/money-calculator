@@ -29,9 +29,9 @@ export default async function TransactionDetailPage({
   const { data: transaction, error: transactionError } =
     await supabase
       .from("transactions")
-      .select(
-        "id, transaction_date, description, reference, notes, transaction_type, status",
-      )
+        .select(
+  "id, transaction_date, description, reference, notes, transaction_type, status, loan_id, reversal_of_id",
+)
       .eq("id", id)
       .eq("user_id", user.id)
       .single();
@@ -39,6 +39,21 @@ export default async function TransactionDetailPage({
   if (transactionError || !transaction) {
     notFound();
   }
+
+  const { data: tuitionPayment } = await supabase
+  .from("tuition_payments")
+  .select("id")
+  .eq("transaction_id", transaction.id)
+  .eq("user_id", user.id)
+  .maybeSingle();
+
+const isTuitionPayment = !!tuitionPayment;
+const isLoanTransaction = !!transaction.loan_id;
+
+const isSpecialTransaction =
+  isTuitionPayment || isLoanTransaction;
+
+
 
   const { data: entries, error: entriesError } =
     await supabase
@@ -183,17 +198,19 @@ export default async function TransactionDetailPage({
                   flexWrap: "wrap",
                 }}
               >
-                <Link
-                  href={`/transactions/${transaction.id}/edit`}
-                  style={{
-                    padding: "10px 14px",
-                    border: "1px solid var(--border)",
-                    borderRadius: 8,
-                    fontWeight: 600,
-                  }}
-                >
-                  Edit
-                </Link>
+              {!isSpecialTransaction && (
+  <Link
+    href={`/transactions/${transaction.id}/edit`}
+    style={{
+      padding: "10px 14px",
+      border: "1px solid var(--border)",
+      borderRadius: 8,
+      fontWeight: 600,
+    }}
+  >
+    Edit
+  </Link>
+)}
 
                 <VoidTransactionButton
                   transactionId={transaction.id}

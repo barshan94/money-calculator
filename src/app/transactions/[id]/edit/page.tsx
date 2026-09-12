@@ -35,18 +35,13 @@ export default function EditTransactionPage() {
 
   const transactionId = params.id as string;
 
-  const [accounts, setAccounts] = useState<Account[]>(
-    [],
-  );
-  const [categories, setCategories] = useState<Category[]>(
-    [],
-  );
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
 
   const [date, setDate] = useState("");
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [sourceAccountId, setSourceAccountId] =
-    useState("");
+  const [sourceAccountId, setSourceAccountId] = useState("");
   const [destinationAccountId, setDestinationAccountId] =
     useState("");
   const [description, setDescription] = useState("");
@@ -82,7 +77,7 @@ export default function EditTransactionPage() {
         supabase
           .from("transactions")
           .select(
-            "id, transaction_date, description, transaction_type, status",
+            "id, transaction_date, description, transaction_type, status, loan_id, reversal_of_id",
           )
           .eq("id", transactionId)
           .eq("user_id", user.id)
@@ -128,9 +123,94 @@ export default function EditTransactionPage() {
       }
 
       const transaction = transactionResult.data;
-      const entries =
-        entriesResult.data as Entry[];
+      const entries = entriesResult.data as Entry[];
 
+      /*
+       * Check whether this transaction belongs to a tuition payment.
+       * Tuition transactions must be edited from the Tuition section.
+       */
+      const {
+        data: tuitionPayment,
+        error: tuitionPaymentError,
+      } = await supabase
+        .from("tuition_payments")
+        .select("id")
+        .eq("transaction_id", transaction.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (tuitionPaymentError) {
+        setMessage(
+          "Unable to verify the transaction type.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      /*
+       * Loan transactions must be edited from the Loans section.
+       */
+      const isTuitionPayment = !!tuitionPayment;
+      const isLoanTransaction = !!transaction.loan_id;
+
+      /*
+       * A voided transaction keeps its original row and gets
+       * a separate reversal transaction whose reversal_of_id
+       * points back to the original transaction.
+       */
+      const {
+        data: reversalTransaction,
+        error: reversalError,
+      } = await supabase
+        .from("transactions")
+        .select("id")
+        .eq("reversal_of_id", transaction.id)
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (reversalError) {
+        setMessage(
+          "Unable to verify the transaction status.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      const isVoided = !!reversalTransaction;
+
+      /*
+       * Protect cancelled transactions.
+       */
+      if (isVoided) {
+        setMessage(
+          "This transaction has already been cancelled and cannot be edited.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      /*
+       * Protect special business transactions.
+       */
+      if (isTuitionPayment) {
+        setMessage(
+          "Tuition payments must be edited from the Tuition section.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (isLoanTransaction) {
+        setMessage(
+          "Loan transactions must be edited from the Loans section.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      /*
+       * Protect opening balances and non-posted transactions.
+       */
       if (
         transaction.status !== "posted" ||
         transaction.transaction_type ===
@@ -161,9 +241,7 @@ export default function EditTransactionPage() {
       );
 
       if (categoryEntry?.category_id) {
-        setCategoryId(
-          categoryEntry.category_id,
-        );
+        setCategoryId(categoryEntry.category_id);
 
         setAmount(
           String(categoryEntry.amount),
@@ -1023,8 +1101,7 @@ export default function EditTransactionPage() {
           <div
             style={{
               display: "flex",
-              justifyContent:
-                "flex-end",
+              justifyContent: "flex-end",
               gap: 10,
               paddingTop: 4,
             }}

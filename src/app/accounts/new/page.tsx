@@ -5,15 +5,27 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
+type AccountType = "asset" | "liability";
+
+type LiquidityClass =
+  | "immediate"
+  | "near_liquid"
+  | "receivable"
+  | "long_term";
+
 export default function NewAccountPage() {
   const supabase = createClient();
   const router = useRouter();
 
   const [name, setName] = useState("");
-  const [accountType, setAccountType] = useState<
-    "asset" | "liability"
-  >("asset");
+  const [accountType, setAccountType] =
+    useState<AccountType>("asset");
+
   const [currency, setCurrency] = useState("BDT");
+
+  const [liquidityClass, setLiquidityClass] =
+    useState<LiquidityClass>("immediate");
+
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -45,6 +57,10 @@ export default function NewAccountPage() {
         p_name: trimmedName,
         p_account_type: accountType,
         p_currency: currency,
+        p_liquidity_class:
+          accountType === "asset"
+            ? liquidityClass
+            : "immediate",
       },
     );
 
@@ -133,13 +149,16 @@ export default function NewAccountPage() {
             <select
               id="account-type"
               value={accountType}
-              onChange={(event) =>
-                setAccountType(
-                  event.target.value as
-                    | "asset"
-                    | "liability",
-                )
-              }
+              onChange={(event) => {
+                const value =
+                  event.target.value as AccountType;
+
+                setAccountType(value);
+
+                if (value === "liability") {
+                  setLiquidityClass("immediate");
+                }
+              }}
               style={{
                 width: "100%",
                 padding: "11px 12px",
@@ -157,6 +176,67 @@ export default function NewAccountPage() {
               </option>
             </select>
           </div>
+
+          {accountType === "asset" && (
+            <div>
+              <label
+                htmlFor="liquidity-class"
+                style={{
+                  display: "block",
+                  marginBottom: 7,
+                  fontWeight: 600,
+                }}
+              >
+                Availability
+              </label>
+
+              <select
+                id="liquidity-class"
+                value={liquidityClass}
+                onChange={(event) =>
+                  setLiquidityClass(
+                    event.target
+                      .value as LiquidityClass,
+                  )
+                }
+                style={{
+                  width: "100%",
+                  padding: "11px 12px",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  background: "#fff",
+                }}
+              >
+                <option value="immediate">
+                  Available now — cash, bank, wallet
+                </option>
+
+                <option value="near_liquid">
+                  Near liquid — accessible investments/deposits
+                </option>
+
+                <option value="receivable">
+                  Money to receive — money owed to you
+                </option>
+
+                <option value="long_term">
+                  Long term — land, property, restricted assets
+                </option>
+              </select>
+
+              <p
+                className="muted"
+                style={{
+                  marginTop: 7,
+                  marginBottom: 0,
+                  fontSize: 13,
+                }}
+              >
+                This determines how the account appears
+                in your liquidity report.
+              </p>
+            </div>
+          )}
 
           <div>
             <label

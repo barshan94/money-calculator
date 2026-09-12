@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -21,6 +20,16 @@ type Account = {
   account_type: "asset" | "liability";
 };
 
+function getLocalDateTime() {
+  const now = new Date();
+  const offset =
+    now.getTimezoneOffset() * 60000;
+
+  return new Date(now.getTime() - offset)
+    .toISOString()
+    .slice(0, 16);
+}
+
 export default function NewLoanPage() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -33,7 +42,8 @@ export default function NewLoanPage() {
     useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("BDT");
-  const [startDate, setStartDate] = useState("");
+  const [startDateTime, setStartDateTime] =
+    useState("");
   const [dueDate, setDueDate] = useState("");
   const [accountId, setAccountId] = useState("");
   const [description, setDescription] = useState("");
@@ -61,10 +71,7 @@ export default function NewLoanPage() {
       }
 
       setAccounts(data ?? []);
-
-      setStartDate(
-        new Date().toISOString().slice(0, 10),
-      );
+      setStartDateTime(getLocalDateTime());
     }
 
     void loadAccounts();
@@ -82,9 +89,7 @@ export default function NewLoanPage() {
       const contact = await pickContact();
 
       if (!contact) {
-        setMessage(
-          "No contact was selected.",
-        );
+        setMessage("No contact was selected.");
         return;
       }
 
@@ -93,9 +98,7 @@ export default function NewLoanPage() {
       }
 
       if (contact.phoneNumber) {
-        setWhatsappNumber(
-          contact.phoneNumber,
-        );
+        setWhatsappNumber(contact.phoneNumber);
       } else {
         setMessage(
           "The selected contact has no phone number.",
@@ -121,9 +124,7 @@ export default function NewLoanPage() {
     const numericAmount = Number(amount);
 
     if (!personName.trim()) {
-      setMessage(
-        "Enter the person's name.",
-      );
+      setMessage("Enter the person's name.");
       return;
     }
 
@@ -132,12 +133,26 @@ export default function NewLoanPage() {
       return;
     }
 
-    if (!startDate) {
+    if (!startDateTime) {
       setMessage(
-        "Select the start date.",
+        "Select the start date and time.",
       );
       return;
     }
+
+    const startTimestamp = new Date(
+      startDateTime,
+    );
+
+    if (Number.isNaN(startTimestamp.getTime())) {
+      setMessage(
+        "Enter a valid start date and time.",
+      );
+      return;
+    }
+
+    const startDate =
+      startDateTime.slice(0, 10);
 
     if (dueDate && dueDate < startDate) {
       setMessage(
@@ -147,9 +162,7 @@ export default function NewLoanPage() {
     }
 
     if (!accountId) {
-      setMessage(
-        "Select the account.",
-      );
+      setMessage("Select the account.");
       return;
     }
 
@@ -162,7 +175,8 @@ export default function NewLoanPage() {
         p_loan_type: loanType,
         p_principal_amount: numericAmount,
         p_currency: currency,
-        p_start_date: startDate,
+        p_start_datetime:
+          startTimestamp.toISOString(),
         p_source_account_id: accountId,
         p_due_date: dueDate || null,
         p_description:
@@ -324,13 +338,15 @@ export default function NewLoanPage() {
         </div>
 
         <div>
-          <label>Start Date</label>
+          <label>
+            Start Date & Time
+          </label>
 
           <input
-            type="date"
-            value={startDate}
+            type="datetime-local"
+            value={startDateTime}
             onChange={(event) =>
-              setStartDate(event.target.value)
+              setStartDateTime(event.target.value)
             }
             required
           />

@@ -12,6 +12,7 @@ export type BudgetProgress = {
   period: string;
   startDate: string;
   endDate: string | null;
+  isActive: boolean;
 };
 
 type BudgetProgressRow = {
@@ -26,6 +27,7 @@ type BudgetProgressRow = {
   period: string;
   start_date: string;
   end_date: string | null;
+  is_active: boolean;
 };
 
 export async function getBudgetProgress(): Promise<
@@ -61,5 +63,6 @@ export async function getBudgetProgress(): Promise<
     period: row.period,
     startDate: row.start_date,
     endDate: row.end_date,
+    isActive: row.is_active,
   }));
 }

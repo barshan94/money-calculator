@@ -1,4 +1,3 @@
-
 import { createClient } from "@/lib/supabase/server";
 
 export type LoanBalance = {
@@ -11,6 +10,8 @@ export type LoanBalance = {
   currency: string;
   status: string;
   whatsapp_number: string | null;
+  start_datetime: string | null;
+  due_date: string | null;
 };
 
 type LoanBalanceRow = {
@@ -23,6 +24,8 @@ type LoanBalanceRow = {
   currency: string;
   status: string;
   whatsapp_number: string | null;
+  start_datetime: string | null;
+  due_date: string | null;
 };
 
 export async function getLoanBalances(): Promise<
@@ -64,6 +67,10 @@ export async function getLoanBalances(): Promise<
       status: row.status,
       whatsapp_number:
         row.whatsapp_number,
+      start_datetime:
+        row.start_datetime,
+      due_date:
+        row.due_date,
     }),
   );
 }

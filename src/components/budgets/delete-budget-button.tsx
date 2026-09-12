@@ -2,40 +2,32 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-
 import { createClient } from "@/lib/supabase/client";
 
 type Props = {
-  transactionId: string;
+  budgetId: string;
 };
 
-export function VoidTransactionButton({
-  transactionId,
-}: Props) {
+export function DeleteBudgetButton({ budgetId }: Props) {
   const supabase = createClient();
   const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function handleVoid() {
+  async function handleDelete() {
     const confirmed = window.confirm(
-      "Cancel this transaction? Its financial effect will be reversed.",
+      "Permanently delete this budget? This cannot be undone.",
     );
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
     setLoading(true);
     setMessage("");
 
-    const { error } = await supabase.rpc(
-      "void_transaction",
-      {
-        p_transaction_id: transactionId,
-      },
-    );
+    const { error } = await supabase.rpc("delete_budget", {
+      p_budget_id: budgetId,
+    });
 
     if (error) {
       setMessage(error.message);
@@ -43,22 +35,19 @@ export function VoidTransactionButton({
       return;
     }
 
-    setMessage(
-      "Transaction cancelled successfully.",
-    );
-
-    router.push("/transactions");
+    router.push("/budgets");
+    router.refresh();
   }
 
   return (
     <div>
       <button
         type="button"
-        onClick={handleVoid}
+        onClick={handleDelete}
         disabled={loading}
         style={{
           padding: "10px 14px",
-          border: "1px solid #fecaca",
+          border: "1px solid var(--danger)",
           borderRadius: 8,
           background: "#fff",
           color: "var(--danger)",
@@ -66,18 +55,14 @@ export function VoidTransactionButton({
           opacity: loading ? 0.7 : 1,
         }}
       >
-        {loading
-          ? "Cancelling..."
-          : "Cancel Transaction"}
+        {loading ? "Deleting..." : "Delete Budget"}
       </button>
 
       {message && (
         <p
           style={{
             margin: "8px 0 0",
-            color: message.includes("successfully")
-              ? "var(--success)"
-              : "var(--danger)",
+            color: "var(--danger)",
             fontSize: 13,
           }}
         >

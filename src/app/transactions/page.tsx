@@ -1,8 +1,12 @@
 import Link from "next/link";
 
-import { getAccountBalances } from "@/lib/finance/get-account-balances";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/finance/format-money";
+
+type SearchParams = {
+  sort?: string;
+  filter?: string;
+};
 
 type Transaction = {
   id: string;
@@ -10,6 +14,8 @@ type Transaction = {
   description: string | null;
   transaction_type: "normal" | "opening_balance";
   status: "posted" | "voided";
+  created_at: string;
+  reversal_of_id: string | null;
 };
 
 type Entry = {
@@ -25,7 +31,38 @@ type Category = {
   name: string;
 };
 
-export default async function TransactionsPage() {
+type Account = {
+  id: string;
+  name: string;
+  account_type:
+    | "asset"
+    | "liability"
+    | "income"
+    | "expense";
+  currency: string;
+};
+
+type TransactionSummary = {
+  label: string;
+  amount: number;
+  direction:
+    | "income"
+    | "expense"
+    | "transfer"
+    | "neutral";
+  currency: string;
+};
+
+type TransactionWithSummary = Transaction & {
+  summary: TransactionSummary;
+  isReversed: boolean;
+};
+
+export default async function TransactionsPage({
+  searchParams,
+}: {
+  searchParams: Promise<SearchParams>;
+}) {
   const supabase = await createClient();
 
   const {
@@ -36,20 +73,23 @@ export default async function TransactionsPage() {
     return null;
   }
 
+  const { sort = "newest", filter = "all" } =
+    await searchParams;
+
   const [
     transactionsResult,
     entriesResult,
     categoriesResult,
-    accounts,
+    accountsResult,
   ] = await Promise.all([
     supabase
       .from("transactions")
       .select(
-        "id, transaction_date, description, transaction_type, status",
+        "id, transaction_date, description, transaction_type, status, created_at, reversal_of_id",
       )
       .eq("user_id", user.id)
       .eq("status", "posted")
-      .order("transaction_date", {
+      .order("created_at", {
         ascending: false,
       }),
 
@@ -64,7 +104,12 @@ export default async function TransactionsPage() {
       .select("id, name")
       .eq("user_id", user.id),
 
-    getAccountBalances(),
+    supabase
+      .from("accounts")
+      .select(
+        "id, name, account_type, currency",
+      )
+      .eq("user_id", user.id),
   ]);
 
   if (transactionsResult.error) {
@@ -79,7 +124,11 @@ export default async function TransactionsPage() {
     throw new Error(categoriesResult.error.message);
   }
 
-  const transactions =
+  if (accountsResult.error) {
+    throw new Error(accountsResult.error.message);
+  }
+
+  const allTransactions =
     (transactionsResult.data ?? []) as Transaction[];
 
   const entries =
@@ -87,6 +136,31 @@ export default async function TransactionsPage() {
 
   const categories =
     (categoriesResult.data ?? []) as Category[];
+
+  const accounts =
+    (accountsResult.data ?? []) as Account[];
+
+  // ---------------------------------------------------------
+  // REVERSALS
+  // ---------------------------------------------------------
+
+  const originalTransactions =
+    allTransactions.filter(
+      (transaction) =>
+        transaction.reversal_of_id === null,
+    );
+
+  const reversedTransactionIds = new Set(
+    allTransactions
+      .filter(
+        (transaction) =>
+          transaction.reversal_of_id !== null,
+      )
+      .map(
+        (transaction) =>
+          transaction.reversal_of_id as string,
+      ),
+  );
 
   function getAccountName(accountId: string) {
     return (
@@ -96,7 +170,9 @@ export default async function TransactionsPage() {
     );
   }
 
-  function getCategoryName(categoryId: string | null) {
+  function getCategoryName(
+    categoryId: string | null,
+  ) {
     if (!categoryId) return null;
 
     return (
@@ -108,7 +184,7 @@ export default async function TransactionsPage() {
 
   function getTransactionSummary(
     transactionId: string,
-  ) {
+  ): TransactionSummary {
     const transactionEntries = entries.filter(
       (entry) =>
         entry.transaction_id === transactionId,
@@ -134,7 +210,7 @@ export default async function TransactionsPage() {
       return {
         label: "Transaction",
         amount: 0,
-        direction: "neutral" as const,
+        direction: "neutral",
         currency: "BDT",
       };
     }
@@ -156,7 +232,7 @@ export default async function TransactionsPage() {
       return {
         label: categoryName,
         amount: debitEntry.amount,
-        direction: "expense" as const,
+        direction: "expense",
         currency: debitAccount.currency,
       };
     }
@@ -168,7 +244,7 @@ export default async function TransactionsPage() {
       return {
         label: categoryName,
         amount: creditEntry.amount,
-        direction: "income" as const,
+        direction: "income",
         currency: creditAccount.currency,
       };
     }
@@ -180,7 +256,7 @@ export default async function TransactionsPage() {
         debitEntry.account_id,
       )}`,
       amount: debitEntry.amount,
-      direction: "transfer" as const,
+      direction: "transfer",
       currency:
         debitAccount?.currency ??
         creditAccount?.currency ??
@@ -188,226 +264,653 @@ export default async function TransactionsPage() {
     };
   }
 
+  // ---------------------------------------------------------
+  // BUILD TRANSACTIONS
+  // ---------------------------------------------------------
+
+  const transactions: TransactionWithSummary[] =
+    originalTransactions.map((transaction) => ({
+      ...transaction,
+      summary: getTransactionSummary(transaction.id),
+      isReversed: reversedTransactionIds.has(
+        transaction.id,
+      ),
+    }));
+
+  // ---------------------------------------------------------
+  // FILTER
+  // ---------------------------------------------------------
+
+  let filteredTransactions = [...transactions];
+
+  switch (filter) {
+    case "income":
+      filteredTransactions =
+        filteredTransactions.filter(
+          (transaction) =>
+            transaction.summary.direction ===
+            "income",
+        );
+      break;
+
+    case "expense":
+      filteredTransactions =
+        filteredTransactions.filter(
+          (transaction) =>
+            transaction.summary.direction ===
+            "expense",
+        );
+      break;
+
+    case "transfer":
+      filteredTransactions =
+        filteredTransactions.filter(
+          (transaction) =>
+            transaction.summary.direction ===
+            "transfer",
+        );
+      break;
+
+    case "opening":
+      filteredTransactions =
+        filteredTransactions.filter(
+          (transaction) =>
+            transaction.transaction_type ===
+            "opening_balance",
+        );
+      break;
+
+    case "reversed":
+      filteredTransactions =
+        filteredTransactions.filter(
+          (transaction) => transaction.isReversed,
+        );
+      break;
+
+    case "all":
+    default:
+      break;
+  }
+
+  // ---------------------------------------------------------
+  // SORT
+  // ---------------------------------------------------------
+
+  filteredTransactions.sort((a, b) => {
+    switch (sort) {
+      case "oldest":
+        return (
+          new Date(a.transaction_date).getTime() -
+          new Date(b.transaction_date).getTime()
+        );
+
+      case "highest-amount":
+        return (
+          Number(b.summary.amount) -
+          Number(a.summary.amount)
+        );
+
+      case "lowest-amount":
+        return (
+          Number(a.summary.amount) -
+          Number(b.summary.amount)
+        );
+
+      case "description-az":
+        return (
+          (a.description ?? a.summary.label)
+            .toLowerCase()
+            .localeCompare(
+              (
+                b.description ?? b.summary.label
+              ).toLowerCase(),
+            )
+        );
+
+      case "description-za":
+        return (
+          (b.description ?? b.summary.label)
+            .toLowerCase()
+            .localeCompare(
+              (
+                a.description ?? a.summary.label
+              ).toLowerCase(),
+            )
+        );
+
+      case "newest":
+      default:
+        return (
+          new Date(b.transaction_date).getTime() -
+          new Date(a.transaction_date).getTime()
+        );
+    }
+  });
+
   return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 16,
-          flexWrap: "wrap",
-          marginBottom: 28,
-        }}
-      >
-        <div>
-          <p
-            className="muted"
-            style={{
-              margin: "0 0 6px",
-              fontSize: 14,
-            }}
-          >
-            Your financial activity
-          </p>
+    <>
+      <style>{`
+        /* =====================================================
+           TRANSACTION FILTER / SORT
+        ===================================================== */
 
-          <h1 style={{ marginBottom: 0 }}>
-            Transactions
-          </h1>
-        </div>
+        .mc-transaction-controls {
+          display: flex;
+          align-items: flex-end;
+          gap: 12px;
+          margin-bottom: 24px;
+          padding: 16px;
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          background: var(--card);
+        }
 
-        <Link
-          href="/transactions/new"
+        .mc-transaction-control {
+          display: grid;
+          gap: 6px;
+          min-width: 190px;
+        }
+
+        .mc-transaction-control label {
+          font-size: 12px;
+          line-height: 1.3;
+          font-weight: 600;
+        }
+
+        .mc-transaction-control select {
+          width: 100%;
+          height: 40px;
+          box-sizing: border-box;
+          padding: 0 10px;
+          border: 1px solid var(--border);
+          border-radius: 7px;
+          background: var(--background);
+          color: var(--foreground);
+          font: inherit;
+          font-size: 14px;
+        }
+
+        .mc-transaction-control-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        .mc-transaction-apply,
+        .mc-transaction-reset {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          height: 40px;
+          box-sizing: border-box;
+          border-radius: 7px;
+          font-size: 14px;
+          font-weight: 600;
+          white-space: nowrap;
+        }
+
+        .mc-transaction-apply {
+          padding: 0 16px;
+          border: 0;
+          background: var(--primary);
+          color: #fff;
+          cursor: pointer;
+        }
+
+        .mc-transaction-reset {
+          padding: 0 14px;
+          border: 1px solid var(--border);
+          color: var(--foreground);
+          text-decoration: none;
+        }
+
+        @media (max-width: 700px) {
+          .mc-transaction-controls {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            padding: 14px;
+          }
+
+          .mc-transaction-control {
+            width: 100%;
+            min-width: 0;
+          }
+
+          .mc-transaction-control select {
+            width: 100%;
+          }
+
+          .mc-transaction-control-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            width: 100%;
+            gap: 8px;
+          }
+
+          .mc-transaction-apply,
+          .mc-transaction-reset {
+            width: 100%;
+          }
+        }
+      `}</style>
+
+      <div>
+        {/* Header */}
+
+        <div
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            padding: "11px 16px",
-            borderRadius: 8,
-            background: "var(--primary)",
-            color: "#fff",
-            fontWeight: 600,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            gap: 16,
+            flexWrap: "wrap",
+            marginBottom: 24,
           }}
         >
-          + Add Transaction
-        </Link>
-      </div>
-
-      <section>
-        {transactions.length === 0 ? (
-          <div
-            style={{
-              padding: "28px 0",
-              textAlign: "center",
-            }}
-          >
-            <h2>No transactions yet</h2>
-
-            <p className="muted">
-              Record your first income, expense, transfer,
-              investment, loan, or other financial activity.
-            </p>
-
-            <Link
-              href="/transactions/new"
+          <div>
+            <p
+              className="muted"
               style={{
-                display: "inline-flex",
-                marginTop: 8,
-                padding: "10px 14px",
-                borderRadius: 8,
-                background: "var(--primary)",
-                color: "#fff",
-                fontWeight: 600,
+                margin: "0 0 6px",
+                fontSize: 14,
               }}
             >
-              Add Transaction
-            </Link>
+              Your financial activity
+            </p>
+
+            <h1 style={{ marginBottom: 0 }}>
+              Transactions
+            </h1>
           </div>
-        ) : (
-          <div
+
+          <Link
+            href="/transactions/new"
             style={{
-              display: "grid",
-              gap: 10,
+              display: "inline-flex",
+              alignItems: "center",
+              padding: "11px 16px",
+              borderRadius: 8,
+              background: "var(--primary)",
+              color: "#fff",
+              fontWeight: 600,
             }}
           >
-            {transactions.map((transaction) => {
-              const summary =
-                getTransactionSummary(transaction.id);
+            + Add Transaction
+          </Link>
+        </div>
 
-              const amountColor =
-                summary.direction === "income"
-                  ? "var(--success)"
-                  : summary.direction === "expense"
-                    ? "var(--danger)"
-                    : "var(--foreground)";
+        {transactions.length === 0 ? (
+          <section>
+            <div
+              style={{
+                padding: "28px 0",
+                textAlign: "center",
+              }}
+            >
+              <h2>No transactions yet</h2>
 
-              const prefix =
-                summary.direction === "income"
-                  ? "+"
-                  : summary.direction === "expense"
-                    ? "−"
-                    : "";
+              <p className="muted">
+                Record your first income, expense,
+                transfer, investment, loan, or other
+                financial activity.
+              </p>
 
-              return (
+              <Link
+                href="/transactions/new"
+                style={{
+                  display: "inline-flex",
+                  marginTop: 8,
+                  padding: "10px 14px",
+                  borderRadius: 8,
+                  background: "var(--primary)",
+                  color: "#fff",
+                  fontWeight: 600,
+                }}
+              >
+                Add Transaction
+              </Link>
+            </div>
+          </section>
+        ) : (
+          <>
+            {/* Filter / Sort */}
+
+            <form
+              method="GET"
+              className="mc-transaction-controls"
+            >
+              <div className="mc-transaction-control">
+                <label htmlFor="filter">
+                  Filter
+                </label>
+
+                <select
+                  id="filter"
+                  name="filter"
+                  defaultValue={filter}
+                >
+                  <option value="all">
+                    All transactions
+                  </option>
+
+                  <option value="income">
+                    Income
+                  </option>
+
+                  <option value="expense">
+                    Expense
+                  </option>
+
+                  <option value="transfer">
+                    Transfer
+                  </option>
+
+                  <option value="opening">
+                    Opening balance
+                  </option>
+
+                  <option value="reversed">
+                    Reversed
+                  </option>
+                </select>
+              </div>
+
+              <div className="mc-transaction-control">
+                <label htmlFor="sort">
+                  Sort
+                </label>
+
+                <select
+                  id="sort"
+                  name="sort"
+                  defaultValue={sort}
+                >
+                  <option value="newest">
+                    Newest
+                  </option>
+
+                  <option value="oldest">
+                    Oldest
+                  </option>
+
+                  <option value="highest-amount">
+                    Highest amount
+                  </option>
+
+                  <option value="lowest-amount">
+                    Lowest amount
+                  </option>
+
+                  <option value="description-az">
+                    Description A–Z
+                  </option>
+
+                  <option value="description-za">
+                    Description Z–A
+                  </option>
+                </select>
+              </div>
+
+              <div className="mc-transaction-control-actions">
+                <button
+                  type="submit"
+                  className="mc-transaction-apply"
+                >
+                  Apply
+                </button>
+
                 <Link
-                  key={transaction.id}
-                  href={`/transactions/${transaction.id}`}
-                  className="card"
+                  href="/transactions"
+                  className="mc-transaction-reset"
+                >
+                  Reset
+                </Link>
+              </div>
+            </form>
+
+            {/* Result count */}
+
+            <p
+              className="muted"
+              style={{
+                margin: "0 0 14px",
+                fontSize: 13,
+              }}
+            >
+              {filteredTransactions.length} of{" "}
+              {transactions.length} transactions
+            </p>
+
+            {/* Transaction List */}
+
+            {filteredTransactions.length === 0 ? (
+              <section>
+                <h2>No matching transactions</h2>
+
+                <p className="muted">
+                  Try changing your filter or reset the
+                  transaction list.
+                </p>
+
+                <Link
+                  href="/transactions"
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 16,
-                    padding: 17,
-                    transition:
-                      "border-color .15s ease, transform .15s ease",
+                    display: "inline-flex",
+                    marginTop: 8,
+                    padding: "10px 14px",
+                    borderRadius: 8,
+                    background: "var(--primary)",
+                    color: "#fff",
+                    fontWeight: 600,
                   }}
                 >
-                  <div
-                    style={{
-                      minWidth: 0,
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        flexWrap: "wrap",
-                      }}
-                    >
-                      <strong
+                  Reset filters
+                </Link>
+              </section>
+            ) : (
+              <div
+                style={{
+                  display: "grid",
+                  gap: 10,
+                }}
+              >
+                {filteredTransactions.map(
+                  (transaction) => {
+                    const summary =
+                      transaction.summary;
+
+                    const amountColor =
+                      summary.direction === "income"
+                        ? "var(--success)"
+                        : summary.direction ===
+                            "expense"
+                          ? "var(--danger)"
+                          : "var(--foreground)";
+
+                    const prefix =
+                      summary.direction === "income"
+                        ? "+"
+                        : summary.direction ===
+                            "expense"
+                          ? "−"
+                          : "";
+
+                    return (
+                      <Link
+                        key={transaction.id}
+                        href={`/transactions/${transaction.id}`}
+                        className="card"
                         style={{
-                          fontSize: 16,
+                          display: "flex",
+                          justifyContent:
+                            "space-between",
+                          alignItems: "center",
+                          gap: 16,
+                          padding: 17,
+                          opacity:
+                            transaction.isReversed
+                              ? 0.65
+                              : 1,
                         }}
                       >
-                        {summary.label}
-                      </strong>
-
-                      {transaction.transaction_type ===
-                        "opening_balance" && (
-                        <span
+                        <div
                           style={{
-                            padding: "3px 7px",
-                            borderRadius: 5,
-                            background: "#f1f5f9",
-                            color: "var(--muted)",
-                            fontSize: 11,
-                            fontWeight: 600,
+                            minWidth: 0,
                           }}
                         >
-                          Opening balance
-                        </span>
-                      )}
-                    </div>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              flexWrap: "wrap",
+                            }}
+                          >
+                            <strong
+                              style={{
+                                fontSize: 16,
+                                textDecoration:
+                                  transaction.isReversed
+                                    ? "line-through"
+                                    : "none",
+                              }}
+                            >
+                              {summary.label}
+                            </strong>
 
-                    <p
-                      className="muted"
-                      style={{
-                        margin: "5px 0 0",
-                        fontSize: 13,
-                      }}
-                    >
-                      {new Date(
-                        transaction.transaction_date,
-                      ).toLocaleDateString("en-BD", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </p>
+                            {transaction.transaction_type ===
+                              "opening_balance" && (
+                              <span
+                                style={{
+                                  padding: "3px 7px",
+                                  borderRadius: 5,
+                                  background:
+                                    "#f1f5f9",
+                                  color:
+                                    "var(--muted)",
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                Opening balance
+                              </span>
+                            )}
 
-                    {transaction.description && (
-                      <p
-                        className="muted"
-                        style={{
-                          margin: "4px 0 0",
-                          fontSize: 13,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {transaction.description}
-                      </p>
-                    )}
-                  </div>
+                            {transaction.isReversed && (
+                              <span
+                                style={{
+                                  padding: "3px 7px",
+                                  borderRadius: 5,
+                                  background:
+                                    "#f1f5f9",
+                                  color:
+                                    "var(--muted)",
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                ↩ Reversed
+                              </span>
+                            )}
+                          </div>
 
-                  <div
-                    style={{
-                      textAlign: "right",
-                      flexShrink: 0,
-                    }}
-                  >
-                    <strong
-                      style={{
-                        color: amountColor,
-                        fontSize: 16,
-                      }}
-                    >
-                      {prefix}
-                      {formatMoney(
-                        summary.amount,
-                        summary.currency,
-                      )}
-                    </strong>
+                          <p
+                            className="muted"
+                            style={{
+                              margin: "5px 0 0",
+                              fontSize: 13,
+                            }}
+                          >
+                            {new Date(
+                              transaction.transaction_date,
+                            ).toLocaleDateString(
+                              "en-BD",
+                              {
+                                day: "numeric",
+                                month: "short",
+                                year: "numeric",
+                              },
+                            )}{" "}
+                            ·{" "}
+                            {new Date(
+                              transaction.created_at,
+                            ).toLocaleTimeString(
+                              "en-BD",
+                              {
+                                hour: "numeric",
+                                minute: "2-digit",
+                                hour12: true,
+                              },
+                            )}
+                          </p>
 
-                    <p
-                      className="muted"
-                      style={{
-                        margin: "4px 0 0",
-                        fontSize: 11,
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {summary.direction}
-                    </p>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                          {transaction.description && (
+                            <p
+                              className="muted"
+                              style={{
+                                margin: "4px 0 0",
+                                fontSize: 13,
+                                overflow: "hidden",
+                                textOverflow:
+                                  "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {
+                                transaction.description
+                              }
+                            </p>
+                          )}
+                        </div>
+
+                        <div
+                          style={{
+                            textAlign: "right",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <strong
+                            style={{
+                              color:
+                                transaction.isReversed
+                                  ? "var(--muted)"
+                                  : amountColor,
+                              fontSize: 16,
+                              textDecoration:
+                                transaction.isReversed
+                                  ? "line-through"
+                                  : "none",
+                            }}
+                          >
+                            {prefix}
+                            {formatMoney(
+                              summary.amount,
+                              summary.currency,
+                            )}
+                          </strong>
+
+                          <p
+                            className="muted"
+                            style={{
+                              margin: "4px 0 0",
+                              fontSize: 11,
+                              textTransform:
+                                "capitalize",
+                            }}
+                          >
+                            {summary.direction}
+                          </p>
+                        </div>
+                      </Link>
+                    );
+                  },
+                )}
+              </div>
+            )}
+          </>
         )}
-      </section>
-    </div>
+      </div>
+    </>
   );
 }

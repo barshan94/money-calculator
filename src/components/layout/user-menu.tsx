@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+
 import { createClient } from "@/lib/supabase/client";
 
 export function UserMenu() {
   const router = useRouter();
-  const supabase = createClient();
+  const menuRef = useRef<HTMLDivElement>(null);
 
-  const [email, setEmail] = useState<string | null>(
-    null,
-  );
+  const [email, setEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+
+  const supabase = createClient();
 
   useEffect(() => {
     async function loadUser() {
@@ -26,8 +29,34 @@ export function UserMenu() {
     loadUser();
   }, [supabase]);
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener(
+      "mousedown",
+      handleClickOutside,
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleClickOutside,
+      );
+    };
+  }, []);
+
   async function handleLogout() {
+    setOpen(false);
+
     await supabase.auth.signOut();
+
     router.push("/auth/login");
     router.refresh();
   }
@@ -39,28 +68,70 @@ export function UserMenu() {
   if (!email) {
     return (
       <div className="user-menu">
-        <a href="/auth/login">Login</a>
-        <a href="/auth/signup">
+        <Link href="/auth/login">Login</Link>
+        <Link href="/auth/signup">
           Create Account
-        </a>
+        </Link>
       </div>
     );
   }
 
+  const initial = email.charAt(0).toUpperCase();
+
   return (
-    <div className="user-menu">
-      <span>{email}</span>
-
-      <a href="/auth/change-password">
-        Change Password
-      </a>
-
+    <div
+      ref={menuRef}
+      className="user-menu"
+    >
       <button
         type="button"
-        onClick={handleLogout}
+        className="user-profile-button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
       >
-        Logout
+        <span className="user-avatar">
+          {initial}
+        </span>
+
+        <span className="user-email">
+          {email}
+        </span>
+
+        <span className="user-chevron">
+          {open ? "▲" : "▼"}
+        </span>
       </button>
+
+      {open && (
+        <div className="user-dropdown">
+          <div className="user-dropdown-header">
+            <span className="user-avatar large">
+              {initial}
+            </span>
+
+            <div className="user-dropdown-email">
+              {email}
+            </div>
+          </div>
+
+          <div className="user-dropdown-divider" />
+
+          <Link
+            href="/auth/change-password"
+            onClick={() => setOpen(false)}
+          >
+            Change Password
+          </Link>
+
+          <button
+            type="button"
+            className="logout-button"
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
+        </div>
+      )}
     </div>
   );
 }
