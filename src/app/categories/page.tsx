@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -102,12 +101,12 @@ export default function CategoriesPage() {
 
   const activeCategories = useMemo(
     () => categories.filter((category) => !category.is_archived),
-    [categories]
+    [categories],
   );
 
   const archivedCategories = useMemo(
     () => categories.filter((category) => category.is_archived),
-    [categories]
+    [categories],
   );
 
   const filteredActiveCategories = useMemo(() => {
@@ -115,7 +114,7 @@ export default function CategoriesPage() {
 
     if (appliedFilter !== "all") {
       result = result.filter(
-        (category) => category.category_type === appliedFilter
+        (category) => category.category_type === appliedFilter,
       );
     }
 
@@ -147,23 +146,22 @@ export default function CategoriesPage() {
   const incomeCategories = useMemo(
     () =>
       filteredActiveCategories.filter(
-        (category) => category.category_type === "income"
+        (category) => category.category_type === "income",
       ),
-    [filteredActiveCategories]
+    [filteredActiveCategories],
   );
 
   const expenseCategories = useMemo(
     () =>
       filteredActiveCategories.filter(
-        (category) => category.category_type === "expense"
+        (category) => category.category_type === "expense",
       ),
-    [filteredActiveCategories]
+    [filteredActiveCategories],
   );
 
   return (
     <main className="min-h-screen bg-[var(--background)] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-6xl space-y-6">
-        {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-[var(--foreground)]">
             Categories
@@ -174,7 +172,6 @@ export default function CategoriesPage() {
           </p>
         </div>
 
-        {/* Create Category */}
         <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
           <h2 className="text-sm font-semibold text-[var(--foreground)]">
             Create Category
@@ -193,7 +190,7 @@ export default function CategoriesPage() {
               value={categoryType}
               onChange={(event) =>
                 setCategoryType(
-                  event.target.value as "income" | "expense"
+                  event.target.value as "income" | "expense",
                 )
               }
               className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
@@ -218,7 +215,6 @@ export default function CategoriesPage() {
           )}
         </section>
 
-        {/* Filter & Sort */}
         <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
           <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto_auto] md:items-end">
             <div>
@@ -251,8 +247,6 @@ export default function CategoriesPage() {
                 }
                 className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
               >
-                <option value="newest">Newest First</option>
-                <option value="oldest">Oldest First</option>
                 <option value="az">Name A-Z</option>
                 <option value="za">Name Z-A</option>
               </select>
@@ -277,7 +271,6 @@ export default function CategoriesPage() {
           </div>
         </section>
 
-        {/* Count */}
         <div className="text-sm text-[var(--muted-foreground)]">
           Showing{" "}
           <span className="font-semibold text-[var(--foreground)]">
@@ -287,14 +280,12 @@ export default function CategoriesPage() {
           {filteredActiveCategories.length === 1 ? "y" : "ies"}
         </div>
 
-        {/* Categories */}
         {loading ? (
           <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 text-center text-sm text-[var(--muted-foreground)]">
             Loading categories...
           </div>
         ) : (
           <div className="grid gap-6 lg:grid-cols-2">
-            {/* Income */}
             {(appliedFilter === "all" || appliedFilter === "income") && (
               <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
                 <div className="mb-4 flex items-center justify-between">
@@ -318,7 +309,6 @@ export default function CategoriesPage() {
                         key={category.id}
                         className="rounded-lg border border-[var(--border)] px-4 py-3"
                       >
-                        {/* Name + Type */}
                         <div className="flex w-full items-center justify-between gap-3">
                           <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--foreground)]">
                             {category.name}
@@ -329,12 +319,11 @@ export default function CategoriesPage() {
                           </span>
                         </div>
 
-                        {/* Actions */}
                         <div className="mt-3 grid w-full grid-cols-3 gap-2">
                           <EditCategoryButton
                             categoryId={category.id}
-                            currentName={category.name}
-                            currentType={category.category_type}
+                            initialName={category.name}
+                            initialType={category.category_type}
                           />
 
                           <ArchiveCategoryButton
@@ -352,7 +341,6 @@ export default function CategoriesPage() {
               </section>
             )}
 
-            {/* Expense */}
             {(appliedFilter === "all" || appliedFilter === "expense") && (
               <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
                 <div className="mb-4 flex items-center justify-between">
@@ -376,7 +364,6 @@ export default function CategoriesPage() {
                         key={category.id}
                         className="rounded-lg border border-[var(--border)] px-4 py-3"
                       >
-                        {/* Name + Type */}
                         <div className="flex w-full items-center justify-between gap-3">
                           <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--foreground)]">
                             {category.name}
@@ -387,12 +374,11 @@ export default function CategoriesPage() {
                           </span>
                         </div>
 
-                        {/* Actions */}
                         <div className="mt-3 grid w-full grid-cols-3 gap-2">
                           <EditCategoryButton
                             categoryId={category.id}
-                            currentName={category.name}
-                            currentType={category.category_type}
+                            initialName={category.name}
+                            initialType={category.category_type}
                           />
 
                           <ArchiveCategoryButton
@@ -402,6 +388,7 @@ export default function CategoriesPage() {
                           <DeleteCategoryButton
                             categoryId={category.id}
                           />
+
                         </div>
                       </div>
                     ))}
@@ -412,7 +399,6 @@ export default function CategoriesPage() {
           </div>
         )}
 
-        {/* Archived */}
         {archivedCategories.length > 0 && (
           <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
             <div className="mb-4 flex items-center justify-between">

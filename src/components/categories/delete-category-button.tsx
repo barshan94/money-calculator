@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = {
   categoryId: string;
-  onDeleted: () => void;
 };
 
 export function DeleteCategoryButton({
   categoryId,
-  onDeleted,
 }: Props) {
+  const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
 
@@ -34,8 +34,7 @@ export function DeleteCategoryButton({
       return;
     }
 
-    setLoading(false);
-    onDeleted();
+    router.refresh();
   }
 
   return (
@@ -44,9 +43,7 @@ export function DeleteCategoryButton({
       onClick={handleDelete}
       disabled={loading}
       className="w-full rounded-lg px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-      style={{
-        backgroundColor: "var(--danger)",
-      }}
+      style={{ backgroundColor: "var(--danger)" }}
     >
       {loading ? "Deleting..." : "Delete"}
     </button>

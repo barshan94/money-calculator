@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 
 import { ArchiveAccountButton } from "@/components/accounts/archive-account-button";
@@ -15,7 +16,6 @@ export default async function AccountsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const accounts = await getAccountBalances();
-
   const { sort = "name-az", filter = "all" } = await searchParams;
 
   const userAccounts = accounts.filter(
@@ -28,10 +28,6 @@ export default async function AccountsPage({
     new Set(userAccounts.map((account) => account.currency)),
   ).sort();
 
-  // ---------------------------------------------------------
-  // FILTER
-  // ---------------------------------------------------------
-
   let filteredAccounts = [...userAccounts];
 
   if (filter === "asset") {
@@ -42,18 +38,11 @@ export default async function AccountsPage({
     filteredAccounts = filteredAccounts.filter(
       (account) => account.account_type === "liability",
     );
-  } else if (
-    filter !== "all" &&
-    currencies.includes(filter)
-  ) {
+  } else if (filter !== "all" && currencies.includes(filter)) {
     filteredAccounts = filteredAccounts.filter(
       (account) => account.currency === filter,
     );
   }
-
-  // ---------------------------------------------------------
-  // SORT
-  // ---------------------------------------------------------
 
   filteredAccounts.sort((a, b) => {
     switch (sort) {
@@ -66,18 +55,6 @@ export default async function AccountsPage({
       case "lowest-balance":
         return Number(a.balance) - Number(b.balance);
 
-      case "newest":
-        return (
-          new Date(b.created_at).getTime() -
-          new Date(a.created_at).getTime()
-        );
-
-      case "oldest":
-        return (
-          new Date(a.created_at).getTime() -
-          new Date(b.created_at).getTime()
-        );
-
       case "name-az":
       default:
         return a.name.localeCompare(b.name);
@@ -87,10 +64,6 @@ export default async function AccountsPage({
   return (
     <>
       <style>{`
-        /* =====================================================
-           ACCOUNTS FILTER / SORT
-        ===================================================== */
-
         .mc-account-controls {
           display: flex;
           align-items: flex-end;
@@ -193,8 +166,6 @@ export default async function AccountsPage({
       `}</style>
 
       <div>
-        {/* Header */}
-
         <div
           style={{
             display: "flex",
@@ -216,9 +187,7 @@ export default async function AccountsPage({
               Manage your money
             </p>
 
-            <h1 style={{ marginBottom: 0 }}>
-              Accounts
-            </h1>
+            <h1 style={{ marginBottom: 0 }}>Accounts</h1>
           </div>
 
           <Link
@@ -263,39 +232,21 @@ export default async function AccountsPage({
           </section>
         ) : (
           <>
-            {/* Filter / Sort */}
-
-            <form
-              method="GET"
-              className="mc-account-controls"
-            >
+            <form method="GET" className="mc-account-controls">
               <div className="mc-account-control">
-                <label htmlFor="filter">
-                  Filter
-                </label>
+                <label htmlFor="filter">Filter</label>
 
                 <select
                   id="filter"
                   name="filter"
                   defaultValue={filter}
                 >
-                  <option value="all">
-                    All accounts
-                  </option>
-
-                  <option value="asset">
-                    Assets
-                  </option>
-
-                  <option value="liability">
-                    Liabilities
-                  </option>
+                  <option value="all">All accounts</option>
+                  <option value="asset">Assets</option>
+                  <option value="liability">Liabilities</option>
 
                   {currencies.map((currency) => (
-                    <option
-                      key={currency}
-                      value={currency}
-                    >
+                    <option key={currency} value={currency}>
                       {currency}
                     </option>
                   ))}
@@ -303,37 +254,20 @@ export default async function AccountsPage({
               </div>
 
               <div className="mc-account-control">
-                <label htmlFor="sort">
-                  Sort
-                </label>
+                <label htmlFor="sort">Sort</label>
 
                 <select
                   id="sort"
                   name="sort"
                   defaultValue={sort}
                 >
-                  <option value="name-az">
-                    Name A–Z
-                  </option>
-
-                  <option value="name-za">
-                    Name Z–A
-                  </option>
-
+                  <option value="name-az">Name A–Z</option>
+                  <option value="name-za">Name Z–A</option>
                   <option value="highest-balance">
                     Highest balance
                   </option>
-
                   <option value="lowest-balance">
                     Lowest balance
-                  </option>
-
-                  <option value="newest">
-                    Newest
-                  </option>
-
-                  <option value="oldest">
-                    Oldest
                   </option>
                 </select>
               </div>
@@ -355,8 +289,6 @@ export default async function AccountsPage({
               </div>
             </form>
 
-            {/* Result count */}
-
             <p
               className="muted"
               style={{
@@ -364,19 +296,17 @@ export default async function AccountsPage({
                 fontSize: 13,
               }}
             >
-              {filteredAccounts.length} of{" "}
-              {userAccounts.length} accounts
+              {filteredAccounts.length} of {userAccounts.length}{" "}
+              accounts
             </p>
-
-            {/* Account Grid */}
 
             {filteredAccounts.length === 0 ? (
               <section>
                 <h2>No matching accounts</h2>
 
                 <p className="muted">
-                  Try changing your filter or reset the
-                  account list.
+                  Try changing your filter or reset the account
+                  list.
                 </p>
 
                 <Link
@@ -453,11 +383,7 @@ export default async function AccountsPage({
                       </span>
                     </div>
 
-                    <div
-                      style={{
-                        margin: "24px 0",
-                      }}
-                    >
+                    <div style={{ margin: "24px 0" }}>
                       <p
                         className="muted"
                         style={{
@@ -468,11 +394,7 @@ export default async function AccountsPage({
                         Current balance
                       </p>
 
-                      <strong
-                        style={{
-                          fontSize: 25,
-                        }}
-                      >
+                      <strong style={{ fontSize: 25 }}>
                         {formatMoney(
                           account.balance,
                           account.currency,
@@ -487,8 +409,7 @@ export default async function AccountsPage({
                         alignItems: "center",
                         gap: 10,
                         paddingTop: 14,
-                        borderTop:
-                          "1px solid var(--border)",
+                        borderTop: "1px solid var(--border)",
                       }}
                     >
                       <Link

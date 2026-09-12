@@ -1,26 +1,27 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = {
   categoryId: string;
   initialName: string;
   initialType: "income" | "expense";
-  onUpdated: () => void;
 };
 
 export function EditCategoryButton({
   categoryId,
   initialName,
   initialType,
-  onUpdated,
 }: Props) {
+  const router = useRouter();
   const supabase = createClient();
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(initialName);
-  const [type, setType] = useState<"income" | "expense">(initialType);
+  const [type, setType] =
+    useState<"income" | "expense">(initialType);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -56,7 +57,7 @@ export function EditCategoryButton({
 
     setOpen(false);
     setSaving(false);
-    onUpdated();
+    router.refresh();
   }
 
   return (
@@ -65,9 +66,7 @@ export function EditCategoryButton({
         type="button"
         onClick={openModal}
         className="w-full rounded-lg px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90"
-        style={{
-          backgroundColor: "var(--primary)",
-        }}
+        style={{ backgroundColor: "var(--primary)" }}
       >
         Edit
       </button>
@@ -87,7 +86,9 @@ export function EditCategoryButton({
 
                 <input
                   value={name}
-                  onChange={(event) => setName(event.target.value)}
+                  onChange={(event) =>
+                    setName(event.target.value)
+                  }
                   className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
                 />
               </div>
@@ -101,7 +102,9 @@ export function EditCategoryButton({
                   value={type}
                   onChange={(event) =>
                     setType(
-                      event.target.value as "income" | "expense",
+                      event.target.value as
+                        | "income"
+                        | "expense",
                     )
                   }
                   className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"

@@ -42,15 +42,10 @@ function formatDateTime(timestamp: string | null) {
   });
 }
 
-function getDateValue(
-  timestamp: string | null,
-  fallbackDate: string | null,
-) {
-  const value = timestamp ?? fallbackDate;
+function getDateValue(timestamp: string | null) {
+  if (!timestamp) return 0;
 
-  if (!value) return 0;
-
-  const time = new Date(value).getTime();
+  const time = new Date(timestamp).getTime();
 
   return Number.isNaN(time) ? 0 : time;
 }
@@ -226,14 +221,8 @@ export default async function LoansPage({
     switch (sort) {
       case "oldest":
         return (
-          getDateValue(
-            a.start_datetime,
-            a.start_date,
-          ) -
-          getDateValue(
-            b.start_datetime,
-            b.start_date,
-          )
+          getDateValue(a.start_datetime) -
+          getDateValue(b.start_datetime)
         );
 
       case "highest":
@@ -317,14 +306,8 @@ export default async function LoansPage({
       case "newest":
       default:
         return (
-          getDateValue(
-            b.start_datetime,
-            b.start_date,
-          ) -
-          getDateValue(
-            a.start_datetime,
-            a.start_date,
-          )
+          getDateValue(b.start_datetime) -
+          getDateValue(a.start_datetime)
         );
     }
   });
@@ -1189,7 +1172,6 @@ export default async function LoansPage({
           white-space: nowrap;
         }
 
-        /* Loan actions */
         .loan-card-footer {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));

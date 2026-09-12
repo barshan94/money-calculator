@@ -1,17 +1,17 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = {
   categoryId: string;
-  onArchived: () => void;
 };
 
 export function ArchiveCategoryButton({
   categoryId,
-  onArchived,
 }: Props) {
+  const router = useRouter();
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
 
@@ -34,8 +34,7 @@ export function ArchiveCategoryButton({
       return;
     }
 
-    setLoading(false);
-    onArchived();
+    router.refresh();
   }
 
   return (
@@ -44,9 +43,7 @@ export function ArchiveCategoryButton({
       onClick={handleArchive}
       disabled={loading}
       className="w-full rounded-lg px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-      style={{
-        backgroundColor: "#d97706",
-      }}
+      style={{ backgroundColor: "#d97706" }}
     >
       {loading ? "Archiving..." : "Archive"}
     </button>
