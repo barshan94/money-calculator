@@ -71,14 +71,26 @@ export default function NewInvestmentPage() {
     event.preventDefault();
     setMessage("");
 
-    const investedAmount = Number(amount);
+    const investedAmount = parseFloat(amount);
+
+    console.log("INVESTMENT DEBUG", {
+  amount,
+  investedAmount,
+  quantity,
+  purchasePrice,
+});
+
+    
 
     if (!name.trim()) {
       setMessage("Enter the investment name.");
       return;
     }
 
-    if (!investedAmount || investedAmount <= 0) {
+    if (
+      !Number.isFinite(investedAmount) ||
+      investedAmount <= 0
+    ) {
       setMessage("Enter a valid investment amount.");
       return;
     }
@@ -93,6 +105,38 @@ export default function NewInvestmentPage() {
       return;
     }
 
+    /*
+     * If quantity is not supplied, treat the investment
+     * as one unit.
+     *
+     * If purchase price is not supplied, the entire
+     * invested amount becomes the price of that unit.
+     */
+    const finalQuantity = quantity.trim()
+      ? Number(quantity)
+      : 1;
+
+    const finalPurchasePrice =
+      purchasePrice.trim()
+        ? Number(purchasePrice)
+        : investedAmount / finalQuantity;
+
+    if (
+      !Number.isFinite(finalQuantity) ||
+      finalQuantity <= 0
+    ) {
+      setMessage("Enter a valid quantity.");
+      return;
+    }
+
+    if (
+      !Number.isFinite(finalPurchasePrice) ||
+      finalPurchasePrice <= 0
+    ) {
+      setMessage("Enter a valid purchase price.");
+      return;
+    }
+
     setSaving(true);
 
     const { error } = await supabase.rpc(
@@ -101,15 +145,11 @@ export default function NewInvestmentPage() {
         p_name: name.trim(),
         p_investment_type: investmentType,
         p_currency: currency,
-        p_invested_amount: investedAmount,
+        p_invested_amount: Math.max(0.01, investedAmount),
         p_purchase_date: purchaseDate,
         p_source_account_id: accountId,
-        p_quantity: quantity
-          ? Number(quantity)
-          : null,
-        p_purchase_price: purchasePrice
-          ? Number(purchasePrice)
-          : null,
+        p_quantity: finalQuantity,
+        p_purchase_price: finalPurchasePrice,
         p_description:
           description.trim() || null,
       },
@@ -211,7 +251,7 @@ export default function NewInvestmentPage() {
             onChange={(event) =>
               setQuantity(event.target.value)
             }
-            placeholder="e.g. 10"
+            placeholder="Leave empty = 1"
           />
         </div>
 
@@ -226,7 +266,7 @@ export default function NewInvestmentPage() {
             onChange={(event) =>
               setPurchasePrice(event.target.value)
             }
-            placeholder="Price per unit"
+            placeholder="Leave empty = amount ÷ quantity"
           />
         </div>
 
@@ -287,3 +327,4 @@ export default function NewInvestmentPage() {
     </main>
   );
 }
+
