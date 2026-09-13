@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 
@@ -8,18 +9,18 @@ type Props = {
   accountId: string;
 };
 
-export function ArchiveAccountButton({
+export function DeleteAccountButton({
   accountId,
 }: Props) {
   const supabase = createClient();
-
+  const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function handleArchive() {
+  async function handleDelete() {
     const confirmed = window.confirm(
-      "Archive this account? Existing transactions will be preserved, but the account will no longer be available for new transactions.",
+      "Permanently delete this archived account? This cannot be undone.",
     );
 
     if (!confirmed) {
@@ -29,55 +30,42 @@ export function ArchiveAccountButton({
     setLoading(true);
     setMessage("");
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    console.log("Archive user:", user?.id);
-    console.log("Account:", accountId);
-    console.log("Auth error:", authError);
-
-    const { data, error } = await supabase.rpc(
-      "archive_account",
+    const { error } = await supabase.rpc(
+      "delete_account",
       {
         p_account_id: accountId,
       },
     );
 
-    console.log("Archive RPC data:", data);
-    console.log("Archive RPC error:", error);
-
     if (error) {
-      setMessage(
-        `Archive failed: ${error.message}`,
-      );
+      setMessage(error.message);
       setLoading(false);
       return;
     }
 
-    window.location.href = "/accounts";
+    router.push("/accounts");
+    router.refresh();
   }
 
   return (
     <div>
       <button
         type="button"
-        onClick={handleArchive}
+        onClick={handleDelete}
         disabled={loading}
         style={{
           padding: "8px 11px",
-          border: "1px solid var(--border)",
+          border: "1px solid var(--danger)",
           borderRadius: 7,
           background: "var(--card)",
-          color: "var(--foreground)",
+          color: "var(--danger)",
           fontWeight: 600,
           fontSize: 13,
           opacity: loading ? 0.7 : 1,
           cursor: loading ? "default" : "pointer",
         }}
       >
-        {loading ? "Archiving..." : "Archive"}
+        {loading ? "Deleting..." : "Delete permanently"}
       </button>
 
       {message && (

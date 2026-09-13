@@ -64,11 +64,28 @@ export default function NewAccountPage() {
       },
     );
 
-    if (error) {
-      setMessage(error.message);
-      setSaving(false);
-      return;
-    }
+   if (error) {
+  const errorMessage =
+    error.message?.toLowerCase() ?? "";
+
+  if (
+    errorMessage.includes(
+      "active account with this name already exists",
+    )
+  ) {
+    setMessage(
+      "An account with this name already exists.",
+    );
+  } else {
+    setMessage(
+      error.message ||
+        "Unable to create the account.",
+    );
+  }
+
+  setSaving(false);
+  return;
+}
 
     router.push("/accounts");
     router.refresh();

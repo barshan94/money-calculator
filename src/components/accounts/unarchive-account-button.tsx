@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 
@@ -8,18 +9,18 @@ type Props = {
   accountId: string;
 };
 
-export function ArchiveAccountButton({
+export function UnarchiveAccountButton({
   accountId,
 }: Props) {
   const supabase = createClient();
-
+  const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  async function handleArchive() {
+  async function handleUnarchive() {
     const confirmed = window.confirm(
-      "Archive this account? Existing transactions will be preserved, but the account will no longer be available for new transactions.",
+      "Restore this account?",
     );
 
     if (!confirmed) {
@@ -29,41 +30,28 @@ export function ArchiveAccountButton({
     setLoading(true);
     setMessage("");
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    console.log("Archive user:", user?.id);
-    console.log("Account:", accountId);
-    console.log("Auth error:", authError);
-
-    const { data, error } = await supabase.rpc(
-      "archive_account",
+    const { error } = await supabase.rpc(
+      "unarchive_account",
       {
         p_account_id: accountId,
       },
     );
 
-    console.log("Archive RPC data:", data);
-    console.log("Archive RPC error:", error);
-
     if (error) {
-      setMessage(
-        `Archive failed: ${error.message}`,
-      );
+      setMessage(error.message);
       setLoading(false);
       return;
     }
 
-    window.location.href = "/accounts";
+    router.push("/accounts");
+    router.refresh();
   }
 
   return (
     <div>
       <button
         type="button"
-        onClick={handleArchive}
+        onClick={handleUnarchive}
         disabled={loading}
         style={{
           padding: "8px 11px",
@@ -77,7 +65,9 @@ export function ArchiveAccountButton({
           cursor: loading ? "default" : "pointer",
         }}
       >
-        {loading ? "Archiving..." : "Archive"}
+        {loading
+          ? "Restoring..."
+          : "Unarchive"}
       </button>
 
       {message && (

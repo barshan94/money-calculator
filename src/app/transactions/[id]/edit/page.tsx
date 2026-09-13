@@ -1,3 +1,4 @@
+
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
@@ -11,6 +12,18 @@ type Account = {
   name: string;
   account_type: "asset" | "liability";
   currency: string;
+};
+
+type LedgerAccount = {
+  id: string;
+  name: string;
+  account_type:
+    | "asset"
+    | "liability"
+    | "income"
+    | "expense";
+  currency: string;
+  is_system: boolean;
 };
 
 type Category = {
@@ -36,12 +49,17 @@ export default function EditTransactionPage() {
   const transactionId = params.id as string;
 
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [ledgerAccounts, setLedgerAccounts] =
+    useState<LedgerAccount[]>([]);
+  const [categories, setCategories] = useState<Category[]>(
+    [],
+  );
 
   const [date, setDate] = useState("");
   const [amount, setAmount] = useState("");
   const [categoryId, setCategoryId] = useState("");
-  const [sourceAccountId, setSourceAccountId] = useState("");
+  const [sourceAccountId, setSourceAccountId] =
+    useState("");
   const [destinationAccountId, setDestinationAccountId] =
     useState("");
   const [description, setDescription] = useState("");
@@ -72,6 +90,7 @@ export default function EditTransactionPage() {
         transactionResult,
         entriesResult,
         accountsResult,
+        ledgerAccountsResult,
         categoriesResult,
       ] = await Promise.all([
         supabase
@@ -90,6 +109,9 @@ export default function EditTransactionPage() {
           )
           .eq("transaction_id", transactionId),
 
+        /*
+         * Only normal user accounts are selectable.
+         */
         supabase
           .from("accounts")
           .select(
@@ -99,6 +121,19 @@ export default function EditTransactionPage() {
           .eq("is_archived", false)
           .eq("is_system", false)
           .order("name"),
+
+        /*
+         * Category ledger accounts may be system accounts.
+         * They must be available for internal validation,
+         * but they are never shown in the account dropdown.
+         */
+        supabase
+          .from("accounts")
+          .select(
+            "id, name, account_type, currency, is_system",
+          )
+          .eq("user_id", user.id)
+          .eq("is_archived", false),
 
         supabase
           .from("categories")
@@ -115,6 +150,7 @@ export default function EditTransactionPage() {
         !transactionResult.data ||
         entriesResult.error ||
         accountsResult.error ||
+        ledgerAccountsResult.error ||
         categoriesResult.error
       ) {
         setMessage("Unable to load transaction.");
@@ -127,7 +163,6 @@ export default function EditTransactionPage() {
 
       /*
        * Check whether this transaction belongs to a tuition payment.
-       * Tuition transactions must be edited from the Tuition section.
        */
       const {
         data: tuitionPayment,
@@ -147,16 +182,12 @@ export default function EditTransactionPage() {
         return;
       }
 
-      /*
-       * Loan transactions must be edited from the Loans section.
-       */
       const isTuitionPayment = !!tuitionPayment;
       const isLoanTransaction = !!transaction.loan_id;
 
       /*
-       * A voided transaction keeps its original row and gets
-       * a separate reversal transaction whose reversal_of_id
-       * points back to the original transaction.
+       * Check whether this transaction already has
+       * a posted reversal.
        */
       const {
         data: reversalTransaction,
@@ -166,6 +197,7 @@ export default function EditTransactionPage() {
         .select("id")
         .eq("reversal_of_id", transaction.id)
         .eq("user_id", user.id)
+        .eq("status", "posted")
         .maybeSingle();
 
       if (reversalError) {
@@ -177,6 +209,20 @@ export default function EditTransactionPage() {
       }
 
       const isVoided = !!reversalTransaction;
+
+      /*
+       * A reversal transaction itself is immutable.
+       */
+      const isReversal =
+        transaction.reversal_of_id !== null;
+
+      if (isReversal) {
+        setMessage(
+          "Cancellation/reversal transactions cannot be edited.",
+        );
+        setLoading(false);
+        return;
+      }
 
       /*
        * Protect cancelled transactions.
@@ -224,6 +270,10 @@ export default function EditTransactionPage() {
       }
 
       setAccounts(accountsResult.data ?? []);
+      setLedgerAccounts(
+        (ledgerAccountsResult.data ??
+          []) as LedgerAccount[],
+      );
       setCategories(categoriesResult.data ?? []);
 
       setDate(
@@ -236,6 +286,17 @@ export default function EditTransactionPage() {
         transaction.description ?? "",
       );
 
+      /*
+       * Find the category entry.
+       *
+       * Expense:
+       *   debit  = category ledger account
+       *   credit = money account
+       *
+       * Income:
+       *   debit  = money account
+       *   credit = category ledger account
+       */
       const categoryEntry = entries.find(
         (entry) => entry.category_id !== null,
       );
@@ -270,6 +331,9 @@ export default function EditTransactionPage() {
           }
         }
       } else if (entries.length === 2) {
+        /*
+         * No category means transfer.
+         */
         const debit = entries.find(
           (entry) =>
             entry.entry_type === "debit",
@@ -283,9 +347,11 @@ export default function EditTransactionPage() {
         if (debit && credit) {
           setType("transfer");
           setAmount(String(debit.amount));
+
           setDestinationAccountId(
             debit.account_id,
           );
+
           setSourceAccountId(
             credit.account_id,
           );
@@ -298,6 +364,10 @@ export default function EditTransactionPage() {
     load();
   }, [transactionId, router, supabase]);
 
+  /*
+   * User-selectable money accounts.
+   * System accounts remain hidden.
+   */
   const moneyAccounts = accounts.filter(
     (account) =>
       account.account_type === "asset" ||
@@ -331,9 +401,22 @@ export default function EditTransactionPage() {
       category.id === categoryId,
   );
 
+  /*
+   * IMPORTANT:
+   * Category ledger accounts can be system accounts,
+   * so look them up in ledgerAccounts rather than accounts.
+   */
+  const selectedCategoryLedgerAccount =
+    ledgerAccounts.find(
+      (account) =>
+        account.id ===
+        selectedCategory?.ledger_account_id,
+    );
+
   const selectedCurrency =
     selectedSourceAccount?.currency ??
     selectedDestinationAccount?.currency ??
+    selectedCategoryLedgerAccount?.currency ??
     "BDT";
 
   function resetTypeFields(
@@ -447,15 +530,25 @@ export default function EditTransactionPage() {
       return;
     }
 
+    /*
+     * Verify that the category's ledger account
+     * actually exists and has a valid currency.
+     */
+    if (
+      type !== "transfer" &&
+      !selectedCategoryLedgerAccount
+    ) {
+      setMessage(
+        "Selected category ledger account is invalid.",
+      );
+      return;
+    }
+
     if (
       type === "expense" &&
       selectedSourceAccount &&
-      selectedCategory &&
-      accounts.find(
-        (account) =>
-          account.id ===
-          selectedCategory.ledger_account_id,
-      )?.currency !==
+      selectedCategoryLedgerAccount &&
+      selectedCategoryLedgerAccount.currency !==
         selectedSourceAccount.currency
     ) {
       setMessage(
@@ -467,12 +560,8 @@ export default function EditTransactionPage() {
     if (
       type === "income" &&
       selectedDestinationAccount &&
-      selectedCategory &&
-      accounts.find(
-        (account) =>
-          account.id ===
-          selectedCategory.ledger_account_id,
-      )?.currency !==
+      selectedCategoryLedgerAccount &&
+      selectedCategoryLedgerAccount.currency !==
         selectedDestinationAccount.currency
     ) {
       setMessage(
@@ -652,9 +741,11 @@ export default function EditTransactionPage() {
               <option value="expense">
                 Expense
               </option>
+
               <option value="income">
                 Income
               </option>
+
               <option value="transfer">
                 Transfer
               </option>
@@ -738,8 +829,7 @@ export default function EditTransactionPage() {
                 required
                 style={{
                   width: "100%",
-                  padding:
-                    "11px 12px",
+                  padding: "11px 12px",
                   border: 0,
                 }}
               />
@@ -771,8 +861,7 @@ export default function EditTransactionPage() {
                   required
                   style={{
                     width: "100%",
-                    padding:
-                      "11px 12px",
+                    padding: "11px 12px",
                     border:
                       "1px solid var(--border)",
                     borderRadius: 8,
@@ -819,8 +908,7 @@ export default function EditTransactionPage() {
                   required
                   style={{
                     width: "100%",
-                    padding:
-                      "11px 12px",
+                    padding: "11px 12px",
                     border:
                       "1px solid var(--border)",
                     borderRadius: 8,
@@ -872,8 +960,7 @@ export default function EditTransactionPage() {
                   required
                   style={{
                     width: "100%",
-                    padding:
-                      "11px 12px",
+                    padding: "11px 12px",
                     border:
                       "1px solid var(--border)",
                     borderRadius: 8,
@@ -920,8 +1007,7 @@ export default function EditTransactionPage() {
                   required
                   style={{
                     width: "100%",
-                    padding:
-                      "11px 12px",
+                    padding: "11px 12px",
                     border:
                       "1px solid var(--border)",
                     borderRadius: 8,
@@ -973,8 +1059,7 @@ export default function EditTransactionPage() {
                   required
                   style={{
                     width: "100%",
-                    padding:
-                      "11px 12px",
+                    padding: "11px 12px",
                     border:
                       "1px solid var(--border)",
                     borderRadius: 8,
@@ -1022,8 +1107,7 @@ export default function EditTransactionPage() {
                   required
                   style={{
                     width: "100%",
-                    padding:
-                      "11px 12px",
+                    padding: "11px 12px",
                     border:
                       "1px solid var(--border)",
                     borderRadius: 8,

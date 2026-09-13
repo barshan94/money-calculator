@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -29,9 +30,9 @@ export default async function TransactionDetailPage({
   const { data: transaction, error: transactionError } =
     await supabase
       .from("transactions")
-        .select(
-  "id, transaction_date, description, reference, notes, transaction_type, status, loan_id, reversal_of_id",
-)
+      .select(
+        "id, transaction_date, description, reference, notes, transaction_type, status, loan_id, reversal_of_id",
+      )
       .eq("id", id)
       .eq("user_id", user.id)
       .single();
@@ -40,20 +41,75 @@ export default async function TransactionDetailPage({
     notFound();
   }
 
+  /*
+    A cancelled transaction is represented by a
+    separate posted reversal transaction.
+
+    Therefore:
+    - original transaction has reversal_of_id = null
+    - reversal transaction has reversal_of_id = original.id
+  */
+
+  const { data: reversalTransaction } = await supabase
+    .from("transactions")
+    .select(
+      "id, transaction_date, description",
+    )
+    .eq("user_id", user.id)
+    .eq("reversal_of_id", transaction.id)
+    .eq("status", "posted")
+    .maybeSingle();
+
+  const isReversedOriginal =
+    !!reversalTransaction;
+
+  const isReversal =
+    transaction.reversal_of_id !== null;
+
+  let originalTransaction: {
+    id: string;
+    description: string | null;
+  } | null = null;
+
+  if (isReversal) {
+    const { data } = await supabase
+      .from("transactions")
+      .select("id, description")
+      .eq("id", transaction.reversal_of_id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    originalTransaction = data;
+  }
+
   const { data: tuitionPayment } = await supabase
-  .from("tuition_payments")
-  .select("id")
-  .eq("transaction_id", transaction.id)
-  .eq("user_id", user.id)
-  .maybeSingle();
+    .from("tuition_payments")
+    .select("id")
+    .eq("transaction_id", transaction.id)
+    .eq("user_id", user.id)
+    .maybeSingle();
 
-const isTuitionPayment = !!tuitionPayment;
-const isLoanTransaction = !!transaction.loan_id;
+  const isTuitionPayment = !!tuitionPayment;
+  const isLoanTransaction = !!transaction.loan_id;
 
-const isSpecialTransaction =
-  isTuitionPayment || isLoanTransaction;
+  const isSpecialTransaction =
+    isTuitionPayment || isLoanTransaction;
 
+  const canEdit =
+    transaction.status === "posted" &&
+    transaction.transaction_type !==
+      "opening_balance" &&
+    !isSpecialTransaction &&
+    !isReversedOriginal &&
+    !isReversal;
 
+  const canVoid =
+    transaction.status === "posted" &&
+    transaction.transaction_type !==
+      "opening_balance" &&
+    !isSpecialTransaction &&
+    !isReversedOriginal &&
+    !isReversal;
 
   const { data: entries, error: entriesError } =
     await supabase
@@ -188,39 +244,40 @@ const isSpecialTransaction =
             </p>
           </div>
 
-          {transaction.status === "posted" &&
-            transaction.transaction_type !==
-              "opening_balance" && (
-              <div
-                style={{
-                  display: "flex",
-                  gap: 8,
-                  flexWrap: "wrap",
-                }}
-              >
-              {!isSpecialTransaction && (
-  <Link
-    href={`/transactions/${transaction.id}/edit`}
-    style={{
-      padding: "10px 14px",
-      border: "1px solid var(--border)",
-      borderRadius: 8,
-      fontWeight: 600,
-    }}
-  >
-    Edit
-  </Link>
-)}
+          {(canEdit || canVoid) && (
+            <div
+              style={{
+                display: "flex",
+                gap: 8,
+                flexWrap: "wrap",
+              }}
+            >
+              {canEdit && (
+                <Link
+                  href={`/transactions/${transaction.id}/edit`}
+                  style={{
+                    padding: "10px 14px",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    fontWeight: 600,
+                    textDecoration: "none",
+                  }}
+                >
+                  Edit
+                </Link>
+              )}
 
+              {canVoid && (
                 <VoidTransactionButton
                   transactionId={transaction.id}
                 />
-              </div>
-            )}
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {transaction.status === "voided" && (
+      {isReversedOriginal && (
         <div
           style={{
             marginBottom: 20,
@@ -231,7 +288,53 @@ const isSpecialTransaction =
             fontWeight: 600,
           }}
         >
-          This transaction has been voided.
+          <div>
+            This transaction has been cancelled.
+          </div>
+
+          <Link
+            href={`/transactions/${reversalTransaction.id}`}
+            style={{
+              display: "inline-block",
+              marginTop: 6,
+              color: "inherit",
+              fontSize: 13,
+            }}
+          >
+            View cancellation transaction →
+          </Link>
+        </div>
+      )}
+
+      {isReversal && (
+        <div
+          style={{
+            marginBottom: 20,
+            padding: "12px 14px",
+            borderRadius: 8,
+            background: "#f1f5f9",
+            color: "var(--muted)",
+            fontWeight: 600,
+          }}
+        >
+          <div>
+            This is a cancellation/reversal
+            transaction.
+          </div>
+
+          {originalTransaction && (
+            <Link
+              href={`/transactions/${originalTransaction.id}`}
+              style={{
+                display: "inline-block",
+                marginTop: 6,
+                color: "var(--foreground)",
+                fontSize: 13,
+              }}
+            >
+              View original transaction →
+            </Link>
+          )}
         </div>
       )}
 
@@ -248,6 +351,54 @@ const isSpecialTransaction =
           }}
         >
           Opening balance
+        </div>
+      )}
+
+      {isTuitionPayment && (
+        <div
+          style={{
+            marginBottom: 20,
+            padding: "12px 14px",
+            borderRadius: 8,
+            background: "#f1f5f9",
+            color: "var(--muted)",
+            fontWeight: 600,
+          }}
+        >
+          This transaction belongs to a tuition
+          payment. Manage it from the Tuition
+          section.
+        </div>
+      )}
+
+      {isLoanTransaction && (
+        <div
+          style={{
+            marginBottom: 20,
+            padding: "12px 14px",
+            borderRadius: 8,
+            background: "#f1f5f9",
+            color: "var(--muted)",
+            fontWeight: 600,
+          }}
+        >
+          This transaction belongs to a loan.
+          Manage it from the Loans section.
+        </div>
+      )}
+
+      {transaction.status === "voided" && (
+        <div
+          style={{
+            marginBottom: 20,
+            padding: "12px 14px",
+            borderRadius: 8,
+            background: "#fef2f2",
+            color: "var(--danger)",
+            fontWeight: 600,
+          }}
+        >
+          This transaction has been voided.
         </div>
       )}
 

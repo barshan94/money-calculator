@@ -1,9 +1,13 @@
-
+import { DeleteAccountButton } from "@/components/accounts/delete-account-button";
 import Link from "next/link";
 
 import { ArchiveAccountButton } from "@/components/accounts/archive-account-button";
+import { UnarchiveAccountButton } from "@/components/accounts/unarchive-account-button";
 import { getAccountBalances } from "@/lib/finance/get-account-balances";
 import { formatMoney } from "@/lib/finance/format-money";
+import { createClient } from "@/lib/supabase/server";
+
+export const dynamic = "force-dynamic";
 
 type SearchParams = {
   sort?: string;
@@ -15,32 +19,104 @@ export default async function AccountsPage({
 }: {
   searchParams: Promise<SearchParams>;
 }) {
-  const accounts = await getAccountBalances();
-  const { sort = "name-az", filter = "all" } = await searchParams;
+  const supabase = await createClient();
 
-  const userAccounts = accounts.filter(
-    (account) =>
-      account.account_type === "asset" ||
-      account.account_type === "liability",
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return null;
+  }
+
+  const [{ data: accountRows, error: accountError }, balances] =
+    await Promise.all([
+      supabase
+        .from("accounts")
+        .select(
+          "id, name, account_type, currency, is_archived",
+        )
+        .eq("user_id", user.id)
+        .eq("is_system", false)
+        .in("account_type", ["asset", "liability"])
+        .order("name"),
+      getAccountBalances(),
+    ]);
+
+  if (accountError) {
+    throw new Error(accountError.message);
+  }
+
+  const balanceMap = new Map(
+    balances.map((account) => [
+      account.id,
+      account.balance,
+    ]),
+  );
+
+  const accounts = (accountRows ?? []).map(
+    (account) => ({
+      ...account,
+      balance: balanceMap.get(account.id) ?? 0,
+    }),
+  );
+
+  const {
+    sort = "name-az",
+    filter = "active",
+  } = await searchParams;
+
+  const activeAccounts = accounts.filter(
+    (account) => !account.is_archived,
+  );
+
+  const archivedAccounts = accounts.filter(
+    (account) => account.is_archived,
   );
 
   const currencies = Array.from(
-    new Set(userAccounts.map((account) => account.currency)),
+    new Set(
+      activeAccounts.map(
+        (account) => account.currency,
+      ),
+    ),
   ).sort();
 
-  let filteredAccounts = [...userAccounts];
+  let filteredAccounts = [...accounts];
 
-  if (filter === "asset") {
-    filteredAccounts = filteredAccounts.filter(
-      (account) => account.account_type === "asset",
-    );
-  } else if (filter === "liability") {
-    filteredAccounts = filteredAccounts.filter(
-      (account) => account.account_type === "liability",
-    );
-  } else if (filter !== "all" && currencies.includes(filter)) {
-    filteredAccounts = filteredAccounts.filter(
-      (account) => account.currency === filter,
+  switch (filter) {
+    case "active":
+      filteredAccounts = activeAccounts;
+      break;
+
+    case "archived":
+      filteredAccounts = archivedAccounts;
+      break;
+
+    case "asset":
+      filteredAccounts = activeAccounts.filter(
+        (account) =>
+          account.account_type === "asset",
+      );
+      break;
+
+    case "liability":
+      filteredAccounts = activeAccounts.filter(
+        (account) =>
+          account.account_type === "liability",
+      );
+      break;
+
+    case "all":
+    default:
+      filteredAccounts = [...accounts];
+      break;
+  }
+
+  if (currencies.includes(filter)) {
+    filteredAccounts = activeAccounts.filter(
+      (account) =>
+        account.currency === filter,
     );
   }
 
@@ -50,10 +126,16 @@ export default async function AccountsPage({
         return b.name.localeCompare(a.name);
 
       case "highest-balance":
-        return Number(b.balance) - Number(a.balance);
+        return (
+          Number(b.balance) -
+          Number(a.balance)
+        );
 
       case "lowest-balance":
-        return Number(a.balance) - Number(b.balance);
+        return (
+          Number(a.balance) -
+          Number(b.balance)
+        );
 
       case "name-az":
       default:
@@ -62,7 +144,7 @@ export default async function AccountsPage({
   });
 
   return (
-    <>
+    <main>
       <style>{`
         .mc-account-controls {
           display: flex;
@@ -83,26 +165,22 @@ export default async function AccountsPage({
 
         .mc-account-control label {
           font-size: 12px;
-          line-height: 1.3;
           font-weight: 600;
         }
 
         .mc-account-control select {
           width: 100%;
           height: 40px;
-          box-sizing: border-box;
           padding: 0 10px;
           border: 1px solid var(--border);
           border-radius: 7px;
           background: var(--background);
           color: var(--foreground);
-          font: inherit;
           font-size: 14px;
         }
 
         .mc-account-control-actions {
           display: flex;
-          align-items: center;
           gap: 8px;
         }
 
@@ -112,15 +190,14 @@ export default async function AccountsPage({
           align-items: center;
           justify-content: center;
           height: 40px;
+          padding: 0 14px;
           box-sizing: border-box;
           border-radius: 7px;
           font-size: 14px;
           font-weight: 600;
-          white-space: nowrap;
         }
 
         .mc-account-apply {
-          padding: 0 16px;
           border: 0;
           background: var(--primary);
           color: #fff;
@@ -128,18 +205,38 @@ export default async function AccountsPage({
         }
 
         .mc-account-reset {
-          padding: 0 14px;
           border: 1px solid var(--border);
           color: var(--foreground);
           text-decoration: none;
+        }
+
+        .mc-account-archived {
+          opacity: 0.78;
+        }
+
+        .mc-account-archived-badge {
+          display: inline-flex;
+          padding: 4px 8px;
+          border-radius: 999px;
+          background: var(--muted-background);
+          color: var(--muted);
+          font-size: 11px;
+          font-weight: 700;
+        }
+
+        .mc-account-actions {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding-top: 14px;
+          border-top: 1px solid var(--border);
         }
 
         @media (max-width: 700px) {
           .mc-account-controls {
             display: grid;
             grid-template-columns: 1fr;
-            gap: 12px;
-            padding: 14px;
           }
 
           .mc-account-control {
@@ -147,15 +244,9 @@ export default async function AccountsPage({
             min-width: 0;
           }
 
-          .mc-account-control select {
-            width: 100%;
-          }
-
           .mc-account-control-actions {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            width: 100%;
-            gap: 8px;
           }
 
           .mc-account-apply,
@@ -187,7 +278,9 @@ export default async function AccountsPage({
               Manage your money
             </p>
 
-            <h1 style={{ marginBottom: 0 }}>Accounts</h1>
+            <h1 style={{ margin: 0 }}>
+              Accounts
+            </h1>
           </div>
 
           <Link
@@ -200,19 +293,19 @@ export default async function AccountsPage({
               background: "var(--primary)",
               color: "#fff",
               fontWeight: 600,
+              textDecoration: "none",
             }}
           >
             + New Account
           </Link>
         </div>
 
-        {userAccounts.length === 0 ? (
+        {accounts.length === 0 ? (
           <section>
             <h2>No accounts yet</h2>
 
             <p className="muted">
-              Create your first bank, cash, mobile wallet,
-              investment, or liability account.
+              Create your first account.
             </p>
 
             <Link
@@ -225,6 +318,7 @@ export default async function AccountsPage({
                 background: "var(--primary)",
                 color: "#fff",
                 fontWeight: 600,
+                textDecoration: "none",
               }}
             >
               Create Account
@@ -232,40 +326,75 @@ export default async function AccountsPage({
           </section>
         ) : (
           <>
-            <form method="GET" className="mc-account-controls">
+            <form
+              method="GET"
+              className="mc-account-controls"
+            >
               <div className="mc-account-control">
-                <label htmlFor="filter">Filter</label>
+                <label htmlFor="filter">
+                  Filter
+                </label>
 
                 <select
                   id="filter"
                   name="filter"
                   defaultValue={filter}
                 >
-                  <option value="all">All accounts</option>
-                  <option value="asset">Assets</option>
-                  <option value="liability">Liabilities</option>
+                  <option value="active">
+                    Active accounts
+                  </option>
 
-                  {currencies.map((currency) => (
-                    <option key={currency} value={currency}>
-                      {currency}
-                    </option>
-                  ))}
+                  <option value="archived">
+                    Archived accounts
+                  </option>
+
+                  <option value="all">
+                    All accounts
+                  </option>
+
+                  <option value="asset">
+                    Active assets
+                  </option>
+
+                  <option value="liability">
+                    Active liabilities
+                  </option>
+
+                  {currencies.map(
+                    (currency) => (
+                      <option
+                        key={currency}
+                        value={currency}
+                      >
+                        Active {currency}
+                      </option>
+                    ),
+                  )}
                 </select>
               </div>
 
               <div className="mc-account-control">
-                <label htmlFor="sort">Sort</label>
+                <label htmlFor="sort">
+                  Sort
+                </label>
 
                 <select
                   id="sort"
                   name="sort"
                   defaultValue={sort}
                 >
-                  <option value="name-az">Name A–Z</option>
-                  <option value="name-za">Name Z–A</option>
+                  <option value="name-az">
+                    Name A–Z
+                  </option>
+
+                  <option value="name-za">
+                    Name Z–A
+                  </option>
+
                   <option value="highest-balance">
                     Highest balance
                   </option>
+
                   <option value="lowest-balance">
                     Lowest balance
                   </option>
@@ -296,8 +425,7 @@ export default async function AccountsPage({
                 fontSize: 13,
               }}
             >
-              {filteredAccounts.length} of {userAccounts.length}{" "}
-              accounts
+              {filteredAccounts.length} accounts
             </p>
 
             {filteredAccounts.length === 0 ? (
@@ -305,24 +433,8 @@ export default async function AccountsPage({
                 <h2>No matching accounts</h2>
 
                 <p className="muted">
-                  Try changing your filter or reset the account
-                  list.
+                  Try another filter.
                 </p>
-
-                <Link
-                  href="/accounts"
-                  style={{
-                    display: "inline-flex",
-                    marginTop: 8,
-                    padding: "10px 14px",
-                    borderRadius: 8,
-                    background: "var(--primary)",
-                    color: "#fff",
-                    fontWeight: 600,
-                  }}
-                >
-                  Reset filters
-                </Link>
               </section>
             ) : (
               <div
@@ -333,107 +445,175 @@ export default async function AccountsPage({
                   gap: 16,
                 }}
               >
-                {filteredAccounts.map((account) => (
-                  <div
-                    key={account.id}
-                    className="card"
-                    style={{ padding: 20 }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "flex-start",
-                        gap: 12,
-                      }}
-                    >
-                      <div>
-                        <Link
-                          href={`/accounts/${account.id}`}
-                          style={{
-                            fontSize: 18,
-                            fontWeight: 700,
-                          }}
-                        >
-                          {account.name}
-                        </Link>
+                {filteredAccounts.map(
+                  (account) => {
+                    const archived =
+                      account.is_archived;
 
-                        <p
-                          className="muted"
+                    return (
+                      <div
+                        key={account.id}
+                        className={`card ${
+                          archived
+                            ? "mc-account-archived"
+                            : ""
+                        }`}
+                        style={{
+                          padding: 20,
+                        }}
+                      >
+                        <div
                           style={{
-                            margin: "5px 0 0",
-                            fontSize: 13,
-                            textTransform: "capitalize",
+                            display: "flex",
+                            justifyContent:
+                              "space-between",
+                            gap: 12,
                           }}
                         >
-                          {account.account_type}
-                        </p>
+                          <div>
+                            <Link
+                              href={`/accounts/${account.id}`}
+                              style={{
+                                fontSize: 18,
+                                fontWeight: 700,
+                                textDecoration:
+                                  "none",
+                                color:
+                                  "var(--foreground)",
+                              }}
+                            >
+                              {account.name}
+                            </Link>
+
+                            <p
+                              className="muted"
+                              style={{
+                                margin:
+                                  "5px 0 0",
+                                fontSize: 13,
+                                textTransform:
+                                  "capitalize",
+                              }}
+                            >
+                              {
+                                account.account_type
+                              }
+                            </p>
+                          </div>
+
+                          <div
+                            style={{
+                              display: "flex",
+                              flexDirection:
+                                "column",
+                              alignItems:
+                                "flex-end",
+                              gap: 5,
+                            }}
+                          >
+                            <span
+                              style={{
+                                padding:
+                                  "4px 8px",
+                                borderRadius: 6,
+                                background:
+                                  "#f1f5f9",
+                                fontSize: 13,
+                                fontWeight: 600,
+                              }}
+                            >
+                              {
+                                account.currency
+                              }
+                            </span>
+
+                            {archived && (
+                              <span className="mc-account-archived-badge">
+                                Archived
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div
+                          style={{
+                            margin: "24px 0",
+                          }}
+                        >
+                          <p
+                            className="muted"
+                            style={{
+                              margin:
+                                "0 0 5px",
+                              fontSize: 13,
+                            }}
+                          >
+                            Current balance
+                          </p>
+
+                          <strong
+                            style={{
+                              fontSize: 25,
+                            }}
+                          >
+                            {formatMoney(
+                              Number(
+                                account.balance,
+                              ),
+                              account.currency,
+                            )}
+                          </strong>
+                        </div>
+
+                        <div className="mc-account-actions">
+                          <Link
+                            href={`/accounts/${account.id}`}
+                            style={{
+                              color:
+                                "var(--primary)",
+                              fontSize: 14,
+                              fontWeight: 600,
+                              textDecoration:
+                                "none",
+                            }}
+                          >
+                            View details →
+                          </Link>
+
+{archived ? (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      flexWrap: "wrap",
+      justifyContent: "flex-end",
+    }}
+  >
+    <UnarchiveAccountButton
+      accountId={account.id}
+    />
+
+    <DeleteAccountButton
+      accountId={account.id}
+    />
+  </div>
+) : (
+  <ArchiveAccountButton
+    accountId={account.id}
+  />
+)}
+
+                        </div>
                       </div>
-
-                      <span
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 600,
-                          padding: "4px 8px",
-                          borderRadius: 6,
-                          background: "#f1f5f9",
-                        }}
-                      >
-                        {account.currency}
-                      </span>
-                    </div>
-
-                    <div style={{ margin: "24px 0" }}>
-                      <p
-                        className="muted"
-                        style={{
-                          margin: "0 0 5px",
-                          fontSize: 13,
-                        }}
-                      >
-                        Current balance
-                      </p>
-
-                      <strong style={{ fontSize: 25 }}>
-                        {formatMoney(
-                          account.balance,
-                          account.currency,
-                        )}
-                      </strong>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        gap: 10,
-                        paddingTop: 14,
-                        borderTop: "1px solid var(--border)",
-                      }}
-                    >
-                      <Link
-                        href={`/accounts/${account.id}`}
-                        style={{
-                          color: "var(--primary)",
-                          fontSize: 14,
-                          fontWeight: 600,
-                        }}
-                      >
-                        View details →
-                      </Link>
-
-                      <ArchiveAccountButton
-                        accountId={account.id}
-                      />
-                    </div>
-                  </div>
-                ))}
+                    );
+                  },
+                )}
               </div>
             )}
           </>
         )}
       </div>
-    </>
+    </main>
   );
 }
