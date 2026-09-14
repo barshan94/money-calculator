@@ -1,4 +1,3 @@
-cat > playwright.config.ts <<'EOF'
 import { defineConfig, devices } from "@playwright/test";
 import { loadEnvConfig } from "@next/env";
 
@@ -32,11 +31,8 @@ export default defineConfig({
   ],
 
   webServer: {
-    command:
-      "npm run dev -- --webpack --hostname 127.0.0.1",
+    command: "npm run dev -- --webpack --hostname 127.0.0.1",
     url: "http://127.0.0.1:3000",
     reuseExistingServer: true,
   },
 });
-EOF
-
