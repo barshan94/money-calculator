@@ -1,10 +1,13 @@
+cat > playwright.config.ts <<'EOF'
 import { defineConfig, devices } from "@playwright/test";
 import { loadEnvConfig } from "@next/env";
 
 loadEnvConfig(process.cwd());
 
 export default defineConfig({
-  testDir: "./tests/e2e",
+  testDir: "./tests",
+
+  testMatch: /.*\.spec\.ts$/,
 
   use: {
     baseURL: "http://127.0.0.1:3000",
@@ -29,9 +32,11 @@ export default defineConfig({
   ],
 
   webServer: {
-  command: "npm run dev -- --hostname 127.0.0.1",
-  url: "http://127.0.0.1:3000",
-  reuseExistingServer: true,
-  timeout: 120_000,
-},
+    command:
+      "npm run dev -- --webpack --hostname 127.0.0.1",
+    url: "http://127.0.0.1:3000",
+    reuseExistingServer: true,
+  },
 });
+EOF
+
