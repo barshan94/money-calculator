@@ -327,6 +327,70 @@ describe("tuition lifecycle", () => {
         partialHistoryPayment,
       ).toBeTruthy();
 
+
+      /*
+       * INVALID EDIT: 400 -> 1100
+       *
+       * Monthly fee is 1000 BDT.
+       * This must fail and leave the original
+       * payment and account balance unchanged.
+       */
+      const {
+        data: invalidUpdateTransactionId,
+        error: invalidUpdateError,
+      } = await supabase.rpc(
+        "update_tuition_payment",
+        {
+          p_payment_id:
+            firstPayment.id,
+          p_payment_month: month,
+          p_amount: 1100,
+          p_payment_date: paymentDate,
+          p_account_id: account.id,
+          p_notes:
+            "Should be rejected",
+          p_promised_payment_date: null,
+          p_late_reason: null,
+        },
+      );
+
+      expect(
+        invalidUpdateError,
+      ).toBeTruthy();
+
+      expect(
+        invalidUpdateTransactionId,
+      ).toBeNull();
+
+      /*
+       * ORIGINAL 400 BDT PAYMENT MUST REMAIN.
+       */
+      const paymentAfterInvalidUpdate =
+        await getPaymentByTransaction(
+          firstTransactionId,
+        );
+
+      expect(
+        Number(
+          paymentAfterInvalidUpdate.amount,
+        ),
+      ).toBe(400);
+
+      expect(
+        paymentAfterInvalidUpdate.status,
+      ).toBe("posted");
+
+      /*
+       * ACCOUNT BALANCE MUST REMAIN UNCHANGED.
+       */
+      expect(
+        await getAccountBalance(
+          account.id,
+        ),
+      ).toBe(initialBalance + 400);
+    
+
+
       /*
        * EDIT 400 -> 600
        */

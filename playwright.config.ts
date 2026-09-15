@@ -26,6 +26,17 @@ export default defineConfig({
       use: {
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/user.json",
+
+        launchOptions: {
+          executablePath: "/usr/bin/chromium",
+          args: [
+            "--no-sandbox",
+            "--disable-gpu",
+            "--disable-dev-shm-usage",
+            "--disable-software-rasterizer",
+            "--disable-features=UseDBus",
+          ],
+        },
       },
     },
   ],
@@ -37,4 +48,6 @@ export default defineConfig({
     reuseExistingServer: true,
   },
 });
+
+
 
