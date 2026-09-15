@@ -121,10 +121,17 @@ describe("transaction protection", () => {
     );
 
     const { error } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+  await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+if (error) {
+  console.log("AUTH ERROR:", error.message);
+}
+
+expect(error).toBeNull();
+    
 
     expect(error).toBeNull();
   });
@@ -297,5 +304,129 @@ describe("transaction protection", () => {
       expect(cancelError).toBeNull();
     },
   );
+
+  it(
+    "rejects voiding a tuition payment through the generic transaction workflow",
+    async () => {
+      const accounts = await getAccounts();
+
+      const tuitionAccount = accounts.find(
+  (account) => account.currency === "BDT",
+);
+
+      
+
+      expect(tuitionAccount).toBeTruthy();
+
+      const {
+        data: studentId,
+        error: studentError,
+      } = await supabase.rpc(
+        "create_tuition_student",
+        {
+          p_student_name: `Protection Tuition ${Date.now()}`,
+          p_guardian_name: "Protection Guardian",
+          p_whatsapp_number: null,
+          p_monthly_fee: 1000,
+          p_due_day: 10,
+          p_notes: "Transaction protection test",
+        },
+      );
+
+      expect(studentError).toBeNull();
+      expect(studentId).toBeTruthy();
+
+      const month =
+        new Date().toISOString().slice(0, 7) + "-01";
+
+      const {
+        data: transactionId,
+        error: paymentError,
+      } = await supabase.rpc(
+        "record_tuition_payment",
+        {
+          p_student_id: studentId,
+          p_payment_month: month,
+          p_amount: 400,
+          p_payment_date: new Date()
+            .toISOString()
+            .slice(0, 10),
+          p_account_id: tuitionAccount.id,
+          p_notes: "Protection test payment",
+          p_promised_payment_date: null,
+          p_late_reason: null,
+        },
+      );
+
+      expect(paymentError).toBeNull();
+      expect(transactionId).toBeTruthy();
+
+      const {
+        data: voidResult,
+        error: voidError,
+      } = await supabase.rpc(
+        "void_transaction",
+        {
+          p_transaction_id: transactionId,
+        },
+      );
+
+      expect(voidResult).toBeNull();
+      expect(voidError).not.toBeNull();
+      expect(voidError.message).toContain(
+        "Tuition payments must be cancelled from the Tuition section",
+      );
+
+      const {
+        data: transaction,
+        error: transactionCheckError,
+      } = await supabase
+        .from("transactions")
+        .select("id, status")
+        .eq("id", transactionId)
+        .single();
+
+      expect(transactionCheckError).toBeNull();
+      expect(transaction).toEqual({
+        id: transactionId,
+        status: "posted",
+      });
+
+      const {
+        data: payment,
+        error: paymentLookupError,
+      } = await supabase
+        .from("tuition_payments")
+        .select("id")
+        .eq("transaction_id", transactionId)
+        .single();
+
+      expect(paymentLookupError).toBeNull();
+      expect(payment).toBeTruthy();
+
+      const {
+        error: cancelPaymentError,
+      } = await supabase.rpc(
+        "cancel_tuition_payment",
+        {
+          p_payment_id: payment.id,
+        },
+      );
+
+      expect(cancelPaymentError).toBeNull();
+
+      const {
+        error: archiveError,
+      } = await supabase.rpc(
+        "archive_tuition_student",
+        {
+          p_student_id: studentId,
+        },
+      );
+
+      expect(archiveError).toBeNull();
+    },
+  );
+
 });
 

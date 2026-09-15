@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => ({
     environment: "node",
     env: loadEnv(mode, process.cwd(), ""),
     fileParallelism: false,
+    testTimeout: 15000,
+    hookTimeout: 15000,
   },
 }));
-

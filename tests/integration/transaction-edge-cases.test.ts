@@ -160,6 +160,51 @@ describe("transaction edge cases", () => {
     );
   });
 
+  it("rejects NaN and infinite transaction amounts", async () => {
+    const accounts = await getTestAccounts();
+
+    const specialAmounts = [
+      "NaN",
+      "Infinity",
+      "-Infinity",
+    ];
+
+    for (const amount of specialAmounts) {
+      const { data, error } =
+        await supabase.rpc(
+          "create_transaction",
+          {
+            p_transaction_date:
+              new Date().toISOString(),
+            p_description:
+              `Edge case ${amount} amount`,
+            p_reference: null,
+            p_notes: null,
+            p_entries: [
+              {
+                account_id: accounts[0].id,
+                category_id: null,
+                amount,
+                entry_type: "debit",
+              },
+              {
+                account_id: accounts[1].id,
+                category_id: null,
+                amount,
+                entry_type: "credit",
+              },
+            ],
+          },
+        );
+
+      expect(data).toBeNull();
+      expect(error).toBeTruthy();
+      expect(error!.message).toContain(
+        "finite number greater than zero",
+      );
+    }
+  });
+
   it("rejects unbalanced entries", async () => {
     const accounts = await getTestAccounts();
 

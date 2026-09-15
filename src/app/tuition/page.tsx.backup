@@ -1097,7 +1097,7 @@ async function cancelPayment(
 
             </div>
 
-            <div className="action-buttons tuition-actions">
+            <div className="action-buttons">
 
               <button
                 type="submit"
@@ -1543,7 +1543,7 @@ async function cancelPayment(
           ) : (
             <div className="table-wrapper">
 
-              <table className="tuition-table">
+              <table>
 
                 <thead>
                   <tr>
@@ -1682,7 +1682,7 @@ async function cancelPayment(
         ) : (
           <div className="table-wrapper">
 
-            <table className="tuition-table">
+            <table>
 
               <thead>
                 <tr>
@@ -2060,31 +2060,6 @@ async function cancelPayment(
 
       </div>
 
-      <style jsx>{`
-      @media (max-width: 768px) {
-        .tuition-table {
-          font-size: 13px;
-        }
-
-        .tuition-table th,
-        .tuition-table td {
-          padding: 9px 10px;
-        }
-
-        .tuition-actions {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 6px;
-          white-space: normal;
-        }
-
-        .tuition-actions button {
-          min-height: 36px;
-          padding: 7px 10px;
-          font-size: 12px;
-        }
-      }
-    `}</style>
-  </section>
+    </section>
   );
 }
