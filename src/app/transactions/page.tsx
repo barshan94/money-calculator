@@ -88,7 +88,7 @@ export default async function TransactionsPage({
         "id, transaction_date, description, transaction_type, status, created_at, reversal_of_id",
       )
       .eq("user_id", user.id)
-      .eq("status", "posted")
+      .in("status", ["posted", "voided"])
       .order("created_at", {
         ascending: false,
       }),
