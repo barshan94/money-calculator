@@ -5,19 +5,16 @@ loadEnvConfig(process.cwd());
 
 export default defineConfig({
   testDir: "./tests",
-
   testMatch: /.*\.spec\.ts$/,
-
-  use: {
-    baseURL: "http://127.0.0.1:3000",
-    screenshot: "only-on-failure",
-    trace: "on-first-retry",
-  },
 
   projects: [
     {
       name: "setup",
       testMatch: /auth\.setup\.ts/,
+      use: {
+        baseURL: "http://127.0.0.1:3000",
+        executablePath: "/usr/bin/chromium",
+      },
     },
 
     {
@@ -25,7 +22,11 @@ export default defineConfig({
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
+        baseURL: "http://127.0.0.1:3000",
+        executablePath: "/usr/bin/chromium",
         storageState: "playwright/.auth/user.json",
+        screenshot: "only-on-failure",
+        trace: "on-first-retry",
       },
     },
   ],
