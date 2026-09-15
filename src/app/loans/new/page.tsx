@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -204,13 +205,20 @@ export default function NewLoanPage() {
           : "Borrow Money"}
       </h1>
 
-      {message && <p>{message}</p>}
+      {message && (
+        <p role="alert">
+          {message}
+        </p>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Type</label>
+          <label htmlFor="loan-type">
+            Type
+          </label>
 
           <select
+            id="loan-type"
             value={loanType}
             onChange={(event) => {
               setLoanType(
@@ -231,9 +239,12 @@ export default function NewLoanPage() {
         </div>
 
         <div>
-          <label>Person</label>
+          <label htmlFor="loan-person">
+            Person
+          </label>
 
           <input
+            id="loan-person"
             value={personName}
             onChange={(event) =>
               setPersonName(event.target.value)
@@ -259,11 +270,12 @@ export default function NewLoanPage() {
         </div>
 
         <div>
-          <label>
-            WhatsApp Number (optional)
+          <label htmlFor="loan-whatsapp">
+            WhatsApp Number
           </label>
 
           <input
+            id="loan-whatsapp"
             type="tel"
             value={whatsappNumber}
             onChange={(event) =>
@@ -271,16 +283,19 @@ export default function NewLoanPage() {
                 event.target.value,
               )
             }
-            placeholder="+8801XXXXXXXXX"
+            placeholder="Optional"
           />
         </div>
 
         <div>
-          <label>Amount</label>
+          <label htmlFor="loan-amount">
+            Amount
+          </label>
 
           <input
+            id="loan-amount"
             type="number"
-            min="0.01"
+            min="0"
             step="0.01"
             value={amount}
             onChange={(event) =>
@@ -292,9 +307,12 @@ export default function NewLoanPage() {
         </div>
 
         <div>
-          <label>Currency</label>
+          <label htmlFor="loan-currency">
+            Currency
+          </label>
 
           <select
+            id="loan-currency"
             value={currency}
             onChange={(event) => {
               setCurrency(event.target.value);
@@ -309,13 +327,14 @@ export default function NewLoanPage() {
         </div>
 
         <div>
-          <label>
+          <label htmlFor="loan-account">
             {loanType === "lent"
               ? "Money From"
               : "Money Into"}
           </label>
 
           <select
+            id="loan-account"
             value={accountId}
             onChange={(event) =>
               setAccountId(event.target.value)
@@ -326,36 +345,44 @@ export default function NewLoanPage() {
               Select account
             </option>
 
-            {availableAccounts.map((account) => (
-              <option
-                key={account.id}
-                value={account.id}
-              >
-                {account.name}
-              </option>
-            ))}
+            {availableAccounts.map(
+              (account) => (
+                <option
+                  key={account.id}
+                  value={account.id}
+                >
+                  {account.name}
+                </option>
+              ),
+            )}
           </select>
         </div>
 
         <div>
-          <label>
+          <label htmlFor="loan-start">
             Start Date & Time
           </label>
 
           <input
+            id="loan-start"
             type="datetime-local"
             value={startDateTime}
             onChange={(event) =>
-              setStartDateTime(event.target.value)
+              setStartDateTime(
+                event.target.value,
+              )
             }
             required
           />
         </div>
 
         <div>
-          <label>Due Date (optional)</label>
+          <label htmlFor="loan-due">
+            Due Date (optional)
+          </label>
 
           <input
+            id="loan-due"
             type="date"
             value={dueDate}
             onChange={(event) =>
@@ -365,14 +392,20 @@ export default function NewLoanPage() {
         </div>
 
         <div>
-          <label>Description</label>
+          <label htmlFor="loan-description">
+            Description
+          </label>
 
           <textarea
+            id="loan-description"
             value={description}
             onChange={(event) =>
-              setDescription(event.target.value)
+              setDescription(
+                event.target.value,
+              )
             }
             placeholder="Optional"
+            rows={4}
           />
         </div>
 
@@ -380,7 +413,9 @@ export default function NewLoanPage() {
           type="submit"
           disabled={saving}
         >
-          {saving ? "Saving..." : "Save Loan"}
+          {saving
+            ? "Saving..."
+            : "Save Loan"}
         </button>
       </form>
     </main>

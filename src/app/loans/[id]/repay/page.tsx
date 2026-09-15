@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -200,6 +201,7 @@ export default function RecordLoanRepaymentPage() {
     router.push(
       `/loans/${loanId}`,
     );
+
     router.refresh();
   }
 
@@ -211,7 +213,9 @@ export default function RecordLoanRepaymentPage() {
         </h1>
 
         {message && (
-          <p>{message}</p>
+          <p role="alert">
+            {message}
+          </p>
         )}
       </main>
     );
@@ -255,18 +259,22 @@ export default function RecordLoanRepaymentPage() {
       </p>
 
       {message && (
-        <p>{message}</p>
+        <p role="alert">
+          {message}
+        </p>
       )}
 
       <form
         onSubmit={handleSubmit}
       >
         <div>
-          <label>
-            Repayment Amount
+          <label htmlFor="repayment-amount">
+            Amount
           </label>
 
           <input
+            id="repayment-amount"
+            name="amount"
             type="number"
             min="0.01"
             step="0.01"
@@ -281,33 +289,13 @@ export default function RecordLoanRepaymentPage() {
         </div>
 
         <div>
-          <label>
-            Payment Date & Time
-          </label>
-
-          <input
-            type="datetime-local"
-            value={
-              paymentDatetime
-            }
-            onChange={(event) =>
-              setPaymentDatetime(
-                event.target.value,
-              )
-            }
-            required
-          />
-        </div>
-
-        <div>
-          <label>
-            {loan.loan_type ===
-            "lent"
-              ? "Receive Into"
-              : "Pay From"}
+          <label htmlFor="repayment-account">
+            Money To
           </label>
 
           <select
+            id="repayment-account"
+            name="account"
             value={accountId}
             onChange={(event) =>
               setAccountId(
@@ -320,57 +308,64 @@ export default function RecordLoanRepaymentPage() {
               Select account
             </option>
 
-            {accounts.map(
-              (account) => (
-                <option
-                  key={account.id}
-                  value={account.id}
-                >
-                  {account.name}
-                </option>
-              ),
-            )}
+            {accounts.map((account) => (
+              <option
+                key={account.id}
+                value={account.id}
+              >
+                {account.name}
+              </option>
+            ))}
           </select>
         </div>
 
         <div>
-          <label>
+          <label htmlFor="repayment-datetime">
+            Payment Date & Time
+          </label>
+
+          <input
+            id="repayment-datetime"
+            name="paymentDatetime"
+            type="datetime-local"
+            value={paymentDatetime}
+            onChange={(event) =>
+              setPaymentDatetime(
+                event.target.value,
+              )
+            }
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="repayment-description">
             Description
           </label>
 
           <textarea
+            id="repayment-description"
+            name="description"
             value={description}
             onChange={(event) =>
               setDescription(
                 event.target.value,
               )
             }
-            placeholder="Optional"
           />
         </div>
 
-        <div>
-          <button
-            type="submit"
-            disabled={saving}
-          >
-            {saving
-              ? "Saving..."
-              : "Record Repayment"}
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              router.push(
-                `/loans/${loanId}`,
-              )
-            }
-            disabled={saving}
-          >
-            Cancel
-          </button>
-        </div>
+        <button
+          type="submit"
+          disabled={
+            saving ||
+            accounts.length === 0
+          }
+        >
+          {saving
+            ? "Saving..."
+            : "Record Repayment"}
+        </button>
       </form>
     </main>
   );
