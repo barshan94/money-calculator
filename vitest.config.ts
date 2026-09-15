@@ -5,5 +5,7 @@ export default defineConfig(({ mode }) => ({
   test: {
     environment: "node",
     env: loadEnv(mode, process.cwd(), ""),
+    fileParallelism: false,
   },
 }));
+
