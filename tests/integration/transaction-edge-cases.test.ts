@@ -205,6 +205,113 @@ describe("transaction edge cases", () => {
     }
   });
 
+  it("rejects NaN and infinite amounts when updating a transaction", async () => {
+    const accounts = await getTestAccounts();
+
+    const { data: transactionId, error: createError } =
+      await supabase.rpc(
+        "create_transaction",
+        {
+          p_transaction_date:
+            new Date().toISOString(),
+          p_description:
+            "Update special amount regression",
+          p_reference: null,
+          p_notes: null,
+          p_entries: [
+            {
+              account_id: accounts[0].id,
+              category_id: null,
+              amount: 100,
+              entry_type: "debit",
+            },
+            {
+              account_id: accounts[1].id,
+              category_id: null,
+              amount: 100,
+              entry_type: "credit",
+            },
+          ],
+        },
+      );
+
+    expect(createError).toBeNull();
+    expect(transactionId).toBeTruthy();
+
+    const specialAmounts = [
+      "NaN",
+      "Infinity",
+      "-Infinity",
+    ];
+
+    for (const amount of specialAmounts) {
+      const { data, error } =
+        await supabase.rpc(
+          "update_transaction",
+          {
+            p_transaction_id: transactionId,
+            p_entries: [
+              {
+                account_id: accounts[0].id,
+                category_id: null,
+                amount,
+                entry_type: "debit",
+              },
+              {
+                account_id: accounts[1].id,
+                category_id: null,
+                amount,
+                entry_type: "credit",
+              },
+            ],
+            p_transaction_date:
+              new Date().toISOString(),
+            p_description:
+              `Update ${amount} regression`,
+          },
+        );
+
+      expect(data).toBeNull();
+      expect(error).toBeTruthy();
+      expect(error!.message).toContain(
+        "finite number greater than zero",
+      );
+    }
+
+    const { data: transaction, error: transactionError } =
+      await supabase
+        .from("transactions")
+        .select("status, description")
+        .eq("id", transactionId)
+        .single();
+
+    expect(transactionError).toBeNull();
+    expect(transaction?.status).toBe("posted");
+    expect(transaction?.description).toBe(
+      "Update special amount regression",
+    );
+
+    const { data: entries, error: entriesError } =
+      await supabase
+        .from("transaction_entries")
+        .select("amount, entry_type")
+        .eq("transaction_id", transactionId)
+        .order("entry_type", { ascending: true });
+
+    expect(entriesError).toBeNull();
+    expect(entries).toHaveLength(2);
+    expect(entries?.every((entry) => entry.amount === 100)).toBe(
+      true,
+    );
+
+    const { error: voidError } =
+      await supabase.rpc("void_transaction", {
+        p_transaction_id: transactionId,
+      });
+
+    expect(voidError).toBeNull();
+  });
+
   it("rejects unbalanced entries", async () => {
     const accounts = await getTestAccounts();
 
@@ -431,4 +538,3 @@ describe("transaction edge cases", () => {
     );
   });
 });
-
