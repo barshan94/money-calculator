@@ -1,4 +1,3 @@
-
 import { test, expect } from "@playwright/test";
 
 test("loans page loads", async ({ page }) => {
@@ -59,7 +58,8 @@ test("create a lent loan", async ({ page }) => {
   await page.getByLabel("Amount").fill("100");
   await page.getByLabel("Currency").selectOption("BDT");
 
-  const accountSelect = page.getByLabel("Money From");
+  const accountSelect =
+    page.getByLabel("Money From");
 
   await expect(accountSelect).toBeVisible();
 
@@ -102,7 +102,8 @@ test("create a lent loan", async ({ page }) => {
 test("repay a loan partially and settle it", async ({
   page,
 }) => {
-  const personName = `E2E Repayment ${Date.now()}`;
+  const personName =
+    `E2E Settlement ${Date.now()}`;
 
   /*
    * CREATE LOAN
@@ -190,7 +191,7 @@ test("repay a loan partially and settle it", async ({
   );
 
   /*
-   * WAIT FOR REPAYMENT FORM
+   * FIRST REPAYMENT: 40
    */
   await expect(
     page.getByRole("heading", {
@@ -198,9 +199,6 @@ test("repay a loan partially and settle it", async ({
     }),
   ).toBeVisible();
 
-  /*
-   * RECORD PARTIAL REPAYMENT
-   */
   await page.getByLabel("Amount").fill("40");
 
   const repaymentAccount =
@@ -223,15 +221,99 @@ test("repay a loan partially and settle it", async ({
   }).click();
 
   /*
-   * VERIFY RETURN TO DETAIL
+   * VERIFY PARTIAL REPAYMENT
    */
   await expect(page).toHaveURL(
     /\/loans\/[^/]+$/,
   );
 
+  await expect(
+    page.getByText("BDT 60.00", {
+      exact: true,
+    }).first(),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("BDT 40.00", {
+      exact: true,
+    }).first(),
+  ).toBeVisible();
+
   /*
-   * VERIFY OUTSTANDING = 60
+   * SECOND REPAYMENT: 60
    */
+  const secondRepaymentLink =
+    page.getByRole("link", {
+      name: "Record Repayment",
+      exact: true,
+    });
+
+  await expect(
+    secondRepaymentLink,
+  ).toBeVisible();
+
+  const secondRepaymentHref =
+    await secondRepaymentLink.getAttribute(
+      "href",
+    );
+
+  expect(secondRepaymentHref).toMatch(
+    /^\/loans\/[^/]+\/repay$/,
+  );
+
+  await page.goto(secondRepaymentHref!);
+
+  await expect(page).toHaveURL(
+    /\/loans\/[^/]+\/repay$/,
+  );
+
+  await page.getByLabel("Amount").fill("60");
+
+  const secondAccount =
+    page.getByLabel("Money To");
+
+  await expect(secondAccount).toBeVisible();
+
+  await expect(
+    secondAccount.locator("option").nth(1),
+  ).toBeAttached();
+
+  await secondAccount.selectOption({
+    index: 1,
+  });
+
+  await page.getByRole("button", {
+    name: /record repayment/i,
+  }).click();
+
+  /*
+   * VERIFY SETTLEMENT
+   */
+  await expect(page).toHaveURL(
+    /\/loans\/[^/]+$/,
+  );
+
+  await expect(
+    page.getByText("BDT 0.00", {
+      exact: true,
+    }).first(),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("Settled", {
+      exact: true,
+    }).first(),
+  ).toBeVisible();
+
+  /*
+   * VERIFY REPAYMENTS
+   */
+  await expect(
+    page.getByText("BDT 40.00", {
+      exact: true,
+    }).first(),
+  ).toBeVisible();
+
   await expect(
     page.getByText("BDT 60.00", {
       exact: true,
@@ -239,11 +321,13 @@ test("repay a loan partially and settle it", async ({
   ).toBeVisible();
 
   /*
-   * VERIFY REPAYMENT HISTORY
+   * NO MORE ACTIVE REPAYMENT ACTION
    */
   await expect(
-    page.getByText("BDT 40.00", {
+    page.getByRole("link", {
+      name: "Record Repayment",
       exact: true,
-    }).first(),
-  ).toBeVisible();
+    }),
+  ).not.toBeVisible();
 });
+
