@@ -73,14 +73,7 @@ export default function NewInvestmentPage() {
 
     const investedAmount = parseFloat(amount);
 
-    console.log("INVESTMENT DEBUG", {
-  amount,
-  investedAmount,
-  quantity,
-  purchasePrice,
-});
 
-    
 
     if (!name.trim()) {
       setMessage("Enter the investment name.");
@@ -145,7 +138,7 @@ export default function NewInvestmentPage() {
         p_name: name.trim(),
         p_investment_type: investmentType,
         p_currency: currency,
-        p_invested_amount: Math.max(0.01, investedAmount),
+        p_invested_amount: investedAmount,
         p_purchase_date: purchaseDate,
         p_source_account_id: accountId,
         p_quantity: finalQuantity,
@@ -245,7 +238,7 @@ export default function NewInvestmentPage() {
 
           <input
             type="number"
-            min="0"
+            min="0.00000001"
             step="0.00000001"
             value={quantity}
             onChange={(event) =>
@@ -260,7 +253,7 @@ export default function NewInvestmentPage() {
 
           <input
             type="number"
-            min="0"
+            min="0.00000001"
             step="0.00000001"
             value={purchasePrice}
             onChange={(event) =>

@@ -90,20 +90,31 @@ export default function EditDepositPage() {
       return;
     }
 
-    if (rate !== null && rate < 0) {
-      setMessage("Interest rate cannot be negative.");
-      return;
-    }
-
     if (
-      maturity !== null &&
-      maturity < principal
-    ) {
-      setMessage(
-        "Maturity amount cannot be less than principal.",
-      );
-      return;
-    }
+  rate !== null &&
+  (!Number.isFinite(rate) || rate < 0)
+) {
+  setMessage("Enter a valid non-negative interest rate.");
+  return;
+}
+
+if (
+  maturity !== null &&
+  (!Number.isFinite(maturity) || maturity < 0)
+) {
+  setMessage("Enter a valid maturity amount.");
+  return;
+}
+
+if (
+  maturity !== null &&
+  maturity < principal
+) {
+  setMessage(
+    "Maturity amount cannot be less than principal.",
+  );
+  return;
+}
 
     setSaving(true);
 

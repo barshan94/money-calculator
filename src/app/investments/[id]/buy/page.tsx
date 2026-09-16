@@ -159,49 +159,35 @@ export default function BuyMoreInvestmentPage() {
     const buyPrice =
       Number(purchasePrice);
 
-    if (
-      !investedAmount ||
-      investedAmount <= 0
-    ) {
-      setMessage(
-        "Enter a valid investment amount.",
-      );
-      return;
-    }
+   if (
+  !Number.isFinite(investedAmount) ||
+  investedAmount <= 0
+) {
+  setMessage(
+    "Enter a valid investment amount.",
+  );
+  return;
+}
 
-    if (
-      !buyQuantity ||
-      buyQuantity <= 0
-    ) {
-      setMessage(
-        "Enter a valid quantity.",
-      );
-      return;
-    }
+if (
+  !Number.isFinite(buyQuantity) ||
+  buyQuantity <= 0
+) {
+  setMessage(
+    "Enter a valid quantity.",
+  );
+  return;
+}
 
-    if (
-      !buyPrice ||
-      buyPrice <= 0
-    ) {
-      setMessage(
-        "Enter a valid purchase price.",
-      );
-      return;
-    }
-
-    if (!accountId) {
-      setMessage(
-        "Select the source account.",
-      );
-      return;
-    }
-
-    if (!purchaseDate) {
-      setMessage(
-        "Select the purchase date.",
-      );
-      return;
-    }
+if (
+  !Number.isFinite(buyPrice) ||
+  buyPrice <= 0
+) {
+  setMessage(
+    "Enter a valid purchase price.",
+  );
+  return;
+}
 
     setSaving(true);
 

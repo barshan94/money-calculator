@@ -72,10 +72,10 @@ export default function EditInvestmentPage() {
       return;
     }
 
-    if (value < 0) {
-      setMessage("Current value cannot be negative.");
-      return;
-    }
+    if (!Number.isFinite(value) || value < 0) {
+  setMessage("Enter a valid current value.");
+  return;
+}
 
     setSaving(true);
 

@@ -98,7 +98,7 @@ export default function EditBudgetPage() {
       return;
     }
 
-    if (!numericAmount || numericAmount <= 0) {
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
       setMessage("Enter a valid budget amount.");
       return;
     }

@@ -135,14 +135,14 @@ export default function SellInvestmentPage() {
     }
 
     if (
-      !sellQuantity ||
-      sellQuantity <= 0
-    ) {
-      setError(
-        "Enter a valid quantity to sell.",
-      );
-      return;
-    }
+  !Number.isFinite(sellQuantity) ||
+  sellQuantity <= 0
+) {
+  setError(
+    "Enter a valid quantity to sell.",
+  );
+  return;
+}
 
     if (sellQuantity > heldQuantity) {
       setError(
@@ -153,12 +153,15 @@ export default function SellInvestmentPage() {
       return;
     }
 
-    if (!price || price <= 0) {
-      setError(
-        "Enter a valid sale price.",
-      );
-      return;
-    }
+    if (
+  !Number.isFinite(price) ||
+  price <= 0
+) {
+  setError(
+    "Enter a valid sale price.",
+  );
+  return;
+}
 
     if (!accountId) {
       setError(
