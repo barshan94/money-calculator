@@ -1,6 +1,21 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
+function formatMoney(amount: number, currency: string) {
+  return `${currency} ${amount.toLocaleString("en-BD", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function formatDate(date: string) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-BD", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default async function GoalsReportPage() {
   const supabase = await createClient();
 
@@ -45,127 +60,408 @@ export default async function GoalsReportPage() {
     totals.set(goal.currency, total);
   }
 
+  const hasGoals = (goals ?? []).length > 0;
+
   return (
-    <main>
-      <Link href="/reports">← Back to Reports</Link>
+    <main
+      style={{
+        maxWidth: "1100px",
+        margin: "0 auto",
+        padding: "24px 16px 48px",
+      }}
+    >
+      <Link
+        href="/reports"
+        style={{
+          display: "inline-block",
+          marginBottom: "12px",
+          textDecoration: "none",
+        }}
+      >
+        ← Back to Reports
+      </Link>
 
-      <h1>Goals Report</h1>
+      <div style={{ marginBottom: "28px" }}>
+        <h1 style={{ margin: 0 }}>Goals Report</h1>
 
-      {Array.from(totals.entries()).map(
-        ([currency, total]) => {
-          const remaining = Math.max(
-            total.target - total.current,
-            0,
-          );
+        <p
+          style={{
+            margin: "8px 0 0",
+            opacity: 0.7,
+          }}
+        >
+          Track your savings targets and progress toward each goal.
+        </p>
+      </div>
 
-          const percentage =
-            total.target > 0
-              ? Math.min(
-                  (total.current / total.target) * 100,
-                  100,
-                )
-              : 0;
+      {!hasGoals ? (
+        <section
+          style={{
+            border: "1px solid #ddd",
+            borderRadius: "12px",
+            padding: "32px 20px",
+            textAlign: "center",
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>No goals available</h2>
 
-          return (
-            <section key={currency}>
-              <h2>{currency}</h2>
+          <p style={{ opacity: 0.7 }}>
+            Create a financial goal to start tracking your progress.
+          </p>
 
-              <div className="card-grid">
-                <div className="card">
-                  <h3>Total Target</h3>
-                  <p>
-                    {currency}{" "}
-                    {total.target.toLocaleString("en-BD", {
-                      minimumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-
-                <div className="card">
-                  <h3>Total Saved</h3>
-                  <p>
-                    {currency}{" "}
-                    {total.current.toLocaleString("en-BD", {
-                      minimumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-
-                <div className="card">
-                  <h3>Remaining</h3>
-                  <p>
-                    {currency}{" "}
-                    {remaining.toLocaleString("en-BD", {
-                      minimumFractionDigits: 2,
-                    })}
-                  </p>
-                </div>
-
-                <div className="card">
-                  <h3>Overall Progress</h3>
-                  <p>{percentage.toFixed(1)}%</p>
-                </div>
-              </div>
-            </section>
-          );
-        },
-      )}
-
-      {(goals ?? []).length === 0 ? (
-        <p>No goals available.</p>
+          <Link
+            href="/goals/new"
+            style={{
+              display: "inline-block",
+              marginTop: "12px",
+              textDecoration: "none",
+            }}
+          >
+            Create Goal →
+          </Link>
+        </section>
       ) : (
-        <section>
-          <h2>Goal Details</h2>
-
-          {(goals ?? []).map((goal) => {
-            const target = Number(goal.target_amount);
-            const current = Number(goal.current_amount);
+        <>
+          {Array.from(totals.entries()).map(([currency, total]) => {
+            const remaining = Math.max(
+              total.target - total.current,
+              0,
+            );
 
             const percentage =
-              target > 0
-                ? Math.min((current / target) * 100, 100)
+              total.target > 0
+                ? Math.min(
+                    (total.current / total.target) * 100,
+                    100,
+                  )
                 : 0;
 
             return (
-              <div className="card" key={goal.id}>
-                <h3>{goal.name}</h3>
+              <section
+                key={currency}
+                style={{
+                  marginBottom: "36px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <h2 style={{ margin: 0 }}>{currency}</h2>
 
-                <p>Type: {goal.goal_type}</p>
-                <p>Status: {goal.status}</p>
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      padding: "4px 8px",
+                      border: "1px solid #ddd",
+                      borderRadius: "999px",
+                      opacity: 0.75,
+                    }}
+                  >
+                    Currency
+                  </span>
+                </div>
 
-                <p>
-                  Progress: {goal.currency}{" "}
-                  {current.toLocaleString("en-BD", {
-                    minimumFractionDigits: 2,
-                  })}
-                  {" / "}
-                  {target.toLocaleString("en-BD", {
-                    minimumFractionDigits: 2,
-                  })}
-                </p>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(190px, 1fr))",
+                    gap: "14px",
+                  }}
+                >
+                  <div
+                    style={{
+                      border: "1px solid #ddd",
+                      borderRadius: "12px",
+                      padding: "18px",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        margin: "0 0 8px",
+                        fontSize: "15px",
+                      }}
+                    >
+                      Total Target
+                    </h3>
 
-                <p>
-                  {percentage.toFixed(1)}% complete
-                </p>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "22px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {formatMoney(total.target, currency)}
+                    </p>
+                  </div>
 
-                <progress
-                  value={percentage}
-                  max="100"
-                />
+                  <div
+                    style={{
+                      border: "1px solid #ddd",
+                      borderRadius: "12px",
+                      padding: "18px",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        margin: "0 0 8px",
+                        fontSize: "15px",
+                      }}
+                    >
+                      Total Saved
+                    </h3>
 
-                {goal.target_date && (
-                  <p>
-                    Target Date:{" "}
-                    {new Date(
-                      goal.target_date,
-                    ).toLocaleDateString()}
-                  </p>
-                )}
-              </div>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "22px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {formatMoney(total.current, currency)}
+                    </p>
+                  </div>
+
+                  <div
+                    style={{
+                      border: "1px solid #ddd",
+                      borderRadius: "12px",
+                      padding: "18px",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        margin: "0 0 8px",
+                        fontSize: "15px",
+                      }}
+                    >
+                      Remaining
+                    </h3>
+
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "22px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {formatMoney(remaining, currency)}
+                    </p>
+                  </div>
+
+                  <div
+                    style={{
+                      border: "1px solid #ddd",
+                      borderRadius: "12px",
+                      padding: "18px",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        margin: "0 0 8px",
+                        fontSize: "15px",
+                      }}
+                    >
+                      Overall Progress
+                    </h3>
+
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "22px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {percentage.toFixed(1)}%
+                    </p>
+
+                    <progress
+                      value={percentage}
+                      max={100}
+                      style={{
+                        width: "100%",
+                        marginTop: "10px",
+                      }}
+                    />
+                  </div>
+                </div>
+              </section>
             );
           })}
-        </section>
+
+          <section>
+            <h2>Goal Details</h2>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: "14px",
+                marginTop: "16px",
+              }}
+            >
+              {(goals ?? []).map((goal) => {
+                const target = Number(goal.target_amount);
+                const current = Number(goal.current_amount);
+
+                const percentage =
+                  target > 0
+                    ? Math.min((current / target) * 100, 100)
+                    : 0;
+
+                const remaining = Math.max(
+                  target - current,
+                  0,
+                );
+
+                return (
+                  <Link
+                    href={`/goals/${goal.id}`}
+                    key={goal.id}
+                    style={{
+                      display: "block",
+                      border: "1px solid #ddd",
+                      borderRadius: "12px",
+                      padding: "18px",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: "12px",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          margin: 0,
+                          fontSize: "17px",
+                        }}
+                      >
+                        {goal.name}
+                      </h3>
+
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          padding: "4px 8px",
+                          border: "1px solid #ddd",
+                          borderRadius: "999px",
+                          whiteSpace: "nowrap",
+                          opacity: 0.75,
+                        }}
+                      >
+                        {goal.currency}
+                      </span>
+                    </div>
+
+                    <p
+                      style={{
+                        margin: "12px 0 4px",
+                        fontSize: "13px",
+                        opacity: 0.65,
+                      }}
+                    >
+                      {goal.goal_type} · {goal.status}
+                    </p>
+
+                    <p
+                      style={{
+                        margin: "14px 0 6px",
+                        fontSize: "13px",
+                        opacity: 0.65,
+                      }}
+                    >
+                      Progress
+                    </p>
+
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "19px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {formatMoney(current, goal.currency)}
+                    </p>
+
+                    <p
+                      style={{
+                        margin: "4px 0 12px",
+                        fontSize: "13px",
+                        opacity: 0.65,
+                      }}
+                    >
+                      of {formatMoney(target, goal.currency)}
+                    </p>
+
+                    <progress
+                      value={percentage}
+                      max={100}
+                      style={{
+                        width: "100%",
+                      }}
+                    />
+
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        gap: "12px",
+                        marginTop: "8px",
+                        fontSize: "13px",
+                        opacity: 0.7,
+                      }}
+                    >
+                      <span>{percentage.toFixed(1)}% complete</span>
+
+                      <span>
+                        {formatMoney(
+                          remaining,
+                          goal.currency,
+                        )}{" "}
+                        left
+                      </span>
+                    </div>
+
+                    {goal.target_date && (
+                      <p
+                        style={{
+                          margin: "14px 0 0",
+                          fontSize: "13px",
+                          opacity: 0.7,
+                        }}
+                      >
+                        Target: {formatDate(goal.target_date)}
+                      </p>
+                    )}
+
+                    <p
+                      style={{
+                        margin: "14px 0 0",
+                        fontSize: "13px",
+                        opacity: 0.6,
+                      }}
+                    >
+                      View goal →
+                    </p>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        </>
       )}
     </main>
   );
 }
+

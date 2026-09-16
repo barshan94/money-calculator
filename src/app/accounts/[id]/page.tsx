@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -15,9 +14,7 @@ type Props = {
   }>;
 };
 
-function formatLiquidityClass(
-  value: string | null,
-) {
+function formatLiquidityClass(value: string | null) {
   switch (value) {
     case "immediate":
       return "Available now";
@@ -111,8 +108,7 @@ export default async function AccountDetailPage({
     throw new Error(openingError.message);
   }
 
-  const hasOpeningBalance =
-    !!openingBalanceEntry;
+  const hasOpeningBalance = !!openingBalanceEntry;
 
   const {
     data: entries,
@@ -227,8 +223,7 @@ export default async function AccountDetailPage({
                     href={`/accounts/${accountRow.id}/edit`}
                     style={{
                       padding: "10px 14px",
-                      border:
-                        "1px solid var(--border)",
+                      border: "1px solid var(--border)",
                       borderRadius: 8,
                       fontWeight: 600,
                       textDecoration: "none",
@@ -243,12 +238,10 @@ export default async function AccountDetailPage({
                       style={{
                         padding: "10px 14px",
                         borderRadius: 8,
-                        background:
-                          "var(--primary)",
+                        background: "var(--primary)",
                         color: "#fff",
                         fontWeight: 600,
-                        textDecoration:
-                          "none",
+                        textDecoration: "none",
                       }}
                     >
                       Add Opening Balance
@@ -369,8 +362,7 @@ export default async function AccountDetailPage({
             </p>
 
             <strong>
-              {accountRow.account_type ===
-              "asset"
+              {accountRow.account_type === "asset"
                 ? formatLiquidityClass(
                     accountRow.liquidity_class,
                   )
@@ -393,9 +385,7 @@ export default async function AccountDetailPage({
             </p>
 
             <strong>
-              {archived
-                ? "Archived"
-                : "Active"}
+              {archived ? "Archived" : "Active"}
             </strong>
           </div>
         </div>
@@ -457,9 +447,7 @@ export default async function AccountDetailPage({
           >
             {entries.map((entry) => {
               const transaction =
-                Array.isArray(
-                  entry.transactions,
-                )
+                Array.isArray(entry.transactions)
                   ? entry.transactions[0]
                   : entry.transactions;
 
@@ -477,14 +465,12 @@ export default async function AccountDetailPage({
                   className="card"
                   style={{
                     display: "flex",
-                    justifyContent:
-                      "space-between",
+                    justifyContent: "space-between",
                     alignItems: "center",
                     gap: 16,
                     padding: 16,
                     textDecoration: "none",
-                    color:
-                      "var(--foreground)",
+                    color: "var(--foreground)",
                   }}
                 >
                   <div>
@@ -516,8 +502,7 @@ export default async function AccountDetailPage({
                   <div
                     style={{
                       textAlign: "right",
-                      whiteSpace:
-                        "nowrap",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     <strong
@@ -527,13 +512,9 @@ export default async function AccountDetailPage({
                           : "var(--success)",
                       }}
                     >
-                      {isDebit
-                        ? "−"
-                        : "+"}
+                      {isDebit ? "−" : "+"}
                       {formatMoney(
-                        Number(
-                          entry.amount,
-                        ),
+                        Number(entry.amount),
                         accountRow.currency,
                       )}
                     </strong>
@@ -541,11 +522,9 @@ export default async function AccountDetailPage({
                     <p
                       className="muted"
                       style={{
-                        margin:
-                          "4px 0 0",
+                        margin: "4px 0 0",
                         fontSize: 12,
-                        textTransform:
-                          "capitalize",
+                        textTransform: "capitalize",
                       }}
                     >
                       {entry.entry_type}
@@ -560,3 +539,5 @@ export default async function AccountDetailPage({
     </div>
   );
 }
+
+

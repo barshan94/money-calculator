@@ -1,6 +1,21 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
+function formatMoney(amount: number, currency: string) {
+  return `${currency} ${amount.toLocaleString("en-BD", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function formatDate(date: string) {
+  return new Date(`${date}T00:00:00`).toLocaleDateString("en-BD", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 export default async function DepositReportPage() {
   const supabase = await createClient();
 
@@ -47,108 +62,357 @@ export default async function DepositReportPage() {
     totals.set(deposit.currency, total);
   }
 
+  const hasDeposits = (deposits ?? []).length > 0;
+
   return (
-    <main>
-      <Link href="/reports">
+    <main
+      style={{
+        maxWidth: "1100px",
+        margin: "0 auto",
+        padding: "24px 16px 48px",
+      }}
+    >
+      <Link
+        href="/reports"
+        style={{
+          display: "inline-block",
+          marginBottom: "12px",
+          textDecoration: "none",
+        }}
+      >
         ← Back to Reports
       </Link>
 
-      <h1>Deposits Report</h1>
+      <div style={{ marginBottom: "28px" }}>
+        <h1 style={{ margin: 0 }}>Deposits Report</h1>
 
-      {Array.from(totals.entries()).map(
-        ([currency, total]) => (
-          <section key={currency}>
-            <h2>{currency}</h2>
+        <p
+          style={{
+            margin: "8px 0 0",
+            opacity: 0.7,
+          }}
+        >
+          Overview of your active deposits and expected maturity values.
+        </p>
+      </div>
 
-            <div className="card-grid">
-              <div className="card">
-                <h3>Total Principal</h3>
-                <p>
-                  {currency}{" "}
-                  {total.principal.toLocaleString("en-BD", {
-                    minimumFractionDigits: 2,
-                  })}
-                </p>
-              </div>
+      {!hasDeposits ? (
+        <section
+          style={{
+            border: "1px solid #ddd",
+            borderRadius: "12px",
+            padding: "32px 20px",
+            textAlign: "center",
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>No deposits available</h2>
 
-              <div className="card">
-                <h3>Expected Maturity</h3>
-                <p>
-                  {currency}{" "}
-                  {total.maturity.toLocaleString("en-BD", {
-                    minimumFractionDigits: 2,
-                  })}
-                </p>
-              </div>
+          <p style={{ opacity: 0.7 }}>
+            Create a deposit to see its details and expected returns here.
+          </p>
 
-              <div className="card">
-                <h3>Expected Interest</h3>
-                <p>
-                  {currency}{" "}
-                  {(total.maturity - total.principal).toLocaleString(
-                    "en-BD",
-                    {
-                      minimumFractionDigits: 2,
-                    },
-                  )}
-                </p>
-              </div>
-            </div>
-          </section>
-        ),
-      )}
-
-      {(deposits ?? []).length === 0 ? (
-        <p>No deposits available.</p>
+          <Link
+            href="/deposits/new"
+            style={{
+              display: "inline-block",
+              marginTop: "12px",
+              textDecoration: "none",
+            }}
+          >
+            Create Deposit →
+          </Link>
+        </section>
       ) : (
-        <section>
-          <h2>Deposit Details</h2>
+        <>
+          {Array.from(totals.entries()).map(([currency, total]) => {
+            const expectedInterest =
+              total.maturity - total.principal;
 
-          {(deposits ?? []).map((deposit) => (
-            <div className="card" key={deposit.id}>
-              <h3>{deposit.name}</h3>
+            return (
+              <section
+                key={currency}
+                style={{
+                  marginBottom: "36px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "10px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <h2 style={{ margin: 0 }}>{currency}</h2>
 
-              <p>Type: {deposit.deposit_type}</p>
-              <p>Status: {deposit.status}</p>
+                  <span
+                    style={{
+                      fontSize: "13px",
+                      padding: "4px 8px",
+                      border: "1px solid #ddd",
+                      borderRadius: "999px",
+                      opacity: 0.75,
+                    }}
+                  >
+                    Currency
+                  </span>
+                </div>
 
-              <p>
-                Principal: {deposit.currency}{" "}
-                {Number(
-                  deposit.principal_amount,
-                ).toLocaleString("en-BD", {
-                  minimumFractionDigits: 2,
-                })}
-              </p>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(200px, 1fr))",
+                    gap: "14px",
+                  }}
+                >
+                  <div
+                    style={{
+                      border: "1px solid #ddd",
+                      borderRadius: "12px",
+                      padding: "18px",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        margin: "0 0 8px",
+                        fontSize: "15px",
+                      }}
+                    >
+                      Total Principal
+                    </h3>
 
-              <p>
-                Maturity: {deposit.currency}{" "}
-                {Number(
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "22px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {formatMoney(total.principal, currency)}
+                    </p>
+                  </div>
+
+                  <div
+                    style={{
+                      border: "1px solid #ddd",
+                      borderRadius: "12px",
+                      padding: "18px",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        margin: "0 0 8px",
+                        fontSize: "15px",
+                      }}
+                    >
+                      Expected Maturity
+                    </h3>
+
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "22px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {formatMoney(total.maturity, currency)}
+                    </p>
+                  </div>
+
+                  <div
+                    style={{
+                      border: "1px solid #ddd",
+                      borderRadius: "12px",
+                      padding: "18px",
+                    }}
+                  >
+                    <h3
+                      style={{
+                        margin: "0 0 8px",
+                        fontSize: "15px",
+                      }}
+                    >
+                      Expected Interest
+                    </h3>
+
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "22px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {formatMoney(expectedInterest, currency)}
+                    </p>
+                  </div>
+                </div>
+              </section>
+            );
+          })}
+
+          <section>
+            <h2>Deposit Details</h2>
+
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: "14px",
+                marginTop: "16px",
+              }}
+            >
+              {(deposits ?? []).map((deposit) => {
+                const maturityAmount = Number(
                   deposit.maturity_amount ??
                     deposit.principal_amount,
-                ).toLocaleString("en-BD", {
-                  minimumFractionDigits: 2,
-                })}
-              </p>
+                );
 
-              {deposit.interest_rate !== null && (
-                <p>
-                  Interest Rate:{" "}
-                  {Number(deposit.interest_rate).toFixed(2)}%
-                </p>
-              )}
+                return (
+                  <Link
+                    href={`/deposits/${deposit.id}`}
+                    key={deposit.id}
+                    style={{
+                      display: "block",
+                      border: "1px solid #ddd",
+                      borderRadius: "12px",
+                      padding: "18px",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        gap: "12px",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          margin: 0,
+                          fontSize: "17px",
+                        }}
+                      >
+                        {deposit.name}
+                      </h3>
 
-              {deposit.maturity_date && (
-                <p>
-                  Maturity Date:{" "}
-                  {new Date(
-                    deposit.maturity_date,
-                  ).toLocaleDateString()}
-                </p>
-              )}
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          padding: "4px 8px",
+                          border: "1px solid #ddd",
+                          borderRadius: "999px",
+                          whiteSpace: "nowrap",
+                          opacity: 0.75,
+                        }}
+                      >
+                        {deposit.currency}
+                      </span>
+                    </div>
+
+                    <p
+                      style={{
+                        margin: "12px 0 4px",
+                        fontSize: "13px",
+                        opacity: 0.65,
+                      }}
+                    >
+                      {deposit.deposit_type} · {deposit.status}
+                    </p>
+
+                    <div style={{ marginTop: "14px" }}>
+                      <p
+                        style={{
+                          margin: "0 0 6px",
+                          fontSize: "13px",
+                          opacity: 0.65,
+                        }}
+                      >
+                        Principal
+                      </p>
+
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "20px",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {formatMoney(
+                          Number(deposit.principal_amount),
+                          deposit.currency,
+                        )}
+                      </p>
+                    </div>
+
+                    <div style={{ marginTop: "14px" }}>
+                      <p
+                        style={{
+                          margin: "0 0 6px",
+                          fontSize: "13px",
+                          opacity: 0.65,
+                        }}
+                      >
+                        Expected Maturity
+                      </p>
+
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "18px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {formatMoney(
+                          maturityAmount,
+                          deposit.currency,
+                        )}
+                      </p>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "14px",
+                        marginTop: "16px",
+                        fontSize: "13px",
+                        opacity: 0.7,
+                      }}
+                    >
+                      {deposit.interest_rate !== null && (
+                        <span>
+                          Rate:{" "}
+                          {Number(deposit.interest_rate).toFixed(2)}%
+                        </span>
+                      )}
+
+                      {deposit.maturity_date && (
+                        <span>
+                          Matures: {formatDate(deposit.maturity_date)}
+                        </span>
+                      )}
+                    </div>
+
+                    <p
+                      style={{
+                        margin: "16px 0 0",
+                        fontSize: "13px",
+                        opacity: 0.6,
+                      }}
+                    >
+                      View deposit →
+                    </p>
+                  </Link>
+                );
+              })}
             </div>
-          ))}
-        </section>
+          </section>
+        </>
       )}
     </main>
   );
 }
+
