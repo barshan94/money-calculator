@@ -1,4 +1,5 @@
 "use client";
+
 import {
   FormEvent,
   useEffect,
@@ -53,50 +54,78 @@ export default function EditRecurringTransactionPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
+  const today = new Date().toISOString().slice(0, 10);
+
   useEffect(() => {
+    let cancelled = false;
+
     async function load() {
-      const [recurringResult, categoriesResult, accountsResult] =
-        await Promise.all([
-          supabase
-            .from("recurring_transactions")
-            .select(`
-              id,
-              name,
-              transaction_type,
-              amount,
-              currency,
-              frequency,
-              next_run_date,
-              category_id,
-              source_account_id,
-              destination_account_id,
-              description
-            `)
-            .eq("id", recurringId)
-            .eq("is_active", true)
-            .single(),
+      setLoading(true);
+      setMessage("");
 
-          supabase
-            .from("categories")
-            .select("id, name, category_type")
-            .eq("is_archived", false)
-            .order("name"),
+      const [
+        recurringResult,
+        categoriesResult,
+        accountsResult,
+      ] = await Promise.all([
+        supabase
+          .from("recurring_transactions")
+          .select(`
+            id,
+            name,
+            transaction_type,
+            amount,
+            currency,
+            frequency,
+            next_run_date,
+            category_id,
+            source_account_id,
+            destination_account_id,
+            description
+          `)
+          .eq("id", recurringId)
+          .eq("is_active", true)
+          .single(),
 
-          supabase
-            .from("accounts")
-            .select("id, name, account_type")
-            .eq("is_archived", false)
-            .eq("is_system", false)
-            .order("name"),
-        ]);
+        supabase
+          .from("categories")
+          .select("id, name, category_type")
+          .eq("is_archived", false)
+          .order("name"),
 
-      if (
-        recurringResult.error ||
-        !recurringResult.data ||
-        categoriesResult.error ||
-        accountsResult.error
-      ) {
-        setMessage("Unable to load recurring transaction.");
+        supabase
+          .from("accounts")
+          .select("id, name, account_type")
+          .eq("is_archived", false)
+          .eq("is_system", false)
+          .order("name"),
+      ]);
+
+      if (cancelled) {
+        return;
+      }
+
+      if (recurringResult.error || !recurringResult.data) {
+        setMessage(
+          recurringResult.error?.message ??
+            "Unable to find this recurring transaction.",
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (categoriesResult.error) {
+        setMessage(
+          `Failed to load categories: ${categoriesResult.error.message}`,
+        );
+        setLoading(false);
+        return;
+      }
+
+      if (accountsResult.error) {
+        setMessage(
+          `Failed to load accounts: ${accountsResult.error.message}`,
+        );
         setLoading(false);
         return;
       }
@@ -122,29 +151,48 @@ export default function EditRecurringTransactionPage() {
       setLoading(false);
     }
 
-    load();
-  }, [recurringId]);
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [recurringId, supabase]);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
+
+    if (saving) {
+      return;
+    }
+
     setMessage("");
 
+    const trimmedName = name.trim();
+    const trimmedDescription = description.trim();
     const numericAmount = Number(amount);
 
-    if (!name.trim()) {
+    if (!trimmedName) {
       setMessage("Enter a name.");
       return;
     }
 
-    if (!numericAmount || numericAmount <= 0) {
-      setMessage("Enter a valid amount.");
+    if (
+      !Number.isFinite(numericAmount) ||
+      numericAmount <= 0
+    ) {
+      setMessage("Enter a valid amount greater than zero.");
       return;
     }
 
     if (!nextRunDate) {
       setMessage("Select the next run date.");
+      return;
+    }
+
+    if (nextRunDate < today) {
+      setMessage("Next run date cannot be in the past.");
       return;
     }
 
@@ -185,7 +233,7 @@ export default function EditRecurringTransactionPage() {
       "update_recurring_transaction",
       {
         p_recurring_id: recurringId,
-        p_name: name,
+        p_name: trimmedName,
         p_transaction_type: type,
         p_amount: numericAmount,
         p_currency: currency,
@@ -199,7 +247,7 @@ export default function EditRecurringTransactionPage() {
           type === "expense"
             ? null
             : destinationAccountId,
-        p_description: description || null,
+        p_description: trimmedDescription || null,
       },
     );
 
@@ -219,35 +267,133 @@ export default function EditRecurringTransactionPage() {
 
   if (loading) {
     return (
-      <main>
-        <p>Loading...</p>
+      <main
+        style={{
+          maxWidth: 760,
+          margin: "0 auto",
+          padding: "24px 16px 48px",
+        }}
+      >
+        <h1
+          style={{
+            margin: "0 0 8px",
+            fontSize: "clamp(24px, 5vw, 32px)",
+          }}
+        >
+          Edit Recurring Transaction
+        </h1>
+
+        <p style={{ color: "#666" }}>
+          Loading recurring transaction...
+        </p>
       </main>
     );
   }
 
   return (
-    <main>
-      <h1>Edit Recurring Transaction</h1>
+    <main
+      style={{
+        maxWidth: 760,
+        margin: "0 auto",
+        padding: "24px 16px 48px",
+      }}
+    >
+      <div style={{ marginBottom: 24 }}>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: "clamp(24px, 5vw, 32px)",
+            lineHeight: 1.2,
+          }}
+        >
+          Edit Recurring Transaction
+        </h1>
 
-      {message && <p>{message}</p>}
+        <p
+          style={{
+            margin: "8px 0 0",
+            color: "#666",
+            fontSize: 14,
+          }}
+        >
+          Update the schedule, amount, accounts, or other
+          details.
+        </p>
+      </div>
 
-      <form onSubmit={handleSubmit}>
+      {message && (
+        <div
+          role="alert"
+          style={{
+            marginBottom: 18,
+            padding: 12,
+            borderRadius: 8,
+            background: "#fff1f1",
+            border: "1px solid #f0caca",
+            color: "#a00000",
+            fontSize: 14,
+          }}
+        >
+          {message}
+        </div>
+      )}
+
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: "grid",
+          gap: 18,
+          padding: 20,
+          border: "1px solid #e5e5e5",
+          borderRadius: 12,
+          background: "#fff",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+        }}
+      >
         <div>
-          <label>Name</label>
+          <label
+            htmlFor="name"
+            style={{
+              display: "block",
+              marginBottom: 7,
+              fontWeight: 600,
+            }}
+          >
+            Name
+          </label>
 
           <input
+            id="name"
             value={name}
             onChange={(event) =>
               setName(event.target.value)
             }
             required
+            disabled={saving}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              padding: 11,
+              border: "1px solid #ccc",
+              borderRadius: 7,
+            }}
           />
         </div>
 
         <div>
-          <label>Type</label>
+          <label
+            htmlFor="type"
+            style={{
+              display: "block",
+              marginBottom: 7,
+              fontWeight: 600,
+            }}
+          >
+            Type
+          </label>
 
           <select
+            id="type"
             value={type}
             onChange={(event) => {
               const newType =
@@ -258,6 +404,15 @@ export default function EditRecurringTransactionPage() {
               setSourceAccountId("");
               setDestinationAccountId("");
             }}
+            disabled={saving}
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              padding: 11,
+              border: "1px solid #ccc",
+              borderRadius: 7,
+              background: "#fff",
+            }}
           >
             <option value="expense">Expense</option>
             <option value="income">Income</option>
@@ -265,82 +420,193 @@ export default function EditRecurringTransactionPage() {
           </select>
         </div>
 
-        <div>
-          <label>Amount</label>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 16,
+          }}
+        >
+          <div>
+            <label
+              htmlFor="amount"
+              style={{
+                display: "block",
+                marginBottom: 7,
+                fontWeight: 600,
+              }}
+            >
+              Amount
+            </label>
 
-          <input
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={amount}
-            onChange={(event) =>
-              setAmount(event.target.value)
-            }
-            required
-          />
+            <input
+              id="amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              inputMode="decimal"
+              value={amount}
+              onChange={(event) =>
+                setAmount(event.target.value)
+              }
+              required
+              disabled={saving}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: 11,
+                border: "1px solid #ccc",
+                borderRadius: 7,
+              }}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="currency"
+              style={{
+                display: "block",
+                marginBottom: 7,
+                fontWeight: 600,
+              }}
+            >
+              Currency
+            </label>
+
+            <select
+              id="currency"
+              value={currency}
+              onChange={(event) =>
+                setCurrency(event.target.value)
+              }
+              disabled={saving}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: 11,
+                border: "1px solid #ccc",
+                borderRadius: 7,
+                background: "#fff",
+              }}
+            >
+              <option value="BDT">BDT</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+            </select>
+          </div>
         </div>
 
-        <div>
-          <label>Currency</label>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: 16,
+          }}
+        >
+          <div>
+            <label
+              htmlFor="frequency"
+              style={{
+                display: "block",
+                marginBottom: 7,
+                fontWeight: 600,
+              }}
+            >
+              Frequency
+            </label>
 
-          <select
-            value={currency}
-            onChange={(event) =>
-              setCurrency(event.target.value)
-            }
-          >
-            <option value="BDT">BDT</option>
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-            <option value="GBP">GBP</option>
-          </select>
-        </div>
+            <select
+              id="frequency"
+              value={frequency}
+              onChange={(event) =>
+                setFrequency(
+                  event.target.value as Frequency,
+                )
+              }
+              disabled={saving}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: 11,
+                border: "1px solid #ccc",
+                borderRadius: 7,
+                background: "#fff",
+              }}
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
 
-        <div>
-          <label>Frequency</label>
+          <div>
+            <label
+              htmlFor="nextRunDate"
+              style={{
+                display: "block",
+                marginBottom: 7,
+                fontWeight: 600,
+              }}
+            >
+              Next Run Date
+            </label>
 
-          <select
-            value={frequency}
-            onChange={(event) =>
-              setFrequency(
-                event.target.value as Frequency,
-              )
-            }
-          >
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="yearly">Yearly</option>
-          </select>
-        </div>
-
-        <div>
-          <label>Next Run Date</label>
-
-          <input
-            type="date"
-            value={nextRunDate}
-            onChange={(event) =>
-              setNextRunDate(event.target.value)
-            }
-            required
-          />
+            <input
+              id="nextRunDate"
+              type="date"
+              min={today}
+              value={nextRunDate}
+              onChange={(event) =>
+                setNextRunDate(event.target.value)
+              }
+              required
+              disabled={saving}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: 11,
+                border: "1px solid #ccc",
+                borderRadius: 7,
+              }}
+            />
+          </div>
         </div>
 
         {type !== "transfer" && (
           <div>
-            <label>Category</label>
+            <label
+              htmlFor="category"
+              style={{
+                display: "block",
+                marginBottom: 7,
+                fontWeight: 600,
+              }}
+            >
+              Category
+            </label>
 
             <select
+              id="category"
               value={categoryId}
               onChange={(event) =>
                 setCategoryId(event.target.value)
               }
               required
+              disabled={saving}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: 11,
+                border: "1px solid #ccc",
+                borderRadius: 7,
+                background: "#fff",
+              }}
             >
-              <option value="">
-                Select category
-              </option>
+              <option value="">Select category</option>
 
               {visibleCategories.map((category) => (
                 <option
@@ -351,24 +617,52 @@ export default function EditRecurringTransactionPage() {
                 </option>
               ))}
             </select>
+
+            {visibleCategories.length === 0 && (
+              <p
+                style={{
+                  margin: "7px 0 0",
+                  color: "#777",
+                  fontSize: 13,
+                }}
+              >
+                No active {type} categories are available.
+              </p>
+            )}
           </div>
         )}
 
-        {(type === "expense" ||
-          type === "transfer") && (
+        {(type === "expense" || type === "transfer") && (
           <div>
-            <label>Source Account</label>
+            <label
+              htmlFor="sourceAccount"
+              style={{
+                display: "block",
+                marginBottom: 7,
+                fontWeight: 600,
+              }}
+            >
+              Source Account
+            </label>
 
             <select
+              id="sourceAccount"
               value={sourceAccountId}
               onChange={(event) =>
                 setSourceAccountId(event.target.value)
               }
               required
+              disabled={saving}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: 11,
+                border: "1px solid #ccc",
+                borderRadius: 7,
+                background: "#fff",
+              }}
             >
-              <option value="">
-                Select account
-              </option>
+              <option value="">Select account</option>
 
               {accounts.map((account) => (
                 <option
@@ -382,23 +676,37 @@ export default function EditRecurringTransactionPage() {
           </div>
         )}
 
-        {(type === "income" ||
-          type === "transfer") && (
+        {(type === "income" || type === "transfer") && (
           <div>
-            <label>Destination Account</label>
+            <label
+              htmlFor="destinationAccount"
+              style={{
+                display: "block",
+                marginBottom: 7,
+                fontWeight: 600,
+              }}
+            >
+              Destination Account
+            </label>
 
             <select
+              id="destinationAccount"
               value={destinationAccountId}
               onChange={(event) =>
-                setDestinationAccountId(
-                  event.target.value,
-                )
+                setDestinationAccountId(event.target.value)
               }
               required
+              disabled={saving}
+              style={{
+                width: "100%",
+                boxSizing: "border-box",
+                padding: 11,
+                border: "1px solid #ccc",
+                borderRadius: 7,
+                background: "#fff",
+              }}
             >
-              <option value="">
-                Select account
-              </option>
+              <option value="">Select account</option>
 
               {accounts.map((account) => (
                 <option
@@ -410,22 +718,98 @@ export default function EditRecurringTransactionPage() {
               ))}
             </select>
           </div>
+        )}
+
+        {accounts.length === 0 && (
+          <p
+            style={{
+              margin: "-6px 0 0",
+              color: "#777",
+              fontSize: 13,
+            }}
+          >
+            No active non-system accounts are available.
+          </p>
         )}
 
         <div>
-          <label>Description</label>
+          <label
+            htmlFor="description"
+            style={{
+              display: "block",
+              marginBottom: 7,
+              fontWeight: 600,
+            }}
+          >
+            Description
+          </label>
 
           <textarea
+            id="description"
             value={description}
             onChange={(event) =>
               setDescription(event.target.value)
             }
+            rows={4}
+            disabled={saving}
+            placeholder="Optional notes..."
+            style={{
+              width: "100%",
+              boxSizing: "border-box",
+              padding: 11,
+              border: "1px solid #ccc",
+              borderRadius: 7,
+              resize: "vertical",
+            }}
           />
         </div>
 
-        <button type="submit" disabled={saving}>
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 10,
+            paddingTop: 4,
+            borderTop: "1px solid #eee",
+          }}
+        >
+          <button
+            type="submit"
+            disabled={saving}
+            style={{
+              minHeight: 42,
+              padding: "10px 16px",
+              border: 0,
+              borderRadius: 8,
+              background: "#111",
+              color: "#fff",
+              fontWeight: 600,
+              cursor: saving ? "not-allowed" : "pointer",
+              opacity: saving ? 0.65 : 1,
+            }}
+          >
+            {saving ? "Saving..." : "Save Changes"}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => router.push("/recurring")}
+            disabled={saving}
+            style={{
+              minHeight: 42,
+              padding: "10px 16px",
+              border: "1px solid #ccc",
+              borderRadius: 8,
+              background: "#fff",
+              color: "#222",
+              fontWeight: 600,
+              cursor: saving ? "not-allowed" : "pointer",
+              opacity: saving ? 0.65 : 1,
+            }}
+          >
+            Cancel
+          </button>
+        </div>
       </form>
     </main>
   );

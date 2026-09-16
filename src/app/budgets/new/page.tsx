@@ -1,6 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import {
+  FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -11,7 +17,7 @@ type Category = {
 };
 
 export default function NewBudgetPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
   const [categories, setCategories] = useState<Category[]>([]);
@@ -30,7 +36,6 @@ export default function NewBudgetPage() {
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
 
- 
   useEffect(() => {
     let cancelled = false;
 
@@ -63,6 +68,9 @@ export default function NewBudgetPage() {
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
+
+    if (saving) return;
+
     setMessage("");
 
     const numericAmount = Number(amount);
@@ -72,7 +80,10 @@ export default function NewBudgetPage() {
       return;
     }
 
-    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+    if (
+      !Number.isFinite(numericAmount) ||
+      numericAmount <= 0
+    ) {
       setMessage("Enter a valid budget amount.");
       return;
     }
@@ -83,7 +94,9 @@ export default function NewBudgetPage() {
     }
 
     if (endDate && endDate < startDate) {
-      setMessage("End date cannot be before the start date.");
+      setMessage(
+        "End date cannot be before the start date.",
+      );
       return;
     }
 
@@ -112,115 +125,240 @@ export default function NewBudgetPage() {
   }
 
   return (
-    <main>
-      <h1>New Budget</h1>
+    <main
+      className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 lg:px-8"
+    >
+      <div className="mb-6">
+        <Link
+          href="/budgets"
+          className="text-sm font-medium text-[var(--primary)] hover:opacity-80"
+        >
+          ← Back to Budgets
+        </Link>
+      </div>
 
-      {message && <p>{message}</p>}
+      <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-[var(--shadow-sm)] sm:p-7">
+        <div className="mb-6">
+          <p className="mb-1 text-sm font-medium text-[var(--primary)]">
+            Financial planning
+          </p>
 
-      <form onSubmit={handleSubmit}>
-        <div>
-          <label>Expense Category</label>
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
+            New Budget
+          </h1>
 
-          <select
-            value={categoryId}
-            onChange={(event) =>
-              setCategoryId(event.target.value)
-            }
-            required
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            Set a spending limit for an expense category.
+          </p>
+        </div>
+
+        {message && (
+          <div
+            role="alert"
+            className="mb-6 rounded-lg border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm text-[var(--danger)]"
           >
-            <option value="">Select category</option>
+            {message}
+          </div>
+        )}
 
-            {categories.map((category) => (
-              <option
-                key={category.id}
-                value={category.id}
-              >
-                {category.name}
+        <form
+          onSubmit={handleSubmit}
+          className="grid gap-5"
+        >
+          <div>
+            <label
+              htmlFor="category"
+              className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
+            >
+              Expense Category
+            </label>
+
+            <select
+              id="category"
+              value={categoryId}
+              onChange={(event) =>
+                setCategoryId(event.target.value)
+              }
+              required
+              disabled={saving}
+              className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none"
+            >
+              <option value="">
+                Select category
               </option>
-            ))}
-          </select>
-        </div>
 
-        <div>
-          <label>Budget Amount</label>
+              {categories.map((category) => (
+                <option
+                  key={category.id}
+                  value={category.id}
+                >
+                  {category.name}
+                </option>
+              ))}
+            </select>
 
-          <input
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={amount}
-            onChange={(event) =>
-              setAmount(event.target.value)
-            }
-            required
-          />
-        </div>
+            {categories.length === 0 && !message && (
+              <p className="mt-1.5 text-xs text-[var(--muted)]">
+                No active expense categories found.
+              </p>
+            )}
+          </div>
 
-        <div>
-          <label>Currency</label>
+          <div>
+            <label
+              htmlFor="amount"
+              className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
+            >
+              Budget Amount
+            </label>
 
-          <select
-            value={currency}
-            onChange={(event) =>
-              setCurrency(event.target.value)
-            }
-          >
-            <option value="BDT">BDT</option>
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-            <option value="GBP">GBP</option>
-          </select>
-        </div>
+            <input
+              id="amount"
+              type="number"
+              min="0.01"
+              step="0.01"
+              inputMode="decimal"
+              value={amount}
+              onChange={(event) =>
+                setAmount(event.target.value)
+              }
+              required
+              disabled={saving}
+              placeholder="0.00"
+              className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none"
+            />
+          </div>
 
-        <div>
-          <label>Period</label>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="currency"
+                className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
+              >
+                Currency
+              </label>
 
-          <select
-            value={period}
-            onChange={(event) =>
-              setPeriod(
-                event.target.value as
-                  | "weekly"
-                  | "monthly"
-                  | "yearly",
-              )
-            }
-          >
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="yearly">Yearly</option>
-          </select>
-        </div>
+              <select
+                id="currency"
+                value={currency}
+                onChange={(event) =>
+                  setCurrency(event.target.value)
+                }
+                disabled={saving}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none"
+              >
+                <option value="BDT">BDT</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="GBP">GBP</option>
+              </select>
+            </div>
 
-        <div>
-          <label>Start Date</label>
+            <div>
+              <label
+                htmlFor="period"
+                className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
+              >
+                Period
+              </label>
 
-          <input
-            type="date"
-            value={startDate}
-            onChange={(event) =>
-              setStartDate(event.target.value)
-            }
-            required
-          />
-        </div>
+              <select
+                id="period"
+                value={period}
+                onChange={(event) =>
+                  setPeriod(
+                    event.target.value as
+                      | "weekly"
+                      | "monthly"
+                      | "yearly",
+                  )
+                }
+                disabled={saving}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none"
+              >
+                <option value="weekly">
+                  Weekly
+                </option>
+                <option value="monthly">
+                  Monthly
+                </option>
+                <option value="yearly">
+                  Yearly
+                </option>
+              </select>
+            </div>
+          </div>
 
-        <div>
-          <label>End Date (optional)</label>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label
+                htmlFor="start-date"
+                className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
+              >
+                Start Date
+              </label>
 
-          <input
-            type="date"
-            value={endDate}
-            onChange={(event) =>
-              setEndDate(event.target.value)
-            }
-          />
-        </div>
+              <input
+                id="start-date"
+                type="date"
+                value={startDate}
+                onChange={(event) =>
+                  setStartDate(event.target.value)
+                }
+                required
+                disabled={saving}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none"
+              />
+            </div>
 
-        <button type="submit" disabled={saving}>
-          {saving ? "Creating..." : "Create Budget"}
-        </button>
-      </form>
+            <div>
+              <label
+                htmlFor="end-date"
+                className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
+              >
+                End Date
+                <span className="ml-1 font-normal text-[var(--muted)]">
+                  (optional)
+                </span>
+              </label>
+
+              <input
+                id="end-date"
+                type="date"
+                value={endDate}
+                min={startDate || undefined}
+                onChange={(event) =>
+                  setEndDate(event.target.value)
+                }
+                disabled={saving}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-2.5 text-sm text-[var(--foreground)] outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="mt-2 flex flex-col-reverse gap-3 border-t border-[var(--border)] pt-5 sm:flex-row sm:justify-end">
+            <Link
+              href="/budgets"
+              className="inline-flex items-center justify-center rounded-lg border border-[var(--border)] px-5 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:opacity-80"
+            >
+              Cancel
+            </Link>
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="inline-flex items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+              style={{
+                backgroundColor: "var(--primary)",
+              }}
+            >
+              {saving
+                ? "Creating..."
+                : "Create Budget"}
+            </button>
+          </div>
+        </form>
+      </section>
     </main>
   );
 }

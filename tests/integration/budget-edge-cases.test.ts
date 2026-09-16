@@ -1,4 +1,9 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import {
+  beforeAll,
+  describe,
+  expect,
+  it,
+} from "vitest";
 import {
   createClient,
   type SupabaseClient,
@@ -47,6 +52,51 @@ async function getExpenseCategory(): Promise<Category> {
     id: row.id,
     currency: row.accounts.currency,
   };
+}
+
+async function createBudget(
+  category: Category,
+  startDate: string,
+  amount = 100,
+) {
+  const { data, error } = await supabase.rpc(
+    "create_budget",
+    {
+      p_category_id: category.id,
+      p_amount: amount,
+      p_currency: category.currency,
+      p_period: "monthly",
+      p_start_date: startDate,
+      p_end_date: null,
+    },
+  );
+
+  expect(error).toBeNull();
+  expect(data).toBeTruthy();
+
+  return data as string;
+}
+
+async function archiveBudget(budgetId: string) {
+  const { error } = await supabase.rpc(
+    "archive_budget",
+    {
+      p_budget_id: budgetId,
+    },
+  );
+
+  expect(error).toBeNull();
+}
+
+async function deleteBudget(budgetId: string) {
+  const { error } = await supabase.rpc(
+    "delete_budget",
+    {
+      p_budget_id: budgetId,
+    },
+  );
+
+  expect(error).toBeNull();
 }
 
 describe("budget edge cases", () => {
@@ -217,20 +267,10 @@ describe("budget edge cases", () => {
   it("rejects overlapping active budgets", async () => {
     const category = await getExpenseCategory();
 
-    const first = await supabase.rpc(
-      "create_budget",
-      {
-        p_category_id: category.id,
-        p_amount: 100,
-        p_currency: category.currency,
-        p_period: "monthly",
-        p_start_date: "2099-09-01",
-        p_end_date: null,
-      },
+    const firstId = await createBudget(
+      category,
+      "2099-09-01",
     );
-
-    expect(first.error).toBeNull();
-    expect(first.data).toBeTruthy();
 
     const second = await supabase.rpc(
       "create_budget",
@@ -246,11 +286,202 @@ describe("budget edge cases", () => {
 
     expect(second.error).toBeTruthy();
 
-    await supabase.rpc(
-      "archive_budget",
+    await archiveBudget(firstId);
+    await deleteBudget(firstId);
+  });
+
+  it("allows updating an existing budget", async () => {
+    const category = await getExpenseCategory();
+
+    const budgetId = await createBudget(
+      category,
+      "2099-10-01",
+    );
+
+    const { error } = await supabase.rpc(
+      "update_budget",
       {
-        p_budget_id: first.data,
+        p_budget_id: budgetId,
+        p_category_id: category.id,
+        p_amount: 250,
+        p_currency: category.currency,
+        p_period: "yearly",
+        p_start_date: "2099-10-01",
+        p_end_date: "2099-12-31",
       },
     );
+
+    expect(error).toBeNull();
+
+    const { data, error: readError } =
+      await supabase
+        .from("budgets")
+        .select(
+          "amount, currency, period, start_date, end_date",
+        )
+        .eq("id", budgetId)
+        .single();
+
+    expect(readError).toBeNull();
+    expect(data).toMatchObject({
+      amount: 250,
+      currency: category.currency,
+      period: "yearly",
+      start_date: "2099-10-01",
+      end_date: "2099-12-31",
+    });
+
+    await archiveBudget(budgetId);
+    await deleteBudget(budgetId);
+  });
+
+  it("rejects invalid amounts when updating a budget", async () => {
+    const category = await getExpenseCategory();
+
+    const budgetId = await createBudget(
+      category,
+      "2100-01-01",
+    );
+
+    const { error } = await supabase.rpc(
+      "update_budget",
+      {
+        p_budget_id: budgetId,
+        p_category_id: category.id,
+        p_amount: "NaN",
+        p_currency: category.currency,
+        p_period: "monthly",
+        p_start_date: "2100-01-01",
+        p_end_date: null,
+      },
+    );
+
+    expect(error).toBeTruthy();
+
+    await archiveBudget(budgetId);
+    await deleteBudget(budgetId);
+  });
+
+  it("rejects an overlapping range when updating a budget", async () => {
+    const category = await getExpenseCategory();
+
+    const firstId = await createBudget(
+      category,
+      "2101-01-01",
+    );
+
+    const secondId = await createBudget(
+      category,
+      "2101-03-01",
+    );
+
+    const { error } = await supabase.rpc(
+      "update_budget",
+      {
+        p_budget_id: secondId,
+        p_category_id: category.id,
+        p_amount: 150,
+        p_currency: category.currency,
+        p_period: "monthly",
+        p_start_date: "2101-01-15",
+        p_end_date: null,
+      },
+    );
+
+    expect(error).toBeTruthy();
+
+    await archiveBudget(firstId);
+    await deleteBudget(firstId);
+
+    await archiveBudget(secondId);
+    await deleteBudget(secondId);
+  });
+
+  it("archives an active budget", async () => {
+    const category = await getExpenseCategory();
+
+    const budgetId = await createBudget(
+      category,
+      "2102-01-01",
+    );
+
+    await archiveBudget(budgetId);
+
+    const { data, error } =
+      await supabase
+        .from("budgets")
+        .select("is_active")
+        .eq("id", budgetId)
+        .single();
+
+    expect(error).toBeNull();
+    expect(data?.is_active).toBe(false);
+
+    await deleteBudget(budgetId);
+  });
+
+  it("rejects archiving an already archived budget", async () => {
+    const category = await getExpenseCategory();
+
+    const budgetId = await createBudget(
+      category,
+      "2103-01-01",
+    );
+
+    await archiveBudget(budgetId);
+
+    const { error } = await supabase.rpc(
+      "archive_budget",
+      {
+        p_budget_id: budgetId,
+      },
+    );
+
+    expect(error).toBeTruthy();
+
+    await deleteBudget(budgetId);
+  });
+
+  it("rejects deleting an active budget", async () => {
+    const category = await getExpenseCategory();
+
+    const budgetId = await createBudget(
+      category,
+      "2104-01-01",
+    );
+
+    const { error } = await supabase.rpc(
+      "delete_budget",
+      {
+        p_budget_id: budgetId,
+      },
+    );
+
+    expect(error).toBeTruthy();
+
+    await archiveBudget(budgetId);
+    await deleteBudget(budgetId);
+  });
+
+  it("deletes an archived budget", async () => {
+    const category = await getExpenseCategory();
+
+    const budgetId = await createBudget(
+      category,
+      "2105-01-01",
+    );
+
+    await archiveBudget(budgetId);
+    await deleteBudget(budgetId);
+
+    const { data, error } =
+      await supabase
+        .from("budgets")
+        .select("id")
+        .eq("id", budgetId)
+        .maybeSingle();
+
+    expect(error).toBeNull();
+    expect(data).toBeNull();
   });
 });
