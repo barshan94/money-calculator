@@ -1,4 +1,3 @@
-
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
@@ -124,8 +123,7 @@ export default function EditTransactionPage() {
 
         /*
          * Category ledger accounts may be system accounts.
-         * They must be available for internal validation,
-         * but they are never shown in the account dropdown.
+         * They are used only for internal validation.
          */
         supabase
           .from("accounts")
@@ -162,7 +160,8 @@ export default function EditTransactionPage() {
       const entries = entriesResult.data as Entry[];
 
       /*
-       * Check whether this transaction belongs to a tuition payment.
+       * Verify whether this transaction belongs
+       * to a tuition payment.
        */
       const {
         data: tuitionPayment,
@@ -402,9 +401,8 @@ export default function EditTransactionPage() {
   );
 
   /*
-   * IMPORTANT:
    * Category ledger accounts can be system accounts,
-   * so look them up in ledgerAccounts rather than accounts.
+   * so look them up in ledgerAccounts.
    */
   const selectedCategoryLedgerAccount =
     ledgerAccounts.find(
@@ -435,6 +433,14 @@ export default function EditTransactionPage() {
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
+
+    /*
+     * Prevent duplicate submissions.
+     */
+    if (saving) {
+      return;
+    }
+
     setMessage("");
 
     const numericAmount = Number(amount);
@@ -460,33 +466,37 @@ export default function EditTransactionPage() {
       return;
     }
 
+    /*
+     * Explicitly verify selected accounts exist
+     * in the user-selectable account list.
+     */
     if (
       type === "expense" &&
-      !sourceAccountId
+      !selectedSourceAccount
     ) {
       setMessage(
-        "Select the account you paid from.",
+        "Select a valid account you paid from.",
       );
       return;
     }
 
     if (
       type === "income" &&
-      !destinationAccountId
+      !selectedDestinationAccount
     ) {
       setMessage(
-        "Select where you received the money.",
+        "Select a valid account where you received the money.",
       );
       return;
     }
 
     if (type === "transfer") {
       if (
-        !sourceAccountId ||
-        !destinationAccountId
+        !selectedSourceAccount ||
+        !selectedDestinationAccount
       ) {
         setMessage(
-          "Select both accounts.",
+          "Select valid source and destination accounts.",
         );
         return;
       }
@@ -531,7 +541,7 @@ export default function EditTransactionPage() {
     }
 
     /*
-     * Verify that the category's ledger account
+     * Verify that the category ledger account
      * actually exists and has a valid currency.
      */
     if (
@@ -1229,3 +1239,4 @@ export default function EditTransactionPage() {
     </div>
   );
 }
+

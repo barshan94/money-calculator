@@ -1,6 +1,5 @@
 "use client";
 
-
 import {
   FormEvent,
   useEffect,
@@ -60,20 +59,20 @@ export default function GoalProgressPage() {
     }
 
     loadGoal();
-  }, [goalId]);
+  }, [goalId, supabase]);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
   ) {
     event.preventDefault();
 
-    if (!goal) return;
+    if (!goal || saving) return;
 
     setMessage("");
 
     const currentAmount = Number(amount);
 
-    if (currentAmount < 0) {
+    if (!Number.isFinite(currentAmount) || currentAmount < 0) {
       setMessage("Amount cannot be negative.");
       return;
     }
@@ -99,9 +98,8 @@ export default function GoalProgressPage() {
       return;
     }
 
-    alert("Progress saved");
-router.push(`/goals/${goalId}`);
-router.refresh();
+    router.push(`/goals/${goalId}`);
+    router.refresh();
   }
 
   if (loading) {
@@ -148,9 +146,12 @@ router.refresh();
 
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Current Amount</label>
+          <label htmlFor="current-amount">
+            Current Amount
+          </label>
 
           <input
+            id="current-amount"
             type="number"
             min="0"
             step="0.01"
@@ -169,3 +170,4 @@ router.refresh();
     </main>
   );
 }
+

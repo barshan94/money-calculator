@@ -1,3 +1,4 @@
+
 "use client";
 
 import {
@@ -29,38 +30,56 @@ export default function EditDepositPage() {
 
   useEffect(() => {
     async function loadDeposit() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setMessage("You must be logged in.");
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("deposits")
         .select(
           "name, principal_amount, interest_rate, maturity_amount, maturity_date, description, status",
         )
         .eq("id", depositId)
+        .eq("user_id", user.id)
         .single();
 
-      if (error) {
-        setMessage(error.message);
+      if (error || !data) {
+        setMessage(
+          error?.message ?? "Deposit not found.",
+        );
         setLoading(false);
         return;
       }
 
       if (data.status !== "active") {
-        setMessage("This deposit is no longer active.");
+        setMessage(
+          "This deposit is no longer active.",
+        );
         setLoading(false);
         return;
       }
 
       setName(data.name);
       setPrincipal(Number(data.principal_amount));
+
       setInterestRate(
         data.interest_rate !== null
           ? String(data.interest_rate)
           : "",
       );
+
       setMaturityAmount(
         data.maturity_amount !== null
           ? String(data.maturity_amount)
           : "",
       );
+
       setMaturityDate(data.maturity_date ?? "");
       setDescription(data.description ?? "");
 
@@ -68,7 +87,7 @@ export default function EditDepositPage() {
     }
 
     loadDeposit();
-  }, [depositId]);
+  }, [depositId, supabase]);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -86,37 +105,53 @@ export default function EditDepositPage() {
       : null;
 
     if (!name.trim()) {
-      setMessage("Deposit name cannot be empty.");
+      setMessage(
+        "Deposit name cannot be empty.",
+      );
       return;
     }
 
     if (
-  rate !== null &&
-  (!Number.isFinite(rate) || rate < 0)
-) {
-  setMessage("Enter a valid non-negative interest rate.");
-  return;
-}
+      rate !== null &&
+      (!Number.isFinite(rate) || rate < 0)
+    ) {
+      setMessage(
+        "Enter a valid non-negative interest rate.",
+      );
+      return;
+    }
 
-if (
-  maturity !== null &&
-  (!Number.isFinite(maturity) || maturity < 0)
-) {
-  setMessage("Enter a valid maturity amount.");
-  return;
-}
+    if (
+      maturity !== null &&
+      (!Number.isFinite(maturity) || maturity < 0)
+    ) {
+      setMessage(
+        "Enter a valid maturity amount.",
+      );
+      return;
+    }
 
-if (
-  maturity !== null &&
-  maturity < principal
-) {
-  setMessage(
-    "Maturity amount cannot be less than principal.",
-  );
-  return;
-}
+    if (
+      maturity !== null &&
+      maturity < principal
+    ) {
+      setMessage(
+        "Maturity amount cannot be less than principal.",
+      );
+      return;
+    }
 
     setSaving(true);
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setMessage("You must be logged in.");
+      setSaving(false);
+      return;
+    }
 
     const { error } = await supabase
       .from("deposits")
@@ -128,7 +163,8 @@ if (
         description: description.trim() || null,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", depositId);
+      .eq("id", depositId)
+      .eq("user_id", user.id);
 
     if (error) {
       setMessage(error.message);
@@ -157,9 +193,12 @@ if (
 
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Deposit Name</label>
+          <label htmlFor="deposit-name">
+            Deposit Name
+          </label>
 
           <input
+            id="deposit-name"
             value={name}
             onChange={(event) =>
               setName(event.target.value)
@@ -169,18 +208,24 @@ if (
         </div>
 
         <div>
-          <label>Principal Amount</label>
+          <label htmlFor="principal">
+            Principal Amount
+          </label>
 
           <input
+            id="principal"
             value={principal.toFixed(2)}
             disabled
           />
         </div>
 
         <div>
-          <label>Interest Rate %</label>
+          <label htmlFor="interest-rate">
+            Interest Rate %
+          </label>
 
           <input
+            id="interest-rate"
             type="number"
             min="0"
             step="0.01"
@@ -192,9 +237,12 @@ if (
         </div>
 
         <div>
-          <label>Maturity Amount</label>
+          <label htmlFor="maturity-amount">
+            Maturity Amount
+          </label>
 
           <input
+            id="maturity-amount"
             type="number"
             min="0"
             step="0.01"
@@ -206,9 +254,12 @@ if (
         </div>
 
         <div>
-          <label>Maturity Date</label>
+          <label htmlFor="maturity-date">
+            Maturity Date
+          </label>
 
           <input
+            id="maturity-date"
             type="date"
             value={maturityDate}
             onChange={(event) =>
@@ -218,9 +269,12 @@ if (
         </div>
 
         <div>
-          <label>Description</label>
+          <label htmlFor="description">
+            Description
+          </label>
 
           <textarea
+            id="description"
             value={description}
             onChange={(event) =>
               setDescription(event.target.value)
@@ -235,3 +289,5 @@ if (
     </main>
   );
 }
+
+

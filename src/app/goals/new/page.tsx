@@ -32,7 +32,7 @@ export default function NewGoalPage() {
       return;
     }
 
-    if (amount <= 0) {
+    if (!Number.isFinite(amount) || amount <= 0) {
       setMessage("Target amount must be greater than zero.");
       return;
     }

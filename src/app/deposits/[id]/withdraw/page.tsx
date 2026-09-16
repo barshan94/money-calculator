@@ -30,14 +30,19 @@ export default function WithdrawDepositPage() {
 
   const depositId = params.id as string;
 
-  const [deposit, setDeposit] = useState<Deposit | null>(null);
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [receivedAmount, setReceivedAmount] = useState("");
+  const [deposit, setDeposit] =
+    useState<Deposit | null>(null);
+  const [accounts, setAccounts] =
+    useState<Account[]>([]);
+  const [receivedAmount, setReceivedAmount] =
+    useState("");
   const [accountId, setAccountId] = useState("");
-  const [withdrawalDate, setWithdrawalDate] = useState(
-    new Date().toISOString().slice(0, 10),
-  );
-  const [description, setDescription] = useState("");
+  const [withdrawalDate, setWithdrawalDate] =
+    useState(
+      new Date().toISOString().slice(0, 10),
+    );
+  const [description, setDescription] =
+    useState("");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,24 +50,44 @@ export default function WithdrawDepositPage() {
 
   useEffect(() => {
     async function loadData() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setMessage("You must be logged in.");
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from("deposits")
         .select(
           "id, name, currency, principal_amount, status",
         )
         .eq("id", depositId)
+        .eq("user_id", user.id)
         .single();
 
-      if (error) {
-        setMessage(error.message);
+      if (error || !data) {
+        setMessage(
+          error?.message ?? "Deposit not found.",
+        );
         setLoading(false);
         return;
       }
 
-      setDeposit({
-        ...data,
-        principal_amount: Number(data.principal_amount),
-      });
+      const normalizedDeposit: Deposit = {
+        id: data.id,
+        name: data.name,
+        currency: data.currency,
+        principal_amount: Number(
+          data.principal_amount,
+        ),
+        status: data.status,
+      };
+
+      setDeposit(normalizedDeposit);
 
       const {
         data: accountData,
@@ -70,6 +95,7 @@ export default function WithdrawDepositPage() {
       } = await supabase
         .from("accounts")
         .select("id, name, currency")
+        .eq("user_id", user.id)
         .eq("is_archived", false)
         .eq("is_system", false)
         .eq("account_type", "asset")
@@ -94,14 +120,21 @@ export default function WithdrawDepositPage() {
   ) {
     event.preventDefault();
 
-    if (!deposit) return;
+    if (!deposit || saving) {
+      return;
+    }
 
     setMessage("");
 
     const amount = Number(receivedAmount);
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setMessage("Enter a valid received amount.");
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      setMessage(
+        "Enter a valid received amount.",
+      );
       return;
     }
 
@@ -113,12 +146,16 @@ export default function WithdrawDepositPage() {
     }
 
     if (!accountId) {
-      setMessage("Select a destination account.");
+      setMessage(
+        "Select a destination account.",
+      );
       return;
     }
 
     if (!withdrawalDate) {
-      setMessage("Select a withdrawal date.");
+      setMessage(
+        "Select a withdrawal date.",
+      );
       return;
     }
 
@@ -137,10 +174,6 @@ export default function WithdrawDepositPage() {
     );
 
     if (error) {
-      console.error(
-        "Withdraw deposit error:",
-        error,
-      );
       setMessage(error.message);
       setSaving(false);
       return;
@@ -163,7 +196,9 @@ export default function WithdrawDepositPage() {
     return (
       <main>
         <h1>Withdraw Deposit</h1>
-        <p>{message || "Deposit not found."}</p>
+        <p>
+          {message || "Deposit not found."}
+        </p>
       </main>
     );
   }
@@ -172,7 +207,9 @@ export default function WithdrawDepositPage() {
     return (
       <main>
         <h1>Withdraw Deposit</h1>
-        <p>This deposit is no longer active.</p>
+        <p>
+          This deposit is no longer active.
+        </p>
       </main>
     );
   }
@@ -185,33 +222,44 @@ export default function WithdrawDepositPage() {
 
       <p>
         Principal: {deposit.currency}{" "}
-        {deposit.principal_amount.toLocaleString("en-BD", {
-          minimumFractionDigits: 2,
-        })}
+        {deposit.principal_amount.toLocaleString(
+          "en-BD",
+          {
+            minimumFractionDigits: 2,
+          },
+        )}
       </p>
 
       {message && <p>{message}</p>}
 
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Received Amount</label>
+          <label htmlFor="received-amount">
+            Received Amount
+          </label>
 
           <input
+            id="received-amount"
             type="number"
             min={deposit.principal_amount}
             step="0.01"
             value={receivedAmount}
             onChange={(event) =>
-              setReceivedAmount(event.target.value)
+              setReceivedAmount(
+                event.target.value,
+              )
             }
             required
           />
         </div>
 
         <div>
-          <label>Receive Into</label>
+          <label htmlFor="receive-account">
+            Receive Into
+          </label>
 
           <select
+            id="receive-account"
             value={accountId}
             onChange={(event) =>
               setAccountId(event.target.value)
@@ -234,30 +282,43 @@ export default function WithdrawDepositPage() {
         </div>
 
         <div>
-          <label>Withdrawal Date</label>
+          <label htmlFor="withdrawal-date">
+            Withdrawal Date
+          </label>
 
           <input
+            id="withdrawal-date"
             type="date"
             value={withdrawalDate}
             onChange={(event) =>
-              setWithdrawalDate(event.target.value)
+              setWithdrawalDate(
+                event.target.value,
+              )
             }
             required
           />
         </div>
 
         <div>
-          <label>Description</label>
+          <label htmlFor="description">
+            Description
+          </label>
 
           <textarea
+            id="description"
             value={description}
             onChange={(event) =>
-              setDescription(event.target.value)
+              setDescription(
+                event.target.value,
+              )
             }
           />
         </div>
 
-        <button type="submit" disabled={saving}>
+        <button
+          type="submit"
+          disabled={saving}
+        >
           {saving
             ? "Processing..."
             : "Withdraw Deposit"}
@@ -266,3 +327,4 @@ export default function WithdrawDepositPage() {
     </main>
   );
 }
+

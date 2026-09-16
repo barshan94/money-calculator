@@ -19,11 +19,19 @@ export function VoidTransactionButton({
   const [message, setMessage] = useState("");
 
   async function handleVoid() {
+    if (loading) {
+      return;
+    }
+
     const confirmed = window.confirm(
       "Cancel this transaction? Its financial effect will be reversed.",
     );
 
     if (!confirmed) {
+      return;
+    }
+
+    if (loading) {
       return;
     }
 
@@ -43,11 +51,8 @@ export function VoidTransactionButton({
       return;
     }
 
-    setMessage(
-      "Transaction cancelled successfully.",
-    );
-
     router.push("/transactions");
+    router.refresh();
   }
 
   return (
@@ -75,9 +80,7 @@ export function VoidTransactionButton({
         <p
           style={{
             margin: "8px 0 0",
-            color: message.includes("successfully")
-              ? "var(--success)"
-              : "var(--danger)",
+            color: "var(--danger)",
             fontSize: 13,
           }}
         >
@@ -87,3 +90,5 @@ export function VoidTransactionButton({
     </div>
   );
 }
+
+

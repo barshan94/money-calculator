@@ -16,7 +16,11 @@ export default async function DashboardPage() {
     profit: 0,
   };
 
-  const balancesByCurrency = accounts.reduce(
+  const activeAccounts = accounts.filter(
+    (account) => !account.is_archived,
+  );
+
+  const balancesByCurrency = activeAccounts.reduce(
     (result, account) => {
       if (!result[account.currency]) {
         result[account.currency] = {
@@ -44,7 +48,7 @@ export default async function DashboardPage() {
     >,
   );
 
-  const moneyAccounts = accounts.filter(
+  const moneyAccounts = activeAccounts.filter(
     (account) =>
       account.account_type === "asset" ||
       account.account_type === "liability",
@@ -567,3 +571,4 @@ export default async function DashboardPage() {
     </>
   );
 }
+

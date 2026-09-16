@@ -113,9 +113,10 @@ export default async function GoalDetailPage({
       Edit Goal
     </Link>
 
-  <a href={`/goals/${goal.id}/progress`}>
+  <Link href={`/goals/${goal.id}/progress`}>
   Update Progress
-</a>
+</Link>
+    
 
     <CancelGoalButton goalId={goal.id} />
   </section>

@@ -12,6 +12,7 @@ export type AccountBalance = {
   debitTotal: number;
   creditTotal: number;
   balance: number;
+  is_archived: boolean;
 };
 
 type AccountBalanceRow = {
@@ -26,6 +27,7 @@ type AccountBalanceRow = {
   debit_total: number | string;
   credit_total: number | string;
   balance: number | string;
+  is_archived: boolean;
 };
 
 export async function getAccountBalances(): Promise<
@@ -49,13 +51,17 @@ export async function getAccountBalances(): Promise<
     throw new Error(error.message);
   }
 
-  return (data ?? []).map((row: AccountBalanceRow) => ({
-    id: row.id,
-    name: row.name,
-    account_type: row.account_type,
-    currency: row.currency,
-    debitTotal: Number(row.debit_total),
-    creditTotal: Number(row.credit_total),
-    balance: Number(row.balance),
-  }));
+  return (data ?? []).map(
+    (row: AccountBalanceRow) => ({
+      id: row.id,
+      name: row.name,
+      account_type: row.account_type,
+      currency: row.currency,
+      debitTotal: Number(row.debit_total),
+      creditTotal: Number(row.credit_total),
+      balance: Number(row.balance),
+      is_archived: row.is_archived,
+    }),
+  );
 }
+

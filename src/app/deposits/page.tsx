@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
+type DepositSummary = {
+  principal: number;
+  maturity: number;
+};
+
 export default async function DepositsPage() {
   const supabase = await createClient();
 
@@ -18,24 +23,30 @@ export default async function DepositsPage() {
 
   const items = deposits ?? [];
 
-  const totalPrincipal = items.reduce(
-    (sum, deposit) =>
-      sum + Number(deposit.principal_amount),
-    0,
-  );
+  const totalsByCurrency = items.reduce(
+    (result, deposit) => {
+      const currency = deposit.currency;
 
-  const totalMaturity = items.reduce(
-    (sum, deposit) =>
-      sum +
-      Number(
+      if (!result[currency]) {
+        result[currency] = {
+          principal: 0,
+          maturity: 0,
+        };
+      }
+
+      result[currency].principal += Number(
+        deposit.principal_amount,
+      );
+
+      result[currency].maturity += Number(
         deposit.maturity_amount ??
           deposit.principal_amount,
-      ),
-    0,
-  );
+      );
 
-  const expectedInterest =
-    totalMaturity - totalPrincipal;
+      return result;
+    },
+    {} as Record<string, DepositSummary>,
+  );
 
   return (
     <main>
@@ -48,35 +59,63 @@ export default async function DepositsPage() {
       </div>
 
       <section>
-        <div>
-          <h2>Total Principal</h2>
-          <p>
-            ৳
-            {totalPrincipal.toLocaleString("en-BD", {
-              minimumFractionDigits: 2,
-            })}
-          </p>
-        </div>
+        {Object.entries(totalsByCurrency).length === 0 ? (
+          <p>No active deposits.</p>
+        ) : (
+          Object.entries(totalsByCurrency).map(
+            ([currency, totals]) => {
+              const expectedInterest =
+                totals.maturity - totals.principal;
 
-        <div>
-          <h2>Expected Maturity</h2>
-          <p>
-            ৳
-            {totalMaturity.toLocaleString("en-BD", {
-              minimumFractionDigits: 2,
-            })}
-          </p>
-        </div>
+              return (
+                <div key={currency}>
+                  <h2>{currency}</h2>
 
-        <div>
-          <h2>Expected Interest</h2>
-          <p>
-            ৳
-            {expectedInterest.toLocaleString("en-BD", {
-              minimumFractionDigits: 2,
-            })}
-          </p>
-        </div>
+                  <div>
+                    <div>
+                      <h3>Total Principal</h3>
+                      <p>
+                        {currency}{" "}
+                        {totals.principal.toLocaleString(
+                          "en-BD",
+                          {
+                            minimumFractionDigits: 2,
+                          },
+                        )}
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3>Expected Maturity</h3>
+                      <p>
+                        {currency}{" "}
+                        {totals.maturity.toLocaleString(
+                          "en-BD",
+                          {
+                            minimumFractionDigits: 2,
+                          },
+                        )}
+                      </p>
+                    </div>
+
+                    <div>
+                      <h3>Expected Interest</h3>
+                      <p>
+                        {currency}{" "}
+                        {expectedInterest.toLocaleString(
+                          "en-BD",
+                          {
+                            minimumFractionDigits: 2,
+                          },
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            },
+          )
+        )}
       </section>
 
       <section>
@@ -158,3 +197,4 @@ export default async function DepositsPage() {
     </main>
   );
 }
+

@@ -1,29 +1,12 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { getLoanBalances } from "@/lib/finance/get-loan-balances";
 
 export default async function LoanReportPage() {
-  const supabase = await createClient();
+  const allLoans = await getLoanBalances();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return null;
-  }
-
-  const { data: loans, error } = await supabase
-    .from("loans")
-    .select(
-      "id, person_name, loan_type, principal_amount, currency, start_date, due_date, status",
-    )
-    .eq("user_id", user.id)
-    .neq("status", "cancelled")
-    .order("start_date", { ascending: false });
-
-  if (error) {
-    throw new Error(error.message);
-  }
+  const loans = allLoans.filter(
+    (loan) => loan.status !== "cancelled",
+  );
 
   const totals = new Map<
     string,
@@ -33,16 +16,16 @@ export default async function LoanReportPage() {
     }
   >();
 
-  for (const loan of loans ?? []) {
+  for (const loan of loans) {
     const total = totals.get(loan.currency) ?? {
       lent: 0,
       borrowed: 0,
     };
 
     if (loan.loan_type === "lent") {
-      total.lent += Number(loan.principal_amount);
+      total.lent += loan.remaining_amount;
     } else {
-      total.borrowed += Number(loan.principal_amount);
+      total.borrowed += loan.remaining_amount;
     }
 
     totals.set(loan.currency, total);
@@ -63,7 +46,7 @@ export default async function LoanReportPage() {
 
             <div className="card-grid">
               <div className="card">
-                <h3>Total Lent</h3>
+                <h3>Outstanding Lent</h3>
                 <p>
                   {currency}{" "}
                   {total.lent.toLocaleString("en-BD", {
@@ -73,7 +56,7 @@ export default async function LoanReportPage() {
               </div>
 
               <div className="card">
-                <h3>Total Borrowed</h3>
+                <h3>Outstanding Borrowed</h3>
                 <p>
                   {currency}{" "}
                   {total.borrowed.toLocaleString("en-BD", {
@@ -99,13 +82,13 @@ export default async function LoanReportPage() {
         ),
       )}
 
-      {(loans ?? []).length === 0 ? (
+      {loans.length === 0 ? (
         <p>No loans available.</p>
       ) : (
         <section>
           <h2>Loan Details</h2>
 
-          {(loans ?? []).map((loan) => (
+          {loans.map((loan) => (
             <div className="card" key={loan.id}>
               <h3>{loan.person_name}</h3>
 
@@ -114,18 +97,32 @@ export default async function LoanReportPage() {
 
               <p>
                 Principal: {loan.currency}{" "}
-                {Number(
-                  loan.principal_amount,
-                ).toLocaleString("en-BD", {
+                {loan.principal_amount.toLocaleString("en-BD", {
+                  minimumFractionDigits: 2,
+                })}
+              </p>
+
+              <p>
+                Repaid: {loan.currency}{" "}
+                {loan.repaid_amount.toLocaleString("en-BD", {
+                  minimumFractionDigits: 2,
+                })}
+              </p>
+
+              <p>
+                Remaining: {loan.currency}{" "}
+                {loan.remaining_amount.toLocaleString("en-BD", {
                   minimumFractionDigits: 2,
                 })}
               </p>
 
               <p>
                 Start Date:{" "}
-                {new Date(
-                  loan.start_date,
-                ).toLocaleDateString()}
+                {loan.start_datetime
+                  ? new Date(
+                      loan.start_datetime,
+                    ).toLocaleDateString()
+                  : "—"}
               </p>
 
               {loan.due_date && (
@@ -143,3 +140,4 @@ export default async function LoanReportPage() {
     </main>
   );
 }
+

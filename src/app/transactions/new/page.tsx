@@ -1,4 +1,3 @@
-
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
@@ -112,42 +111,34 @@ export default function NewTransactionPage() {
   }, [router]);
 
   const moneyAccounts = accounts.filter(
-    function (account) {
-      return (
-        account.account_type === "asset" ||
-        account.account_type === "liability"
-      );
-    },
+    (account) =>
+      account.account_type === "asset" ||
+      account.account_type === "liability",
   );
 
   const expenseCategories = categories.filter(
-    function (category) {
-      return category.category_type === "expense";
-    },
+    (category) =>
+      category.category_type === "expense",
   );
 
   const incomeCategories = categories.filter(
-    function (category) {
-      return category.category_type === "income";
-    },
+    (category) =>
+      category.category_type === "income",
   );
 
   const selectedSourceAccount = accounts.find(
-    function (account) {
-      return account.id === sourceAccountId;
-    },
+    (account) =>
+      account.id === sourceAccountId,
   );
 
   const selectedDestinationAccount = accounts.find(
-    function (account) {
-      return account.id === destinationAccountId;
-    },
+    (account) =>
+      account.id === destinationAccountId,
   );
 
   const selectedCategory = categories.find(
-    function (category) {
-      return category.id === categoryId;
-    },
+    (category) =>
+      category.id === categoryId,
   );
 
   function changeType(
@@ -165,6 +156,10 @@ export default function NewTransactionPage() {
   ) {
     event.preventDefault();
 
+    if (saving) {
+      return;
+    }
+
     setMessage("");
 
     const supabase = createClient();
@@ -172,7 +167,9 @@ export default function NewTransactionPage() {
     const numericAmount = Number(amount);
 
     if (!transactionDate) {
-      setMessage("Select a transaction date.");
+      setMessage(
+        "Select a transaction date.",
+      );
       return;
     }
 
@@ -250,7 +247,9 @@ export default function NewTransactionPage() {
       selectedCategory.category_type !==
         "expense"
     ) {
-      setMessage("Invalid expense category.");
+      setMessage(
+        "Invalid expense category.",
+      );
       return;
     }
 
@@ -260,7 +259,9 @@ export default function NewTransactionPage() {
       selectedCategory.category_type !==
         "income"
     ) {
-      setMessage("Invalid income source.");
+      setMessage(
+        "Invalid income source.",
+      );
       return;
     }
 
@@ -273,6 +274,42 @@ export default function NewTransactionPage() {
         "Selected category is not properly connected.",
       );
       return;
+    }
+
+    /*
+     * Category ledger accounts and money accounts
+     * must use the same currency.
+     *
+     * The database RPC performs its own validation,
+     * but this prevents invalid combinations in the UI.
+     */
+    if (
+      type !== "transfer" &&
+      selectedCategory?.ledger_account_id
+    ) {
+      const categoryLedgerAccount =
+        accounts.find(
+          (account) =>
+            account.id ===
+            selectedCategory.ledger_account_id,
+        );
+
+      const moneyAccount =
+        type === "expense"
+          ? selectedSourceAccount
+          : selectedDestinationAccount;
+
+      if (
+        categoryLedgerAccount &&
+        moneyAccount &&
+        categoryLedgerAccount.currency !==
+          moneyAccount.currency
+      ) {
+        setMessage(
+          "The selected account and category must use the same currency.",
+        );
+        return;
+      }
     }
 
     setSaving(true);
@@ -547,11 +584,11 @@ export default function NewTransactionPage() {
               id="transaction-date"
               type="date"
               value={transactionDate}
-              onChange={function (event) {
+              onChange={(event) =>
                 setTransactionDate(
                   event.target.value,
-                );
-              }}
+                )
+              }
               required
               style={{
                 width: "100%",
@@ -582,11 +619,9 @@ export default function NewTransactionPage() {
               step="0.01"
               placeholder="0.00"
               value={amount}
-              onChange={function (event) {
-                setAmount(
-                  event.target.value,
-                );
-              }}
+              onChange={(event) =>
+                setAmount(event.target.value)
+              }
               required
               style={{
                 width: "100%",
@@ -615,11 +650,11 @@ export default function NewTransactionPage() {
                 <select
                   id="expense-category"
                   value={categoryId}
-                  onChange={function (event) {
+                  onChange={(event) =>
                     setCategoryId(
                       event.target.value,
-                    );
-                  }}
+                    )
+                  }
                   required
                   style={{
                     width: "100%",
@@ -635,16 +670,14 @@ export default function NewTransactionPage() {
                   </option>
 
                   {expenseCategories.map(
-                    function (category) {
-                      return (
-                        <option
-                          key={category.id}
-                          value={category.id}
-                        >
-                          {category.name}
-                        </option>
-                      );
-                    },
+                    (category) => (
+                      <option
+                        key={category.id}
+                        value={category.id}
+                      >
+                        {category.name}
+                      </option>
+                    ),
                   )}
                 </select>
               </div>
@@ -664,11 +697,11 @@ export default function NewTransactionPage() {
                 <select
                   id="expense-account"
                   value={sourceAccountId}
-                  onChange={function (event) {
+                  onChange={(event) =>
                     setSourceAccountId(
                       event.target.value,
-                    );
-                  }}
+                    )
+                  }
                   required
                   style={{
                     width: "100%",
@@ -684,17 +717,15 @@ export default function NewTransactionPage() {
                   </option>
 
                   {moneyAccounts.map(
-                    function (account) {
-                      return (
-                        <option
-                          key={account.id}
-                          value={account.id}
-                        >
-                          {account.name} (
-                          {account.currency})
-                        </option>
-                      );
-                    },
+                    (account) => (
+                      <option
+                        key={account.id}
+                        value={account.id}
+                      >
+                        {account.name} (
+                        {account.currency})
+                      </option>
+                    ),
                   )}
                 </select>
               </div>
@@ -718,11 +749,11 @@ export default function NewTransactionPage() {
                 <select
                   id="income-category"
                   value={categoryId}
-                  onChange={function (event) {
+                  onChange={(event) =>
                     setCategoryId(
                       event.target.value,
-                    );
-                  }}
+                    )
+                  }
                   required
                   style={{
                     width: "100%",
@@ -738,16 +769,14 @@ export default function NewTransactionPage() {
                   </option>
 
                   {incomeCategories.map(
-                    function (category) {
-                      return (
-                        <option
-                          key={category.id}
-                          value={category.id}
-                        >
-                          {category.name}
-                        </option>
-                      );
-                    },
+                    (category) => (
+                      <option
+                        key={category.id}
+                        value={category.id}
+                      >
+                        {category.name}
+                      </option>
+                    ),
                   )}
                 </select>
               </div>
@@ -767,11 +796,11 @@ export default function NewTransactionPage() {
                 <select
                   id="income-account"
                   value={destinationAccountId}
-                  onChange={function (event) {
+                  onChange={(event) =>
                     setDestinationAccountId(
                       event.target.value,
-                    );
-                  }}
+                    )
+                  }
                   required
                   style={{
                     width: "100%",
@@ -787,17 +816,15 @@ export default function NewTransactionPage() {
                   </option>
 
                   {moneyAccounts.map(
-                    function (account) {
-                      return (
-                        <option
-                          key={account.id}
-                          value={account.id}
-                        >
-                          {account.name} (
-                          {account.currency})
-                        </option>
-                      );
-                    },
+                    (account) => (
+                      <option
+                        key={account.id}
+                        value={account.id}
+                      >
+                        {account.name} (
+                        {account.currency})
+                      </option>
+                    ),
                   )}
                 </select>
               </div>
@@ -821,11 +848,11 @@ export default function NewTransactionPage() {
                 <select
                   id="transfer-source"
                   value={sourceAccountId}
-                  onChange={function (event) {
+                  onChange={(event) =>
                     setSourceAccountId(
                       event.target.value,
-                    );
-                  }}
+                    )
+                  }
                   required
                   style={{
                     width: "100%",
@@ -841,17 +868,15 @@ export default function NewTransactionPage() {
                   </option>
 
                   {moneyAccounts.map(
-                    function (account) {
-                      return (
-                        <option
-                          key={account.id}
-                          value={account.id}
-                        >
-                          {account.name} (
-                          {account.currency})
-                        </option>
-                      );
-                    },
+                    (account) => (
+                      <option
+                        key={account.id}
+                        value={account.id}
+                      >
+                        {account.name} (
+                        {account.currency})
+                      </option>
+                    ),
                   )}
                 </select>
               </div>
@@ -871,11 +896,11 @@ export default function NewTransactionPage() {
                 <select
                   id="transfer-destination"
                   value={destinationAccountId}
-                  onChange={function (event) {
+                  onChange={(event) =>
                     setDestinationAccountId(
                       event.target.value,
-                    );
-                  }}
+                    )
+                  }
                   required
                   style={{
                     width: "100%",
@@ -891,17 +916,15 @@ export default function NewTransactionPage() {
                   </option>
 
                   {moneyAccounts.map(
-                    function (account) {
-                      return (
-                        <option
-                          key={account.id}
-                          value={account.id}
-                        >
-                          {account.name} (
-                          {account.currency})
-                        </option>
-                      );
-                    },
+                    (account) => (
+                      <option
+                        key={account.id}
+                        value={account.id}
+                      >
+                        {account.name} (
+                        {account.currency})
+                      </option>
+                    ),
                   )}
                 </select>
               </div>
@@ -926,11 +949,11 @@ export default function NewTransactionPage() {
               maxLength={500}
               placeholder="Optional"
               value={description}
-              onChange={function (event) {
+              onChange={(event) =>
                 setDescription(
                   event.target.value,
-                );
-              }}
+                )
+              }
               style={{
                 width: "100%",
                 padding: "11px 12px",
@@ -1009,3 +1032,4 @@ export default function NewTransactionPage() {
     </div>
   );
 }
+
