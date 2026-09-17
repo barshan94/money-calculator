@@ -41,9 +41,7 @@ export async function proxy(request: NextRequest) {
 
   const {
     data: { user },
-    error,
   } = await supabase.auth.getUser();
-
 
   const pathname = request.nextUrl.pathname;
 
@@ -51,9 +49,11 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/auth/login") ||
     pathname.startsWith("/auth/signup");
 
+  const isApiRoute = pathname.startsWith("/api/");
+
   const isPrivatePage =
     pathname === "/" ||
-    pathname.startsWith("/dashboard");
+    (!isAuthPage && !isApiRoute);
 
   if (!user && isPrivatePage) {
     return NextResponse.redirect(
@@ -72,9 +72,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/",
-    "/dashboard/:path*",
-    "/auth/login",
-    "/auth/signup",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
