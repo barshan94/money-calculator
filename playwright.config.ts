@@ -8,6 +8,8 @@ export default defineConfig({
 
   testMatch: /.*\.spec\.ts$/,
 
+  workers: 1,
+
   use: {
     baseURL: "http://127.0.0.1:3000",
     screenshot: "only-on-failure",
@@ -23,18 +25,23 @@ export default defineConfig({
     {
       name: "chromium",
       dependencies: ["setup"],
+
       use: {
         ...devices["Desktop Chrome"],
         storageState: "playwright/.auth/user.json",
 
         launchOptions: {
-          executablePath: "/usr/bin/chromium",
           args: [
             "--no-sandbox",
-            "--disable-gpu",
+            "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
+            "--disable-gpu",
             "--disable-software-rasterizer",
             "--disable-features=UseDBus",
+            "--disable-background-networking",
+            "--disable-background-timer-throttling",
+            "--disable-renderer-backgrounding",
+            "--no-zygote",
           ],
         },
       },
@@ -42,12 +49,14 @@ export default defineConfig({
   ],
 
   webServer: {
-    command:
-      "npm run dev -- --webpack --hostname 127.0.0.1",
-    url: "http://127.0.0.1:3000",
-    reuseExistingServer: true,
-  },
+  command:
+    "npm run build -- --webpack && npm run start -- --hostname 127.0.0.1",
+
+  url: "http://127.0.0.1:3000",
+
+  reuseExistingServer: true,
+
+  timeout: 180000,
+},
+
 });
-
-
-

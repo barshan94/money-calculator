@@ -48,7 +48,7 @@ export default function LoginPage() {
         email.trim(),
         {
           redirectTo:
-  `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+            `${window.location.origin}/auth/callback?next=/auth/reset-password`,
         },
       );
 

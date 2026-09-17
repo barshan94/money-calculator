@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -178,6 +177,13 @@ export default function RecordLoanRepaymentPage() {
         paymentDatetime,
       ).toISOString();
 
+    console.log("SUBMIT START", {
+      loanId,
+      amount: numericAmount,
+      accountId,
+      paymentTimestamp,
+    });
+
     const { error } =
       await supabase.rpc(
         "record_loan_repayment",
@@ -192,7 +198,14 @@ export default function RecordLoanRepaymentPage() {
         },
       );
 
+    console.log("RPC RESULT", { error });
+
     if (error) {
+      console.error(
+        "RECORD LOAN REPAYMENT ERROR:",
+        error,
+      );
+
       setMessage(error.message);
       setSaving(false);
       return;
@@ -265,8 +278,9 @@ export default function RecordLoanRepaymentPage() {
       )}
 
       <form
-        onSubmit={handleSubmit}
-      >
+  noValidate
+  onSubmit={handleSubmit}
+>
         <div>
           <label htmlFor="repayment-amount">
             Amount

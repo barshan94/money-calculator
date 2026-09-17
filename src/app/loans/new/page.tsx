@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -23,8 +22,7 @@ type Account = {
 
 function getLocalDateTime() {
   const now = new Date();
-  const offset =
-    now.getTimezoneOffset() * 60000;
+  const offset = now.getTimezoneOffset() * 60000;
 
   return new Date(now.getTime() - offset)
     .toISOString()
@@ -72,6 +70,14 @@ export default function NewLoanPage() {
       }
 
       setAccounts(data ?? []);
+
+      console.log(
+        "LOAN ACCOUNTS:",
+        data,
+        "ERROR:",
+        error,
+      );
+
       setStartDateTime(getLocalDateTime());
     }
 
