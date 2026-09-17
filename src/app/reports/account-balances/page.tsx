@@ -13,8 +13,8 @@ export default async function AccountBalancesPage() {
   const balances = await getAccountBalances();
 
   const visibleBalances = balances.filter(
-    (account) => !account.is_archived && !account.is_system,
-  );
+  (account) => !account.is_archived,
+);
 
   const chartData = visibleBalances.map((account) => ({
     name: account.name,

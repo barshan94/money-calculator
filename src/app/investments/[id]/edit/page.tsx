@@ -1,5 +1,5 @@
-"use client";
 
+"use client";
 
 import {
   FormEvent,
@@ -56,7 +56,7 @@ export default function EditInvestmentPage() {
     }
 
     loadInvestment();
-  }, [investmentId]);
+  }, [investmentId, supabase]);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -73,9 +73,9 @@ export default function EditInvestmentPage() {
     }
 
     if (!Number.isFinite(value) || value < 0) {
-  setMessage("Enter a valid current value.");
-  return;
-}
+      setMessage("Enter a valid current value.");
+      return;
+    }
 
     setSaving(true);
 
@@ -94,17 +94,18 @@ export default function EditInvestmentPage() {
       return;
     }
 
-    const { error: updateError } = await supabase
-      .from("investments")
-      .update({
-        name: name.trim(),
-        description: description.trim() || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", investmentId);
+    const { error: metadataError } =
+      await supabase.rpc(
+        "update_investment",
+        {
+          p_investment_id: investmentId,
+          p_name: name.trim(),
+          p_description: description.trim() || null,
+        },
+      );
 
-    if (updateError) {
-      setMessage(updateError.message);
+    if (metadataError) {
+      setMessage(metadataError.message);
       setSaving(false);
       return;
     }
@@ -167,7 +168,10 @@ export default function EditInvestmentPage() {
           />
         </div>
 
-        <button type="submit" disabled={saving}>
+        <button
+          type="submit"
+          disabled={saving}
+        >
           {saving ? "Saving..." : "Save Changes"}
         </button>
       </form>

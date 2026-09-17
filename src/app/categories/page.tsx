@@ -18,7 +18,7 @@ type Filter = "all" | "income" | "expense";
 type Sort = "az" | "za" | "newest" | "oldest";
 
 export default function CategoriesPage() {
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,10 +55,12 @@ export default function CategoriesPage() {
   }
 
   useEffect(() => {
-    loadCategories();
-  }, []);
+    void loadCategories();
+  }, [supabase]);
 
   async function createCategory() {
+    if (creating) return;
+
     const trimmedName = name.trim();
 
     if (!trimmedName) {
@@ -178,26 +180,49 @@ export default function CategoriesPage() {
           </h2>
 
           <div className="mt-4 grid gap-3 md:grid-cols-[1fr_180px_auto]">
-            <input
-              type="text"
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder="Category name"
-              className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)]"
-            />
+            <div>
+              <label
+                htmlFor="category-name"
+                className="sr-only"
+              >
+                Category name
+              </label>
 
-            <select
-              value={categoryType}
-              onChange={(event) =>
-                setCategoryType(
-                  event.target.value as "income" | "expense",
-                )
-              }
-              className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
-            >
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
-            </select>
+              <input
+                id="category-name"
+                type="text"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Category name"
+                maxLength={100}
+                disabled={creating}
+                className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+              />
+            </div>
+
+            <div>
+              <label
+                htmlFor="category-type"
+                className="sr-only"
+              >
+                Category type
+              </label>
+
+              <select
+                id="category-type"
+                value={categoryType}
+                onChange={(event) =>
+                  setCategoryType(
+                    event.target.value as "income" | "expense",
+                  )
+                }
+                disabled={creating}
+                className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+              </select>
+            </div>
 
             <button
               type="button"
@@ -211,18 +236,27 @@ export default function CategoriesPage() {
           </div>
 
           {error && (
-            <p className="mt-3 text-sm text-[var(--danger)]">{error}</p>
+            <p
+              role="alert"
+              className="mt-3 text-sm text-[var(--danger)]"
+            >
+              {error}
+            </p>
           )}
         </section>
 
         <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
           <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto_auto] md:items-end">
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-[var(--muted-foreground)]">
+              <label
+                htmlFor="category-filter"
+                className="mb-1.5 block text-xs font-medium text-[var(--muted-foreground)]"
+              >
                 Filter
               </label>
 
               <select
+                id="category-filter"
                 value={filter}
                 onChange={(event) =>
                   setFilter(event.target.value as Filter)
@@ -236,17 +270,23 @@ export default function CategoriesPage() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-[var(--muted-foreground)]">
+              <label
+                htmlFor="category-sort"
+                className="mb-1.5 block text-xs font-medium text-[var(--muted-foreground)]"
+              >
                 Sort
               </label>
 
               <select
+                id="category-sort"
                 value={sort}
                 onChange={(event) =>
                   setSort(event.target.value as Sort)
                 }
                 className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
               >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
                 <option value="az">Name A-Z</option>
                 <option value="za">Name Z-A</option>
               </select>
@@ -388,7 +428,6 @@ export default function CategoriesPage() {
                           <DeleteCategoryButton
                             categoryId={category.id}
                           />
-
                         </div>
                       </div>
                     ))}

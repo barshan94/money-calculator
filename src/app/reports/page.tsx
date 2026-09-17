@@ -320,6 +320,7 @@ export default async function ReportsPage() {
             ["Loans", "/reports/loans"],
             ["Deposits", "/reports/deposits"],
             ["Goals", "/reports/goals"],
+            ["Liquidity", "/reports/liquidity"],
           ].map(([label, href]) => (
             <Link
               key={href}

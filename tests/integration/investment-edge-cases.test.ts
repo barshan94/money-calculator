@@ -1,3 +1,4 @@
+
 import { createClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
@@ -375,9 +376,6 @@ describe("investment edge cases", () => {
         );
       }
 
-      /*
-       * Verify the investment was not corrupted.
-       */
       const {
         data: investment,
         error: queryError,
@@ -391,6 +389,146 @@ describe("investment edge cases", () => {
       expect(investment).toBeTruthy();
       expect(Number(investment.current_value)).toBe(1000);
       expect(investment.status).toBe("active");
+    } finally {
+      await cleanupInvestment(investmentId);
+    }
+  });
+
+  it("rejects value updates for archived investments", async () => {
+    const { investmentId } = await createInvestment();
+
+    try {
+      const { error: archiveError } = await supabase.rpc(
+        "archive_investment",
+        {
+          p_investment_id: investmentId,
+        },
+      );
+
+      expect(archiveError).toBeNull();
+
+      const { data, error } = await supabase.rpc(
+        "update_investment_value",
+        {
+          p_investment_id: investmentId,
+          p_current_value: 1500,
+        },
+      );
+
+      expect(data).toBeNull();
+      expect(error).toBeTruthy();
+      expect(error!.message).toContain(
+        "Investment not found or inactive",
+      );
+
+      const {
+        data: investment,
+        error: queryError,
+      } = await supabase
+        .from("investments")
+        .select("current_value, status, archived_at")
+        .eq("id", investmentId)
+        .single();
+
+      expect(queryError).toBeNull();
+      expect(investment).toBeTruthy();
+      expect(Number(investment.current_value)).toBe(1000);
+      expect(investment.status).toBe("active");
+      expect(investment.archived_at).not.toBeNull();
+    } finally {
+      await cleanupInvestment(investmentId);
+    }
+  });
+
+  it("updates investment metadata through update_investment", async () => {
+    const { investmentId } = await createInvestment();
+
+    try {
+      const { data, error } = await supabase.rpc(
+        "update_investment",
+        {
+          p_investment_id: investmentId,
+          p_name: "Updated Investment",
+          p_description: "Updated investment description",
+        },
+      );
+
+      expect(error).toBeNull();
+      expect(data).toBeNull();
+
+      const {
+        data: investment,
+        error: queryError,
+      } = await supabase
+        .from("investments")
+        .select(
+          "name, description, current_value, status",
+        )
+        .eq("id", investmentId)
+        .single();
+
+      expect(queryError).toBeNull();
+      expect(investment).toEqual({
+        name: "Updated Investment",
+        description: "Updated investment description",
+        current_value: 1000,
+        status: "active",
+      });
+    } finally {
+      await cleanupInvestment(investmentId);
+    }
+  });
+
+  it("rejects an empty investment name when updating metadata", async () => {
+    const { investmentId } = await createInvestment();
+
+    try {
+      const { data, error } = await supabase.rpc(
+        "update_investment",
+        {
+          p_investment_id: investmentId,
+          p_name: " ",
+          p_description: "Should not update",
+        },
+      );
+
+      expect(data).toBeNull();
+      expect(error).toBeTruthy();
+      expect(error!.message).toContain(
+        "Investment name cannot be empty",
+      );
+    } finally {
+      await cleanupInvestment(investmentId);
+    }
+  });
+
+  it("rejects metadata updates for inactive investments", async () => {
+    const { investmentId } = await createInvestment();
+
+    try {
+      const { error: archiveError } = await supabase.rpc(
+        "archive_investment",
+        {
+          p_investment_id: investmentId,
+        },
+      );
+
+      expect(archiveError).toBeNull();
+
+      const { data, error } = await supabase.rpc(
+        "update_investment",
+        {
+          p_investment_id: investmentId,
+          p_name: "Should Fail",
+          p_description: "Should not update",
+        },
+      );
+
+      expect(data).toBeNull();
+      expect(error).toBeTruthy();
+      expect(error!.message).toContain(
+        "Investment not found or inactive",
+      );
     } finally {
       await cleanupInvestment(investmentId);
     }

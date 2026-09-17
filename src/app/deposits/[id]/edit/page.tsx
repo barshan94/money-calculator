@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -143,28 +142,17 @@ export default function EditDepositPage() {
 
     setSaving(true);
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      setMessage("You must be logged in.");
-      setSaving(false);
-      return;
-    }
-
-    const { error } = await supabase
-      .from("deposits")
-      .update({
-        name: name.trim(),
-        interest_rate: rate,
-        maturity_amount: maturity,
-        maturity_date: maturityDate || null,
-        description: description.trim() || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", depositId)
-      .eq("user_id", user.id);
+    const { error } = await supabase.rpc(
+      "update_deposit",
+      {
+        p_deposit_id: depositId,
+        p_name: name.trim(),
+        p_interest_rate: rate,
+        p_maturity_amount: maturity,
+        p_maturity_date: maturityDate || null,
+        p_description: description.trim() || null,
+      },
+    );
 
     if (error) {
       setMessage(error.message);
@@ -289,5 +277,3 @@ export default function EditDepositPage() {
     </main>
   );
 }
-
-
