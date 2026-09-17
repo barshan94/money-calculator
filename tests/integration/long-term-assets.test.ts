@@ -189,91 +189,97 @@ async function cleanupAsset(
 }
 
 describe("long-term asset update lifecycle", () => {
-  it("updates an active long-term asset", async () => {
-    const {
-      assetId,
-    } = await createTestAsset();
-
-    try {
+  it(
+    "updates metadata of an active long-term asset without changing financial fields",
+    async () => {
       const {
-        error,
-      } = await supabase.rpc(
-        "update_long_term_asset",
-        {
-          p_asset_id: assetId,
-          p_name:
-            "Updated Land Asset",
-          p_asset_type:
-            "property",
-          p_purchase_price:
-            15000,
-          p_acquisition_cost:
-            1200,
-          p_purchase_date:
-            "2026-02-20",
-          p_description:
-            "Updated long-term asset",
-        },
-      );
+        assetId,
+      } = await createTestAsset();
 
-      expect(error).toBeNull();
+      try {
+        const {
+          error,
+        } = await supabase.rpc(
+          "update_long_term_asset",
+          {
+            p_asset_id: assetId,
+            p_name:
+              "Updated Land Asset",
+            p_asset_type:
+              "property",
+            p_purchase_price:
+              10000,
+            p_acquisition_cost:
+              500,
+            p_purchase_date:
+              "2026-01-15",
+            p_description:
+              "Updated long-term asset",
+          },
+        );
 
-      const {
-        data: asset,
-        error: assetError,
-      } = await supabase
-        .from("long_term_assets")
-        .select(
-          "id, name, asset_type, currency, purchase_price, acquisition_cost, current_value, purchase_date, description, status, archived_at",
-        )
-        .eq("id", assetId)
-        .single();
+        expect(error).toBeNull();
 
-      expect(assetError).toBeNull();
-      expect(asset).toBeTruthy();
+        const {
+          data: asset,
+          error: assetError,
+        } = await supabase
+          .from("long_term_assets")
+          .select(
+            "id, name, asset_type, currency, purchase_price, acquisition_cost, current_value, purchase_date, description, status, archived_at",
+          )
+          .eq("id", assetId)
+          .single();
 
-      expect(asset.id).toBe(assetId);
-      expect(asset.name).toBe(
-        "Updated Land Asset",
-      );
-      expect(asset.asset_type).toBe(
-        "property",
-      );
-      expect(asset.currency).toBe("BDT");
+        expect(assetError).toBeNull();
+        expect(asset).toBeTruthy();
 
-      expect(
-        Number(asset.purchase_price),
-      ).toBe(15000);
+        expect(asset.id).toBe(assetId);
 
-      expect(
-        Number(asset.acquisition_cost),
-      ).toBe(1200);
+        expect(asset.name).toBe(
+          "Updated Land Asset",
+        );
 
-      expect(
-        Number(asset.current_value),
-      ).toBe(16200);
+        expect(asset.asset_type).toBe(
+          "property",
+        );
 
-      expect(
-        asset.purchase_date,
-      ).toBe("2026-02-20");
+        expect(asset.currency).toBe("BDT");
 
-      expect(
-        asset.description,
-      ).toBe(
-        "Updated long-term asset",
-      );
+        expect(
+          Number(asset.purchase_price),
+        ).toBe(10000);
 
-      expect(asset.status).toBe(
-        "active",
-      );
+        expect(
+          Number(asset.acquisition_cost),
+        ).toBe(500);
 
-      expect(
-        asset.archived_at,
-      ).toBeNull();
-    } finally {
-      await cleanupAsset(assetId);
-    }
-  });
+        expect(
+          Number(asset.current_value),
+        ).toBe(10500);
+
+        expect(
+          asset.purchase_date,
+        ).toBe("2026-01-15");
+
+        expect(
+          asset.description,
+        ).toBe(
+          "Updated long-term asset",
+        );
+
+        expect(asset.status).toBe(
+          "active",
+        );
+
+        expect(
+          asset.archived_at,
+        ).toBeNull();
+      } finally {
+        await cleanupAsset(assetId);
+      }
+    },
+  );
 
   it("rejects an empty asset name", async () => {
     const {
@@ -311,41 +317,44 @@ describe("long-term asset update lifecycle", () => {
     }
   });
 
-  it("rejects an asset name longer than 150 characters", async () => {
-    const {
-      assetId,
-    } = await createTestAsset();
-
-    try {
+  it(
+    "rejects an asset name longer than 150 characters",
+    async () => {
       const {
-        data,
-        error,
-      } = await supabase.rpc(
-        "update_long_term_asset",
-        {
-          p_asset_id: assetId,
-          p_name: "A".repeat(151),
-          p_asset_type: "land",
-          p_purchase_price: 10000,
-          p_acquisition_cost: 500,
-          p_purchase_date:
-            "2026-01-15",
-          p_description: null,
-        },
-      );
+        assetId,
+      } = await createTestAsset();
 
-      expect(data).toBeNull();
-      expect(error).toBeTruthy();
+      try {
+        const {
+          data,
+          error,
+        } = await supabase.rpc(
+          "update_long_term_asset",
+          {
+            p_asset_id: assetId,
+            p_name: "A".repeat(151),
+            p_asset_type: "land",
+            p_purchase_price: 10000,
+            p_acquisition_cost: 500,
+            p_purchase_date:
+              "2026-01-15",
+            p_description: null,
+          },
+        );
 
-      expect(
-        error!.message,
-      ).toContain(
-        "Asset name cannot exceed 150 characters",
-      );
-    } finally {
-      await cleanupAsset(assetId);
-    }
-  });
+        expect(data).toBeNull();
+        expect(error).toBeTruthy();
+
+        expect(
+          error!.message,
+        ).toContain(
+          "Asset name cannot exceed 150 characters",
+        );
+      } finally {
+        await cleanupAsset(assetId);
+      }
+    },
+  );
 
   it("rejects an invalid asset type", async () => {
     const {
@@ -385,19 +394,14 @@ describe("long-term asset update lifecycle", () => {
     }
   });
 
-  it("rejects invalid purchase prices", async () => {
-    const {
-      assetId,
-    } = await createTestAsset();
+  it(
+    "rejects changing the purchase price after asset creation",
+    async () => {
+      const {
+        assetId,
+      } = await createTestAsset();
 
-    try {
-      for (const price of [
-        "NaN",
-        "Infinity",
-        "-Infinity",
-        0,
-        -100,
-      ]) {
+      try {
         const {
           data,
           error,
@@ -409,7 +413,7 @@ describe("long-term asset update lifecycle", () => {
               "Updated Asset",
             p_asset_type: "land",
             p_purchase_price:
-              price,
+              15000,
             p_acquisition_cost:
               500,
             p_purchase_date:
@@ -424,26 +428,22 @@ describe("long-term asset update lifecycle", () => {
         expect(
           error!.message,
         ).toContain(
-          "Purchase price must be a finite number greater than zero",
+          "Purchase price cannot be changed after asset creation",
         );
+      } finally {
+        await cleanupAsset(assetId);
       }
-    } finally {
-      await cleanupAsset(assetId);
-    }
-  });
+    },
+  );
 
-  it("rejects invalid acquisition costs", async () => {
-    const {
-      assetId,
-    } = await createTestAsset();
+  it(
+    "rejects changing the acquisition cost after asset creation",
+    async () => {
+      const {
+        assetId,
+      } = await createTestAsset();
 
-    try {
-      for (const cost of [
-        "NaN",
-        "Infinity",
-        "-Infinity",
-        -1,
-      ]) {
+      try {
         const {
           data,
           error,
@@ -457,7 +457,7 @@ describe("long-term asset update lifecycle", () => {
             p_purchase_price:
               10000,
             p_acquisition_cost:
-              cost,
+              1200,
             p_purchase_date:
               "2026-01-15",
             p_description: null,
@@ -470,13 +470,55 @@ describe("long-term asset update lifecycle", () => {
         expect(
           error!.message,
         ).toContain(
-          "Acquisition cost must be a finite number greater than or equal to zero",
+          "Acquisition cost cannot be changed after asset creation",
         );
+      } finally {
+        await cleanupAsset(assetId);
       }
-    } finally {
-      await cleanupAsset(assetId);
-    }
-  });
+    },
+  );
+
+  it(
+    "rejects changing the purchase date after asset creation",
+    async () => {
+      const {
+        assetId,
+      } = await createTestAsset();
+
+      try {
+        const {
+          data,
+          error,
+        } = await supabase.rpc(
+          "update_long_term_asset",
+          {
+            p_asset_id: assetId,
+            p_name:
+              "Updated Asset",
+            p_asset_type: "land",
+            p_purchase_price:
+              10000,
+            p_acquisition_cost:
+              500,
+            p_purchase_date:
+              "2026-02-20",
+            p_description: null,
+          },
+        );
+
+        expect(data).toBeNull();
+        expect(error).toBeTruthy();
+
+        expect(
+          error!.message,
+        ).toContain(
+          "Purchase date cannot be changed after asset creation",
+        );
+      } finally {
+        await cleanupAsset(assetId);
+      }
+    },
+  );
 
   it("rejects a missing asset", async () => {
     const {
@@ -537,10 +579,10 @@ describe("long-term asset update lifecycle", () => {
           p_name:
             "Should Not Update",
           p_asset_type: "land",
-          p_purchase_price: 12000,
+          p_purchase_price: 10000,
           p_acquisition_cost: 500,
           p_purchase_date:
-            "2026-03-01",
+            "2026-01-15",
           p_description: null,
         },
       );
@@ -587,10 +629,10 @@ describe("long-term asset update lifecycle", () => {
           p_name:
             "Should Not Update",
           p_asset_type: "land",
-          p_purchase_price: 12000,
+          p_purchase_price: 10000,
           p_acquisition_cost: 500,
           p_purchase_date:
-            "2026-03-01",
+            "2026-01-15",
           p_description: null,
         },
       );
@@ -608,76 +650,77 @@ describe("long-term asset update lifecycle", () => {
     }
   });
 
- it("rejects updating an archived asset", async () => {
-  const {
-    assetId,
-  } = await createTestAsset();
-
-  try {
+  it("rejects updating an archived asset", async () => {
     const {
-      error: archiveError,
-    } = await supabase
-      .from("long_term_assets")
-      .update({
-        status: "cancelled",
-        archived_at:
-          new Date().toISOString(),
-      })
-      .eq("id", assetId);
+      assetId,
+    } = await createTestAsset();
 
-    expect(archiveError).toBeNull();
+    try {
+      const {
+        error: archiveError,
+      } = await supabase
+        .from("long_term_assets")
+        .update({
+          status: "cancelled",
+          archived_at:
+            new Date().toISOString(),
+        })
+        .eq("id", assetId);
 
-    const {
-      data: archivedAsset,
-      error: archivedAssetError,
-    } = await supabase
-      .from("long_term_assets")
-      .select(
-        "status, archived_at",
-      )
-      .eq("id", assetId)
-      .single();
+      expect(archiveError).toBeNull();
 
-    expect(
-      archivedAssetError,
-    ).toBeNull();
+      const {
+        data: archivedAsset,
+        error: archivedAssetError,
+      } = await supabase
+        .from("long_term_assets")
+        .select(
+          "status, archived_at",
+        )
+        .eq("id", assetId)
+        .single();
 
-    expect(
-      archivedAsset?.status,
-    ).toBe("cancelled");
+      expect(
+        archivedAssetError,
+      ).toBeNull();
 
-    expect(
-      archivedAsset?.archived_at,
-    ).not.toBeNull();
+      expect(
+        archivedAsset?.status,
+      ).toBe("cancelled");
 
-    const {
-      data,
-      error,
-    } = await supabase.rpc(
-      "update_long_term_asset",
-      {
-        p_asset_id: assetId,
-        p_name:
-          "Should Not Update",
-        p_asset_type: "land",
-        p_purchase_price: 12000,
-        p_acquisition_cost: 500,
-        p_purchase_date:
-          "2026-03-01",
-        p_description: null,
-      },
-    );
+      expect(
+        archivedAsset?.archived_at,
+      ).not.toBeNull();
 
-    expect(data).toBeNull();
-    expect(error).toBeTruthy();
+      const {
+        data,
+        error,
+      } = await supabase.rpc(
+        "update_long_term_asset",
+        {
+          p_asset_id: assetId,
+          p_name:
+            "Should Not Update",
+          p_asset_type: "land",
+          p_purchase_price: 10000,
+          p_acquisition_cost: 500,
+          p_purchase_date:
+            "2026-01-15",
+          p_description: null,
+        },
+      );
 
-    expect(
-      error!.message,
-    ).toContain(
-      "Only active long-term assets can be updated",
-    );
-  } finally {
-    await cleanupAsset(assetId);
-  }
+      expect(data).toBeNull();
+      expect(error).toBeTruthy();
+
+      expect(
+        error!.message,
+      ).toContain(
+        "Only active long-term assets can be updated",
+      );
+    } finally {
+      await cleanupAsset(assetId);
+    }
+  });
 });
-});
+

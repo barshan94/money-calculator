@@ -11,12 +11,15 @@ const navigation = [
   { href: "/categories", label: "Categories", icon: "▦" },
   { href: "/budgets", label: "Budgets", icon: "◉" },
   { href: "/investments", label: "Investments", icon: "↗" },
+  { href: "/long-term-assets", label: "Long-Term Assets", icon: "⌂" },
   { href: "/deposits", label: "Deposits", icon: "▣" },
   { href: "/recurring", label: "Recurring", icon: "↻" },
   { href: "/goals", label: "Goals", icon: "◎" },
   { href: "/reports", label: "Reports", icon: "▥" },
   { href: "/tuition", label: "Tuition", icon: "🎓" },
 ];
+
+
 
 export function DashboardNav() {
   const pathname = usePathname();
