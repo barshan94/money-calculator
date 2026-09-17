@@ -178,12 +178,13 @@ export default function TuitionPage() {
         .eq("is_active", true)
         .order("created_at", { ascending: true }),
 
-      supabase
+            supabase
         .from("accounts")
         .select("id,name,currency")
         .eq("user_id", user.id)
         .eq("account_type", "asset")
         .eq("is_archived", false)
+        .eq("is_system", false)
         .order("name"),
     ]);
 
