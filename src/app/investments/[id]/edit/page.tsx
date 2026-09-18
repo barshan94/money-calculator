@@ -131,17 +131,20 @@ export default function EditInvestmentPage() {
 
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Investment Name</label>
+  <label htmlFor="investment-name">
+    Investment Name
+  </label>
 
-          <input
-            value={name}
-            onChange={(event) =>
-              setName(event.target.value)
-            }
-            required
-          />
-        </div>
-
+  <input
+    id="investment-name"
+    value={name}
+    onChange={(event) =>
+      setName(event.target.value)
+    }
+    required
+  />
+</div>
+        
         <div>
           <label>Current Value</label>
 

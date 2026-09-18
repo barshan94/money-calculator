@@ -131,10 +131,7 @@ export default function BuyMoreInvestmentPage() {
     const qty = Number(quantity);
     const price = Number(purchasePrice);
 
-    if (
-      qty > 0 &&
-      price > 0
-    ) {
+    if (qty > 0 && price > 0) {
       setAmount(
         (qty * price).toFixed(2),
       );
@@ -150,44 +147,47 @@ export default function BuyMoreInvestmentPage() {
 
     setMessage("");
 
-    const investedAmount =
-      Number(amount);
+    const investedAmount = Number(amount);
+    const buyQuantity = Number(quantity);
+    const buyPrice = Number(purchasePrice);
 
-    const buyQuantity =
-      Number(quantity);
+    if (
+      !Number.isFinite(investedAmount) ||
+      investedAmount <= 0
+    ) {
+      setMessage(
+        "Enter a valid investment amount.",
+      );
+      return;
+    }
 
-    const buyPrice =
-      Number(purchasePrice);
+    if (
+      !Number.isFinite(buyQuantity) ||
+      buyQuantity <= 0
+    ) {
+      setMessage("Enter a valid quantity.");
+      return;
+    }
 
-   if (
-  !Number.isFinite(investedAmount) ||
-  investedAmount <= 0
-) {
-  setMessage(
-    "Enter a valid investment amount.",
-  );
-  return;
-}
+    if (
+      !Number.isFinite(buyPrice) ||
+      buyPrice <= 0
+    ) {
+      setMessage(
+        "Enter a valid purchase price.",
+      );
+      return;
+    }
 
-if (
-  !Number.isFinite(buyQuantity) ||
-  buyQuantity <= 0
-) {
-  setMessage(
-    "Enter a valid quantity.",
-  );
-  return;
-}
+    if (!accountId) {
+      setMessage("Select the source account.");
+      return;
+    }
 
-if (
-  !Number.isFinite(buyPrice) ||
-  buyPrice <= 0
-) {
-  setMessage(
-    "Enter a valid purchase price.",
-  );
-  return;
-}
+    if (!purchaseDate) {
+      setMessage("Select a purchase date.");
+      return;
+    }
 
     setSaving(true);
 
@@ -196,27 +196,14 @@ if (
     } = await supabase.rpc(
       "buy_investment",
       {
-        p_investment_id:
-          investmentId,
-
-        p_amount:
-          investedAmount,
-
-        p_quantity:
-          buyQuantity,
-
-        p_purchase_price:
-          buyPrice,
-
-        p_purchase_date:
-          purchaseDate,
-
-        p_source_account_id:
-          accountId,
-
+        p_investment_id: investmentId,
+        p_amount: investedAmount,
+        p_quantity: buyQuantity,
+        p_purchase_price: buyPrice,
+        p_purchase_date: purchaseDate,
+        p_source_account_id: accountId,
         p_description:
-          description.trim() ||
-          null,
+          description.trim() || null,
       },
     );
 
@@ -258,10 +245,8 @@ if (
     return (
       <main>
         <h1>Buy More</h1>
-
         <p>
-          This investment is no longer
-          active.
+          This investment is no longer active.
         </p>
       </main>
     );
@@ -358,8 +343,7 @@ if (
             </span>
 
             <strong>
-              {investment.quantity ===
-              null
+              {investment.quantity === null
                 ? "—"
                 : investment.quantity.toLocaleString(
                     "en-BD",
@@ -387,8 +371,7 @@ if (
 
             <strong>
               {investment.currency}{" "}
-              {investment.purchase_price ===
-              null
+              {investment.purchase_price === null
                 ? "—"
                 : investment.purchase_price.toLocaleString(
                     "en-BD",
@@ -424,17 +407,18 @@ if (
           }}
         >
           <div>
-            <label>Quantity</label>
+            <label htmlFor="buy-quantity">
+              Quantity
+            </label>
 
             <input
+              id="buy-quantity"
               type="number"
               min="0.00000001"
               step="0.00000001"
               value={quantity}
               onChange={(event) =>
-                setQuantity(
-                  event.target.value,
-                )
+                setQuantity(event.target.value)
               }
               placeholder="e.g. 20"
               required
@@ -446,11 +430,12 @@ if (
           </div>
 
           <div>
-            <label>
+            <label htmlFor="buy-purchase-price">
               Purchase Price per Unit
             </label>
 
             <input
+              id="buy-purchase-price"
               type="number"
               min="0.00000001"
               step="0.00000001"
@@ -470,19 +455,18 @@ if (
           </div>
 
           <div>
-            <label>
+            <label htmlFor="buy-total-amount">
               Total Investment Amount
             </label>
 
             <input
+              id="buy-total-amount"
               type="number"
               min="0.01"
               step="0.01"
               value={amount}
               onChange={(event) =>
-                setAmount(
-                  event.target.value,
-                )
+                setAmount(event.target.value)
               }
               required
               style={{
@@ -504,14 +488,15 @@ if (
           </div>
 
           <div>
-            <label>Paid From</label>
+            <label htmlFor="buy-paid-from">
+              Paid From
+            </label>
 
             <select
+              id="buy-paid-from"
               value={accountId}
               onChange={(event) =>
-                setAccountId(
-                  event.target.value,
-                )
+                setAccountId(event.target.value)
               }
               required
               style={{
@@ -523,23 +508,24 @@ if (
                 Select account
               </option>
 
-              {accounts.map(
-                (account) => (
-                  <option
-                    key={account.id}
-                    value={account.id}
-                  >
-                    {account.name}
-                  </option>
-                ),
-              )}
+              {accounts.map((account) => (
+                <option
+                  key={account.id}
+                  value={account.id}
+                >
+                  {account.name}
+                </option>
+              ))}
             </select>
           </div>
 
           <div>
-            <label>Purchase Date</label>
+            <label htmlFor="buy-purchase-date">
+              Purchase Date
+            </label>
 
             <input
+              id="buy-purchase-date"
               type="date"
               value={purchaseDate}
               onChange={(event) =>
@@ -556,9 +542,12 @@ if (
           </div>
 
           <div>
-            <label>Description</label>
+            <label htmlFor="buy-description">
+              Description
+            </label>
 
             <textarea
+              id="buy-description"
               value={description}
               onChange={(event) =>
                 setDescription(
@@ -583,8 +572,7 @@ if (
               padding: "11px 16px",
               border: 0,
               borderRadius: 9,
-              background:
-                "var(--primary)",
+              background: "var(--primary)",
               color: "white",
               fontWeight: 700,
               cursor: saving

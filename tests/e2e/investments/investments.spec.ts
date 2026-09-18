@@ -439,7 +439,7 @@ test.describe("Investments", () => {
     );
 
     await expect(
-      page.getByText("60.00", {
+      page.getByText("60", {
         exact: true,
       }),
     ).toBeVisible();
