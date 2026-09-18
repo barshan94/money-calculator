@@ -20,7 +20,6 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
       PLAYWRIGHT_TEST_EMAIL: "${{ secrets.PLAYWRIGHT_TEST_EMAIL }}"
       PLAYWRIGHT_TEST_PASSWORD: "${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}"
-      CRON_SECRET: "${{ secrets.CRON_SECRET }}"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
