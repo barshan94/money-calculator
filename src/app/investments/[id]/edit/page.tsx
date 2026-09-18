@@ -1,4 +1,3 @@
-
 "use client";
 
 import {
@@ -43,7 +42,9 @@ export default function EditInvestmentPage() {
       }
 
       if (data.status !== "active") {
-        setMessage("This investment is no longer active.");
+        setMessage(
+          "This investment is no longer active.",
+        );
         setLoading(false);
         return;
       }
@@ -68,12 +69,16 @@ export default function EditInvestmentPage() {
     const value = Number(currentValue);
 
     if (!name.trim()) {
-      setMessage("Investment name cannot be empty.");
+      setMessage(
+        "Investment name cannot be empty.",
+      );
       return;
     }
 
     if (!Number.isFinite(value) || value < 0) {
-      setMessage("Enter a valid current value.");
+      setMessage(
+        "Enter a valid current value.",
+      );
       return;
     }
 
@@ -100,7 +105,8 @@ export default function EditInvestmentPage() {
         {
           p_investment_id: investmentId,
           p_name: name.trim(),
-          p_description: description.trim() || null,
+          p_description:
+            description.trim() || null,
         },
       );
 
@@ -110,7 +116,10 @@ export default function EditInvestmentPage() {
       return;
     }
 
-    router.push(`/investments/${investmentId}`);
+    router.push(
+      `/investments/${investmentId}`,
+    );
+
     router.refresh();
   }
 
@@ -131,42 +140,52 @@ export default function EditInvestmentPage() {
 
       <form onSubmit={handleSubmit}>
         <div>
-  <label htmlFor="investment-name">
-    Investment Name
-  </label>
-
-  <input
-    id="investment-name"
-    value={name}
-    onChange={(event) =>
-      setName(event.target.value)
-    }
-    required
-  />
-</div>
-        
-        <div>
-          <label>Current Value</label>
+          <label htmlFor="investment-name">
+            Investment Name
+          </label>
 
           <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={currentValue}
+            id="investment-name"
+            value={name}
             onChange={(event) =>
-              setCurrentValue(event.target.value)
+              setName(event.target.value)
             }
             required
           />
         </div>
 
         <div>
-          <label>Description</label>
+          <label htmlFor="current-value">
+            Current Value
+          </label>
+
+          <input
+            id="current-value"
+            type="number"
+            min="0"
+            step="0.01"
+            value={currentValue}
+            onChange={(event) =>
+              setCurrentValue(
+                event.target.value,
+              )
+            }
+            required
+          />
+        </div>
+
+        <div>
+          <label htmlFor="investment-description">
+            Description
+          </label>
 
           <textarea
+            id="investment-description"
             value={description}
             onChange={(event) =>
-              setDescription(event.target.value)
+              setDescription(
+                event.target.value,
+              )
             }
           />
         </div>
@@ -175,9 +194,12 @@ export default function EditInvestmentPage() {
           type="submit"
           disabled={saving}
         >
-          {saving ? "Saving..." : "Save Changes"}
+          {saving
+            ? "Saving..."
+            : "Save Changes"}
         </button>
       </form>
     </main>
   );
 }
+

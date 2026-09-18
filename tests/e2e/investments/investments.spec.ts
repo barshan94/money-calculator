@@ -439,10 +439,9 @@ test.describe("Investments", () => {
     );
 
     await expect(
-      page.getByText("60", {
-        exact: true,
-      }),
-    ).toBeVisible();
+  page.getByText("60", { exact: true }),
+).toBeVisible();
+    
 
     await expect(
       page.getByRole("link", {
