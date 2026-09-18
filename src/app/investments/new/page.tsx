@@ -73,8 +73,6 @@ export default function NewInvestmentPage() {
 
     const investedAmount = parseFloat(amount);
 
-
-
     if (!name.trim()) {
       setMessage("Enter the investment name.");
       return;
@@ -166,9 +164,12 @@ export default function NewInvestmentPage() {
 
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Investment Name</label>
+          <label htmlFor="investment-name">
+            Investment Name
+          </label>
 
           <input
+            id="investment-name"
             value={name}
             onChange={(event) =>
               setName(event.target.value)
@@ -179,9 +180,12 @@ export default function NewInvestmentPage() {
         </div>
 
         <div>
-          <label>Investment Type</label>
+          <label htmlFor="investment-type">
+            Investment Type
+          </label>
 
           <select
+            id="investment-type"
             value={investmentType}
             onChange={(event) =>
               setInvestmentType(event.target.value)
@@ -201,9 +205,12 @@ export default function NewInvestmentPage() {
         </div>
 
         <div>
-          <label>Invested Amount</label>
+          <label htmlFor="invested-amount">
+            Invested Amount
+          </label>
 
           <input
+            id="invested-amount"
             type="number"
             min="0.01"
             step="0.01"
@@ -217,9 +224,12 @@ export default function NewInvestmentPage() {
         </div>
 
         <div>
-          <label>Currency</label>
+          <label htmlFor="investment-currency">
+            Currency
+          </label>
 
           <select
+            id="investment-currency"
             value={currency}
             onChange={(event) => {
               setCurrency(event.target.value);
@@ -234,9 +244,12 @@ export default function NewInvestmentPage() {
         </div>
 
         <div>
-          <label>Quantity (optional)</label>
+          <label htmlFor="investment-quantity">
+            Quantity (optional)
+          </label>
 
           <input
+            id="investment-quantity"
             type="number"
             min="0.00000001"
             step="0.00000001"
@@ -249,9 +262,12 @@ export default function NewInvestmentPage() {
         </div>
 
         <div>
-          <label>Purchase Price (optional)</label>
+          <label htmlFor="purchase-price">
+            Purchase Price (optional)
+          </label>
 
           <input
+            id="purchase-price"
             type="number"
             min="0.00000001"
             step="0.00000001"
@@ -264,9 +280,12 @@ export default function NewInvestmentPage() {
         </div>
 
         <div>
-          <label>Paid From</label>
+          <label htmlFor="paid-from">
+            Paid From
+          </label>
 
           <select
+            id="paid-from"
             value={accountId}
             onChange={(event) =>
               setAccountId(event.target.value)
@@ -289,9 +308,12 @@ export default function NewInvestmentPage() {
         </div>
 
         <div>
-          <label>Purchase Date</label>
+          <label htmlFor="purchase-date">
+            Purchase Date
+          </label>
 
           <input
+            id="purchase-date"
             type="date"
             value={purchaseDate}
             onChange={(event) =>
@@ -302,9 +324,12 @@ export default function NewInvestmentPage() {
         </div>
 
         <div>
-          <label>Description</label>
+          <label htmlFor="investment-description">
+            Description
+          </label>
 
           <textarea
+            id="investment-description"
             value={description}
             onChange={(event) =>
               setDescription(event.target.value)
