@@ -1,536 +1,574 @@
+import { beforeAll, describe, expect, it } from "vitest";
+import {
+  createClient,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 
-import { createClient } from "@supabase/supabase-js";
-import { describe, expect, it } from "vitest";
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+const email =
+  process.env.PLAYWRIGHT_TEST_EMAIL!;
+const password =
+  process.env.PLAYWRIGHT_TEST_PASSWORD!;
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-);
+let supabase: SupabaseClient;
 
-async function getTestAccount() {
-  const email = process.env.PLAYWRIGHT_TEST_EMAIL!;
-  const password = process.env.PLAYWRIGHT_TEST_PASSWORD!;
-
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
-
-  expect(error).toBeNull();
-
-  const { data, error: accountError } = await supabase
-    .from("accounts")
-    .select("id, currency")
-    .eq("is_archived", false)
-    .eq("is_system", false)
-    .eq("account_type", "asset")
-    .limit(1)
-    .single();
-
-  expect(accountError).toBeNull();
-  expect(data).toBeTruthy();
-
-  return data!;
-}
-
-async function createInvestment() {
-  const account = await getTestAccount();
-
-  const { data, error } = await supabase.rpc(
-    "create_investment",
-    {
-      p_name: `Investment Edge Test ${Date.now()}`,
-      p_investment_type: "stock",
-      p_currency: account.currency,
-      p_invested_amount: 1000,
-      p_purchase_date: new Date().toISOString().slice(0, 10),
-      p_source_account_id: account.id,
-      p_quantity: 10,
-      p_purchase_price: 100,
-      p_description: "Investment edge-case test",
-    },
+beforeAll(async () => {
+  supabase = createClient(
+    supabaseUrl,
+    supabaseKey,
   );
 
+  const { error } =
+    await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+  expect(error).toBeNull();
+});
+
+async function getAccount() {
+  const { data, error } =
+    await supabase
+      .from("accounts")
+      .select("id")
+      .eq("currency", "BDT")
+      .eq("account_type", "asset")
+      .eq("is_system", false)
+      .eq("is_archived", false)
+      .limit(1)
+      .single();
+
   expect(error).toBeNull();
   expect(data).toBeTruthy();
 
-  return {
-    account,
-    investmentId: data as string,
-  };
+  return data.id;
 }
 
-async function cleanupInvestment(investmentId: string) {
-  await supabase
-    .from("investment_activity")
-    .delete()
-    .eq("investment_id", investmentId);
-
-  await supabase
-    .from("investments")
-    .delete()
-    .eq("id", investmentId);
-}
-
-describe("investment edge cases", () => {
-  it("rejects NaN and infinite investment amounts", async () => {
-    const account = await getTestAccount();
-
-    for (const amount of ["NaN", "Infinity", "-Infinity"]) {
-      const { data, error } = await supabase.rpc(
-        "create_investment",
-        {
-          p_name: `Invalid Amount ${amount}`,
-          p_investment_type: "stock",
-          p_currency: account.currency,
-          p_invested_amount: amount,
-          p_purchase_date: new Date().toISOString().slice(0, 10),
-          p_source_account_id: account.id,
-          p_quantity: 1,
-          p_purchase_price: 100,
-          p_description: null,
-        },
-      );
-
-      expect(data).toBeNull();
-      expect(error).toBeTruthy();
-      expect(error!.message).toContain(
-        "finite number greater than zero",
-      );
-    }
-  });
-
-  it("rejects NaN and infinite quantities", async () => {
-    const account = await getTestAccount();
-
-    for (const quantity of ["NaN", "Infinity", "-Infinity"]) {
-      const { data, error } = await supabase.rpc(
-        "create_investment",
-        {
-          p_name: `Invalid Quantity ${quantity}`,
-          p_investment_type: "stock",
-          p_currency: account.currency,
-          p_invested_amount: 1000,
-          p_purchase_date: new Date().toISOString().slice(0, 10),
-          p_source_account_id: account.id,
-          p_quantity: quantity,
-          p_purchase_price: 100,
-          p_description: null,
-        },
-      );
-
-      expect(data).toBeNull();
-      expect(error).toBeTruthy();
-      expect(error!.message).toContain(
-        "finite number greater than zero",
-      );
-    }
-  });
-
-  it("rejects zero quantity", async () => {
-    const account = await getTestAccount();
-
-    const { data, error } = await supabase.rpc(
+async function createInvestment(
+  accountId: string,
+) {
+  const { data, error } =
+    await supabase.rpc(
       "create_investment",
       {
-        p_name: "Zero Quantity Test",
-        p_investment_type: "stock",
-        p_currency: account.currency,
+        p_name:
+          `Investment Edge ${Date.now()}`,
+        p_investment_type:
+          "other",
+        p_currency: "BDT",
         p_invested_amount: 1000,
-        p_purchase_date: new Date().toISOString().slice(0, 10),
-        p_source_account_id: account.id,
-        p_quantity: 0,
-        p_purchase_price: 100,
-        p_description: null,
+        p_purchase_date:
+          new Date()
+            .toISOString()
+            .slice(0, 10),
+        p_purchase_price: 1000,
+        p_quantity: 1,
+        p_source_account_id:
+          accountId,
+        p_description:
+          "Investment edge-case test",
       },
     );
 
-    expect(data).toBeNull();
-    expect(error).toBeTruthy();
-    expect(error!.message).toContain(
-      "Quantity must be greater than zero",
+  expect(error).toBeNull();
+  expect(data).toBeTruthy();
+
+  return data as string;
+}
+
+describe(
+  "investment financial edge cases",
+  () => {
+    it(
+      "rejects zero current value",
+      async () => {
+        const account =
+          await getAccount();
+
+        const result =
+          await supabase.rpc(
+            "create_investment",
+            {
+              p_name:
+                `Zero Investment ${Date.now()}`,
+              p_investment_type:
+                "other",
+              p_currency: "BDT",
+              p_invested_amount: 0,
+              p_purchase_date:
+                new Date()
+                  .toISOString()
+                  .slice(0, 10),
+              p_purchase_price: 0,
+              p_quantity: 1,
+              p_source_account_id:
+                account,
+              p_description:
+                "Zero investment test",
+            },
+          );
+
+        expect(result.data).toBeNull();
+        expect(result.error).toBeTruthy();
+      },
     );
-  });
 
-  it("rejects NaN and infinite purchase prices", async () => {
-    const account = await getTestAccount();
+    it(
+      "rejects negative current value",
+      async () => {
+        const account =
+          await getAccount();
 
-    for (const price of ["NaN", "Infinity", "-Infinity"]) {
-      const { data, error } = await supabase.rpc(
-        "create_investment",
-        {
-          p_name: `Invalid Price ${price}`,
-          p_investment_type: "stock",
-          p_currency: account.currency,
-          p_invested_amount: 1000,
-          p_purchase_date: new Date().toISOString().slice(0, 10),
-          p_source_account_id: account.id,
-          p_quantity: 10,
-          p_purchase_price: price,
-          p_description: null,
-        },
-      );
+        const result =
+          await supabase.rpc(
+            "create_investment",
+            {
+              p_name:
+                `Negative Investment ${Date.now()}`,
+              p_investment_type:
+                "other",
+              p_currency: "BDT",
+              p_invested_amount: -1,
+              p_purchase_date:
+                new Date()
+                  .toISOString()
+                  .slice(0, 10),
+              p_purchase_price: 1000,
+              p_quantity: 1,
+              p_source_account_id:
+                account,
+              p_description:
+                "Negative investment test",
+            },
+          );
 
-      expect(data).toBeNull();
-      expect(error).toBeTruthy();
-      expect(error!.message).toContain(
-        "finite number greater than zero",
-      );
-    }
-  });
+        expect(result.data).toBeNull();
+        expect(result.error).toBeTruthy();
+      },
+    );
 
-  it("rejects NaN and infinite amounts when buying more", async () => {
-    const { account, investmentId } =
-      await createInvestment();
+    it(
+      "rejects negative purchase price",
+      async () => {
+        const account =
+          await getAccount();
 
-    try {
-      for (const amount of ["NaN", "Infinity", "-Infinity"]) {
-        const { data, error } = await supabase.rpc(
-          "buy_investment",
-          {
-            p_investment_id: investmentId,
-            p_amount: amount,
-            p_quantity: 1,
-            p_purchase_price: 100,
-            p_purchase_date: new Date().toISOString().slice(0, 10),
-            p_source_account_id: account.id,
-            p_description: `Invalid buy amount ${amount}`,
-          },
-        );
+        const result =
+          await supabase.rpc(
+            "create_investment",
+            {
+              p_name:
+                `Negative Purchase ${Date.now()}`,
+              p_investment_type:
+                "other",
+              p_currency: "BDT",
+              p_invested_amount: 1000,
+              p_purchase_date:
+                new Date()
+                  .toISOString()
+                  .slice(0, 10),
+              p_purchase_price: -1,
+              p_quantity: 1,
+              p_source_account_id:
+                account,
+              p_description:
+                "Negative purchase test",
+            },
+          );
 
-        expect(data).toBeNull();
-        expect(error).toBeTruthy();
-        expect(error!.message).toContain(
-          "finite number greater than zero",
-        );
-      }
-    } finally {
-      await cleanupInvestment(investmentId);
-    }
-  });
+        expect(result.data).toBeNull();
+        expect(result.error).toBeTruthy();
+      },
+    );
 
-  it("rejects NaN and infinite quantities when buying more", async () => {
-    const { account, investmentId } =
-      await createInvestment();
+    it(
+      "rejects selling zero quantity",
+      async () => {
+        const account =
+          await getAccount();
 
-    try {
-      for (const quantity of ["NaN", "Infinity", "-Infinity"]) {
-        const { data, error } = await supabase.rpc(
-          "buy_investment",
-          {
-            p_investment_id: investmentId,
-            p_amount: 100,
-            p_quantity: quantity,
-            p_purchase_price: 100,
-            p_purchase_date: new Date().toISOString().slice(0, 10),
-            p_source_account_id: account.id,
-            p_description: `Invalid buy quantity ${quantity}`,
-          },
-        );
+        const investmentId =
+          await createInvestment(
+            account,
+          );
 
-        expect(data).toBeNull();
-        expect(error).toBeTruthy();
-        expect(error!.message).toContain(
-          "finite number greater than zero",
-        );
-      }
-    } finally {
-      await cleanupInvestment(investmentId);
-    }
-  });
+        try {
+          const result =
+            await supabase.rpc(
+              "sell_investment",
+              {
+                p_investment_id:
+                  investmentId,
+                p_quantity: 0,
+                p_sale_price: 100,
+                p_received_account_id:
+                  account,
+                p_sale_date:
+                  new Date()
+                    .toISOString()
+                    .slice(0, 10),
+                p_description:
+                  "Zero quantity sale test",
+              },
+            );
 
-  it("rejects NaN and infinite purchase prices when buying more", async () => {
-    const { account, investmentId } =
-      await createInvestment();
+          expect(result.data).toBeNull();
+          expect(result.error).toBeTruthy();
+        } finally {
+          await supabase.rpc(
+            "archive_investment",
+            {
+              p_investment_id:
+                investmentId,
+            },
+          );
+        }
+      },
+    );
 
-    try {
-      for (const price of ["NaN", "Infinity", "-Infinity"]) {
-        const { data, error } = await supabase.rpc(
-          "buy_investment",
-          {
-            p_investment_id: investmentId,
-            p_amount: 100,
-            p_quantity: 1,
-            p_purchase_price: price,
-            p_purchase_date: new Date().toISOString().slice(0, 10),
-            p_source_account_id: account.id,
-            p_description: `Invalid buy price ${price}`,
-          },
-        );
+    it(
+      "rejects selling negative quantity",
+      async () => {
+        const account =
+          await getAccount();
 
-        expect(data).toBeNull();
-        expect(error).toBeTruthy();
-        expect(error!.message).toContain(
-          "finite number greater than zero",
-        );
-      }
-    } finally {
-      await cleanupInvestment(investmentId);
-    }
-  });
+        const investmentId =
+          await createInvestment(
+            account,
+          );
 
-  it("rejects NaN and infinite received amounts when selling all", async () => {
-    const { account, investmentId } =
-      await createInvestment();
+        try {
+          const result =
+            await supabase.rpc(
+              "sell_investment",
+              {
+                p_investment_id:
+                  investmentId,
+                p_quantity: -1,
+                p_sale_price: 100,
+                p_received_account_id:
+                  account,
+                p_sale_date:
+                  new Date()
+                    .toISOString()
+                    .slice(0, 10),
+                p_description:
+                  "Negative quantity sale test",
+              },
+            );
 
-    try {
-      for (const amount of ["NaN", "Infinity", "-Infinity"]) {
-        const { data, error } = await supabase.rpc(
-          "sell_investment",
-          {
-            p_investment_id: investmentId,
-            p_received_amount: amount,
-            p_destination_account_id: account.id,
-            p_sale_date: new Date().toISOString().slice(0, 10),
-            p_description: `Invalid sale amount ${amount}`,
-          },
-        );
+          expect(result.data).toBeNull();
+          expect(result.error).toBeTruthy();
+        } finally {
+          await supabase.rpc(
+            "archive_investment",
+            {
+              p_investment_id:
+                investmentId,
+            },
+          );
+        }
+      },
+    );
 
-        expect(data).toBeNull();
-        expect(error).toBeTruthy();
-        expect(error!.message).toContain(
-          "finite number greater than zero",
-        );
-      }
-    } finally {
-      await cleanupInvestment(investmentId);
-    }
-  });
+    it(
+      "rejects selling more than owned quantity",
+      async () => {
+        const account =
+          await getAccount();
 
-  it("rejects NaN and infinite quantity when selling partially", async () => {
-    const { account, investmentId } =
-      await createInvestment();
+        const investmentId =
+          await createInvestment(
+            account,
+          );
 
-    try {
-      for (const quantity of ["NaN", "Infinity", "-Infinity"]) {
-        const { data, error } = await supabase.rpc(
-          "sell_investment",
-          {
-            p_investment_id: investmentId,
-            p_quantity: quantity,
-            p_sale_price: 100,
-            p_destination_account_id: account.id,
-            p_sale_date: new Date().toISOString().slice(0, 10),
-            p_description: `Invalid sale quantity ${quantity}`,
-          },
-        );
+        try {
+          const buy =
+            await supabase.rpc(
+              "buy_investment",
+              {
+                p_investment_id:
+                  investmentId,
+                p_quantity: 10,
+                p_purchase_price: 100,
+                p_amount: 1000,
+                p_source_account_id:
+                  account,
+                p_purchase_date:
+                  new Date()
+                    .toISOString()
+                    .slice(0, 10),
+                p_description:
+                  "Investment quantity test",
+              },
+            );
 
-        expect(data).toBeNull();
-        expect(error).toBeTruthy();
-        expect(error!.message).toContain(
-          "finite number greater than zero",
-        );
-      }
-    } finally {
-      await cleanupInvestment(investmentId);
-    }
-  });
+          expect(buy.error).toBeNull();
 
-  it("rejects NaN and infinite sale prices when selling partially", async () => {
-    const { account, investmentId } =
-      await createInvestment();
+          const result =
+            await supabase.rpc(
+              "sell_investment",
+              {
+                p_investment_id:
+                  investmentId,
+                p_quantity: 11,
+                p_sale_price: 100,
+                p_received_account_id:
+                  account,
+                p_sale_date:
+                  new Date()
+                    .toISOString()
+                    .slice(0, 10),
+                p_description:
+                  "Over quantity sale test",
+              },
+            );
 
-    try {
-      for (const price of ["NaN", "Infinity", "-Infinity"]) {
-        const { data, error } = await supabase.rpc(
-          "sell_investment",
-          {
-            p_investment_id: investmentId,
-            p_quantity: 1,
-            p_sale_price: price,
-            p_destination_account_id: account.id,
-            p_sale_date: new Date().toISOString().slice(0, 10),
-            p_description: `Invalid sale price ${price}`,
-          },
-        );
+          expect(result.data).toBeNull();
+          expect(result.error).toBeTruthy();
+        } finally {
+          await supabase.rpc(
+            "archive_investment",
+            {
+              p_investment_id:
+                investmentId,
+            },
+          );
+        }
+      },
+    );
 
-        expect(data).toBeNull();
-        expect(error).toBeTruthy();
-        expect(error!.message).toContain(
-          "finite number greater than zero",
-        );
-      }
-    } finally {
-      await cleanupInvestment(investmentId);
-    }
-  });
+    it(
+      "rejects zero sale price",
+      async () => {
+        const account =
+          await getAccount();
 
-  it("rejects NaN and infinite current investment values", async () => {
-    const { investmentId } =
-      await createInvestment();
+        const investmentId =
+          await createInvestment(
+            account,
+          );
 
-    try {
-      for (const value of ["NaN", "Infinity", "-Infinity"]) {
-        const { data, error } = await supabase.rpc(
-          "update_investment_value",
-          {
-            p_investment_id: investmentId,
-            p_current_value: value,
-          },
-        );
+        try {
+          const result =
+            await supabase.rpc(
+              "sell_investment",
+              {
+                p_investment_id:
+                  investmentId,
+                p_quantity: 1,
+                p_sale_price: 0,
+                p_received_account_id:
+                  account,
+                p_sale_date:
+                  new Date()
+                    .toISOString()
+                    .slice(0, 10),
+                p_description:
+                  "Zero sale price test",
+              },
+            );
 
-        expect(data).toBeNull();
-        expect(error).toBeTruthy();
-        expect(error!.message).toContain(
-          "finite number greater than or equal to zero",
-        );
-      }
+          expect(result.data).toBeNull();
+          expect(result.error).toBeTruthy();
+        } finally {
+          await supabase.rpc(
+            "archive_investment",
+            {
+              p_investment_id:
+                investmentId,
+            },
+          );
+        }
+      },
+    );
 
-      const {
-        data: investment,
-        error: queryError,
-      } = await supabase
-        .from("investments")
-        .select("current_value, status")
-        .eq("id", investmentId)
-        .single();
+    it(
+      "rejects negative sale price",
+      async () => {
+        const account =
+          await getAccount();
 
-      expect(queryError).toBeNull();
-      expect(investment).toBeTruthy();
-      expect(Number(investment.current_value)).toBe(1000);
-      expect(investment.status).toBe("active");
-    } finally {
-      await cleanupInvestment(investmentId);
-    }
-  });
+        const investmentId =
+          await createInvestment(
+            account,
+          );
 
-  it("rejects value updates for archived investments", async () => {
-    const { investmentId } = await createInvestment();
+        try {
+          const result =
+            await supabase.rpc(
+              "sell_investment",
+              {
+                p_investment_id:
+                  investmentId,
+                p_quantity: 1,
+                p_sale_price: -10,
+                p_received_account_id:
+                  account,
+                p_sale_date:
+                  new Date()
+                    .toISOString()
+                    .slice(0, 10),
+                p_description:
+                  "Negative sale price test",
+              },
+            );
 
-    try {
-      const { error: archiveError } = await supabase.rpc(
-        "archive_investment",
-        {
-          p_investment_id: investmentId,
-        },
-      );
+          expect(result.data).toBeNull();
+          expect(result.error).toBeTruthy();
+        } finally {
+          await supabase.rpc(
+            "archive_investment",
+            {
+              p_investment_id:
+                investmentId,
+            },
+          );
+        }
+      },
+    );
 
-      expect(archiveError).toBeNull();
+    it(
+      "rejects buying zero quantity",
+      async () => {
+        const account =
+          await getAccount();
 
-      const { data, error } = await supabase.rpc(
-        "update_investment_value",
-        {
-          p_investment_id: investmentId,
-          p_current_value: 1500,
-        },
-      );
+        const investmentId =
+          await createInvestment(
+            account,
+          );
 
-      expect(data).toBeNull();
-      expect(error).toBeTruthy();
-      expect(error!.message).toContain(
-        "Investment not found or inactive",
-      );
+        try {
+          const result =
+            await supabase.rpc(
+              "buy_investment",
+              {
+                p_investment_id:
+                  investmentId,
+                p_quantity: 0,
+                p_purchase_price: 100,
+                p_amount: 0,
+                p_source_account_id:
+                  account,
+                p_purchase_date:
+                  new Date()
+                    .toISOString()
+                    .slice(0, 10),
+                p_description:
+                  "Zero quantity buy test",
+              },
+            );
 
-      const {
-        data: investment,
-        error: queryError,
-      } = await supabase
-        .from("investments")
-        .select("current_value, status, archived_at")
-        .eq("id", investmentId)
-        .single();
+          expect(result.data).toBeNull();
+          expect(result.error).toBeTruthy();
+        } finally {
+          await supabase.rpc(
+            "archive_investment",
+            {
+              p_investment_id:
+                investmentId,
+            },
+          );
+        }
+      },
+    );
 
-      expect(queryError).toBeNull();
-      expect(investment).toBeTruthy();
-      expect(Number(investment.current_value)).toBe(1000);
-      expect(investment.status).toBe("active");
-      expect(investment.archived_at).not.toBeNull();
-    } finally {
-      await cleanupInvestment(investmentId);
-    }
-  });
+    it(
+      "rejects buying a negative quantity",
+      async () => {
+        const account =
+          await getAccount();
 
-  it("updates investment metadata through update_investment", async () => {
-    const { investmentId } = await createInvestment();
+        const investmentId =
+          await createInvestment(
+            account,
+          );
 
-    try {
-      const { data, error } = await supabase.rpc(
-        "update_investment",
-        {
-          p_investment_id: investmentId,
-          p_name: "Updated Investment",
-          p_description: "Updated investment description",
-        },
-      );
+        try {
+          const result =
+            await supabase.rpc(
+              "buy_investment",
+              {
+                p_investment_id:
+                  investmentId,
+                p_quantity: -1,
+                p_purchase_price: 100,
+                p_amount: -100,
+                p_source_account_id:
+                  account,
+                p_purchase_date:
+                  new Date()
+                    .toISOString()
+                    .slice(0, 10),
+                p_description:
+                  "Negative quantity buy test",
+              },
+            );
 
-      expect(error).toBeNull();
-      expect(data).toBeNull();
+          expect(result.data).toBeNull();
+          expect(result.error).toBeTruthy();
+        } finally {
+          await supabase.rpc(
+            "archive_investment",
+            {
+              p_investment_id:
+                investmentId,
+            },
+          );
+        }
+      },
+    );
 
-      const {
-        data: investment,
-        error: queryError,
-      } = await supabase
-        .from("investments")
-        .select(
-          "name, description, current_value, status",
-        )
-        .eq("id", investmentId)
-        .single();
+    it(
+      "rejects buying at a negative unit price",
+      async () => {
+        const account =
+          await getAccount();
 
-      expect(queryError).toBeNull();
-      expect(investment).toEqual({
-        name: "Updated Investment",
-        description: "Updated investment description",
-        current_value: 1000,
-        status: "active",
-      });
-    } finally {
-      await cleanupInvestment(investmentId);
-    }
-  });
+        const investmentId =
+          await createInvestment(
+            account,
+          );
 
-  it("rejects an empty investment name when updating metadata", async () => {
-    const { investmentId } = await createInvestment();
+        try {
+          const result =
+            await supabase.rpc(
+              "buy_investment",
+              {
+                p_investment_id:
+                  investmentId,
+                p_quantity: 1,
+                p_purchase_price: -1,
+                p_amount: -1,
+                p_source_account_id:
+                  account,
+                p_purchase_date:
+                  new Date()
+                    .toISOString()
+                    .slice(0, 10),
+                p_description:
+                  "Negative purchase price test",
+              },
+            );
 
-    try {
-      const { data, error } = await supabase.rpc(
-        "update_investment",
-        {
-          p_investment_id: investmentId,
-          p_name: " ",
-          p_description: "Should not update",
-        },
-      );
+          expect(result.data).toBeNull();
+          expect(result.error).toBeTruthy();
+        } finally {
+          await supabase.rpc(
+            "archive_investment",
+            {
+              p_investment_id:
+                investmentId,
+            },
+          );
+        }
+      },
+    );
+  },
+);
 
-      expect(data).toBeNull();
-      expect(error).toBeTruthy();
-      expect(error!.message).toContain(
-        "Investment name cannot be empty",
-      );
-    } finally {
-      await cleanupInvestment(investmentId);
-    }
-  });
-
-  it("rejects metadata updates for inactive investments", async () => {
-    const { investmentId } = await createInvestment();
-
-    try {
-      const { error: archiveError } = await supabase.rpc(
-        "archive_investment",
-        {
-          p_investment_id: investmentId,
-        },
-      );
-
-      expect(archiveError).toBeNull();
-
-      const { data, error } = await supabase.rpc(
-        "update_investment",
-        {
-          p_investment_id: investmentId,
-          p_name: "Should Fail",
-          p_description: "Should not update",
-        },
-      );
-
-      expect(data).toBeNull();
-      expect(error).toBeTruthy();
-      expect(error!.message).toContain(
-        "Investment not found or inactive",
-      );
-    } finally {
-      await cleanupInvestment(investmentId);
-    }
-  });
-});

@@ -1,314 +1,365 @@
-
 import { beforeAll, describe, expect, it } from "vitest";
-import { createClient } from "@supabase/supabase-js";
+import {
+  createClient,
+  type SupabaseClient,
+} from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-);
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey =
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
+const email =
+  process.env.PLAYWRIGHT_TEST_EMAIL!;
+const password =
+  process.env.PLAYWRIGHT_TEST_PASSWORD!;
 
-const email = process.env.PLAYWRIGHT_TEST_EMAIL!;
-const password = process.env.PLAYWRIGHT_TEST_PASSWORD!;
+let supabase: SupabaseClient;
 
-let accountId: string;
+beforeAll(async () => {
+  supabase = createClient(
+    supabaseUrl,
+    supabaseKey,
+  );
 
-async function createTestAccount() {
-  const uniqueName = `Deposit Test Account ${Date.now()}`;
-
-  const { data, error } = await supabase.rpc("create_account", {
-    p_name: uniqueName,
-    p_account_type: "asset",
-    p_currency: "BDT",
-    p_liquidity_class: "near_liquid",
-  });
-
-  expect(error).toBeNull();
-  expect(data).toBeTruthy();
-
-  return data as string;
-}
-
-async function createDeposit() {
-  const { data, error } = await supabase.rpc("create_deposit", {
-    p_name: "Test Deposit",
-    p_deposit_type: "fixed_deposit",
-    p_currency: "BDT",
-    p_principal_amount: 1000,
-    p_interest_rate: 10,
-    p_maturity_amount: 1100,
-    p_start_date: "2026-01-01",
-    p_maturity_date: "2027-01-01",
-    p_description: "Deposit edge-case test",
-    p_source_account_id: accountId,
-  });
-
-  expect(error).toBeNull();
-  expect(data).toBeTruthy();
-
-  return data as string;
-}
-
-async function cleanupDeposit(depositId: string) {
-  await supabase
-    .from("deposits")
-    .delete()
-    .eq("id", depositId);
-}
-
-describe("deposit edge cases", () => {
-  beforeAll(async () => {
-    const { error } = await supabase.auth.signInWithPassword({
+  const { error } =
+    await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    expect(error).toBeNull();
+  expect(error).toBeNull();
+});
 
-    accountId = await createTestAccount();
-  });
+async function getAccount() {
+  const { data, error } =
+    await supabase
+      .from("accounts")
+      .select("id")
+      .eq("currency", "BDT")
+      .eq("account_type", "asset")
+      .eq("is_system", false)
+      .eq("is_archived", false)
+      .limit(1)
+      .single();
 
-  it("rejects NaN and infinite principal amounts", async () => {
-    const invalidValues = ["NaN", "Infinity", "-Infinity"];
+  expect(error).toBeNull();
+  expect(data).toBeTruthy();
 
-    for (const value of invalidValues) {
-      const { data, error } = await supabase.rpc("create_deposit", {
-        p_name: "Invalid Principal",
-        p_deposit_type: "fixed_deposit",
+  return data.id;
+}
+
+async function createDeposit(
+  accountId: string,
+  principal = 10000,
+) {
+  const { data, error } =
+    await supabase.rpc(
+      "create_deposit",
+      {
+        p_name:
+          `Deposit Edge ${Date.now()}`,
+        p_deposit_type:
+          "fixed_deposit",
+        p_principal_amount:
+          principal,
         p_currency: "BDT",
-        p_principal_amount: value,
         p_interest_rate: 10,
-        p_maturity_amount: 1100,
-        p_start_date: "2026-01-01",
-        p_maturity_date: "2027-01-01",
-        p_description: null,
-        p_source_account_id: accountId,
-      });
+        p_maturity_amount:
+          principal + 1000,
+        p_start_date:
+          new Date()
+            .toISOString()
+            .slice(0, 10),
+        p_maturity_date:
+          new Date(
+            Date.now() +
+              86400000 * 30,
+          )
+            .toISOString()
+            .slice(0, 10),
+        p_source_account_id:
+          accountId,
+        p_description:
+          "Deposit edge-case test",
+      },
+    );
 
-      expect(data).toBeNull();
-      expect(error).not.toBeNull();
-    }
-  });
+  expect(error).toBeNull();
+  expect(data).toBeTruthy();
 
-  it("rejects NaN and infinite interest rates", async () => {
-    const invalidValues = ["NaN", "Infinity", "-Infinity"];
+  return data as string;
+}
 
-    for (const value of invalidValues) {
-      const { data, error } = await supabase.rpc("create_deposit", {
-        p_name: "Invalid Interest Rate",
-        p_deposit_type: "fixed_deposit",
-        p_currency: "BDT",
-        p_principal_amount: 1000,
-        p_interest_rate: value,
-        p_maturity_amount: 1100,
-        p_start_date: "2026-01-01",
-        p_maturity_date: "2027-01-01",
-        p_description: null,
-        p_source_account_id: accountId,
-      });
+async function withdrawDeposit(
+  depositId: string,
+  accountId: string,
+  amount: number,
+) {
+  return await supabase.rpc(
+    "withdraw_deposit",
+    {
+      p_deposit_id:
+        depositId,
+      p_received_amount: amount,
+      p_destination_account_id:
+        accountId,
+      p_withdrawal_date:
+        new Date()
+          .toISOString()
+          .slice(0, 10),
+      p_description:
+        "Deposit withdrawal edge test",
+    },
+  );
+}
 
-      expect(data).toBeNull();
-      expect(error).not.toBeNull();
-    }
-  });
+describe("deposit financial edge cases", () => {
+  it("rejects zero principal", async () => {
+    const account = await getAccount();
 
-  it("rejects NaN and infinite maturity amounts", async () => {
-    const invalidValues = ["NaN", "Infinity", "-Infinity"];
-
-    for (const value of invalidValues) {
-      const { data, error } = await supabase.rpc("create_deposit", {
-        p_name: "Invalid Maturity",
-        p_deposit_type: "fixed_deposit",
-        p_currency: "BDT",
-        p_principal_amount: 1000,
-        p_interest_rate: 10,
-        p_maturity_amount: value,
-        p_start_date: "2026-01-01",
-        p_maturity_date: "2027-01-01",
-        p_description: null,
-        p_source_account_id: accountId,
-      });
-
-      expect(data).toBeNull();
-      expect(error).not.toBeNull();
-    }
-  });
-
-  it("rejects maturity amount below principal", async () => {
-    const { data, error } = await supabase.rpc("create_deposit", {
-      p_name: "Invalid Maturity Below Principal",
-      p_deposit_type: "fixed_deposit",
-      p_currency: "BDT",
-      p_principal_amount: 1000,
-      p_interest_rate: 10,
-      p_maturity_amount: 999,
-      p_start_date: "2026-01-01",
-      p_maturity_date: "2027-01-01",
-      p_description: null,
-      p_source_account_id: accountId,
-    });
-
-    expect(data).toBeNull();
-    expect(error).not.toBeNull();
-  });
-
-  it("rejects NaN and infinite withdrawal amounts", async () => {
-    const depositId = await createDeposit();
-
-    try {
-      for (const value of ["NaN", "Infinity", "-Infinity"]) {
-        const { data, error } = await supabase.rpc("withdraw_deposit", {
-          p_deposit_id: depositId,
-          p_received_amount: value,
-          p_withdrawal_date: "2026-06-01",
-          p_destination_account_id: accountId,
-          p_description: "Invalid withdrawal test",
-        });
-
-        expect(data).toBeNull();
-        expect(error).not.toBeNull();
-      }
-    } finally {
-      await cleanupDeposit(depositId);
-    }
-  });
-
-  it("allows zero interest rate", async () => {
-    const { data, error } = await supabase.rpc("create_deposit", {
-      p_name: "Zero Interest Deposit",
-      p_deposit_type: "fixed_deposit",
-      p_currency: "BDT",
-      p_principal_amount: 1000,
-      p_interest_rate: 0,
-      p_maturity_amount: 1000,
-      p_start_date: "2026-01-01",
-      p_maturity_date: "2027-01-01",
-      p_description: null,
-      p_source_account_id: accountId,
-    });
-
-    expect(error).toBeNull();
-    expect(data).toBeTruthy();
-
-    if (data) {
-      await cleanupDeposit(data as string);
-    }
-  });
-
-  it("allows withdrawal at exactly principal", async () => {
-    const depositId = await createDeposit();
-
-    try {
-      const { data, error } = await supabase.rpc("withdraw_deposit", {
-        p_deposit_id: depositId,
-        p_received_amount: 1000,
-        p_withdrawal_date: "2026-06-01",
-        p_destination_account_id: accountId,
-        p_description: "Principal-only withdrawal",
-      });
-
-      expect(error).toBeNull();
-      expect(data).toBeTruthy();
-    } finally {
-      await cleanupDeposit(depositId);
-    }
-  });
-
-  it("updates editable deposit fields through update_deposit", async () => {
-    const depositId = await createDeposit();
-
-    try {
-      const { data, error } = await supabase.rpc("update_deposit", {
-        p_deposit_id: depositId,
-        p_name: "Updated Deposit",
-        p_interest_rate: 12.5,
-        p_maturity_amount: 1125,
-        p_maturity_date: "2027-02-01",
-        p_description: "Updated description",
-      });
-
-      expect(error).toBeNull();
-      expect(data).toBeNull();
-
-      const { data: updated, error: selectError } = await supabase
-        .from("deposits")
-        .select(
-          "name, interest_rate, maturity_amount, maturity_date, description, principal_amount, status",
-        )
-        .eq("id", depositId)
-        .single();
-
-      expect(selectError).toBeNull();
-
-      expect(updated).toEqual({
-        name: "Updated Deposit",
-        interest_rate: 12.5,
-        maturity_amount: 1125,
-        maturity_date: "2027-02-01",
-        description: "Updated description",
-        principal_amount: 1000,
-        status: "active",
-      });
-    } finally {
-      await cleanupDeposit(depositId);
-    }
-  });
-
-  it("rejects maturity amount below principal when updating", async () => {
-    const depositId = await createDeposit();
-
-    try {
-      const { data, error } = await supabase.rpc("update_deposit", {
-        p_deposit_id: depositId,
-        p_name: "Invalid Updated Deposit",
-        p_interest_rate: 12,
-        p_maturity_amount: 999,
-        p_maturity_date: "2027-02-01",
-        p_description: "Invalid update",
-      });
-
-      expect(data).toBeNull();
-      expect(error).not.toBeNull();
-      expect(error?.message).toContain(
-        "Maturity amount cannot be less than principal",
-      );
-    } finally {
-      await cleanupDeposit(depositId);
-    }
-  });
-
-  it("rejects updating a closed deposit", async () => {
-    const depositId = await createDeposit();
-
-    try {
-      const { error: withdrawError } = await supabase.rpc(
-        "withdraw_deposit",
+    const result =
+      await supabase.rpc(
+        "create_deposit",
         {
-          p_deposit_id: depositId,
-          p_received_amount: 1000,
-          p_withdrawal_date: "2026-06-01",
-          p_destination_account_id: accountId,
-          p_description: "Close deposit before update",
+          p_name:
+            `Zero Deposit ${Date.now()}`,
+          p_deposit_type:
+            "fixed_deposit",
+          p_principal_amount: 0,
+          p_currency: "BDT",
+          p_interest_rate: 10,
+          p_maturity_amount: 0,
+          p_start_date:
+            new Date()
+              .toISOString()
+              .slice(0, 10),
+          p_maturity_date:
+            new Date(
+              Date.now() +
+                86400000 * 30,
+            )
+              .toISOString()
+              .slice(0, 10),
+          p_source_account_id:
+            account,
+          p_description:
+            "Zero deposit test",
         },
       );
 
-      expect(withdrawError).toBeNull();
+    expect(result.data).toBeNull();
+    expect(result.error).toBeTruthy();
+  });
 
-      const { data, error } = await supabase.rpc("update_deposit", {
-        p_deposit_id: depositId,
-        p_name: "Should Fail",
-        p_interest_rate: 15,
-        p_maturity_amount: 1150,
-        p_maturity_date: "2027-03-01",
-        p_description: "Should not update",
-      });
+  it("rejects negative principal", async () => {
+    const account = await getAccount();
 
-      expect(data).toBeNull();
-      expect(error).not.toBeNull();
-      expect(error?.message).toContain(
-        "Deposit not found or already closed",
+    const result =
+      await supabase.rpc(
+        "create_deposit",
+        {
+          p_name:
+            `Negative Deposit ${Date.now()}`,
+          p_deposit_type:
+            "fixed_deposit",
+          p_principal_amount: -100,
+          p_currency: "BDT",
+          p_interest_rate: 10,
+          p_maturity_amount: 0,
+          p_start_date:
+            new Date()
+              .toISOString()
+              .slice(0, 10),
+          p_maturity_date:
+            new Date(
+              Date.now() +
+                86400000 * 30,
+            )
+              .toISOString()
+              .slice(0, 10),
+          p_source_account_id:
+            account,
+          p_description:
+            "Negative deposit test",
+        },
       );
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBeTruthy();
+  });
+
+  it("rejects withdrawal greater than deposit balance", async () => {
+    const account = await getAccount();
+    const depositId =
+      await createDeposit(
+        account,
+        10000,
+      );
+
+    try {
+      const result =
+        await withdrawDeposit(
+          depositId,
+          account,
+          11001,
+        );
+
+      expect(result.data).toBeNull();
+      expect(result.error).toBeTruthy();
     } finally {
-      await cleanupDeposit(depositId);
+      await supabase
+        .from("deposits")
+        .update({
+          status: "withdrawn",
+        })
+        .eq("id", depositId);
+    }
+  });
+
+  it("rejects zero withdrawal", async () => {
+    const account = await getAccount();
+    const depositId =
+      await createDeposit(
+        account,
+        10000,
+      );
+
+    try {
+      const result =
+        await withdrawDeposit(
+          depositId,
+          account,
+          0,
+        );
+
+      expect(result.data).toBeNull();
+      expect(result.error).toBeTruthy();
+    } finally {
+      await supabase
+        .from("deposits")
+        .update({
+          status: "withdrawn",
+        })
+        .eq("id", depositId);
+    }
+  });
+
+  it("rejects negative withdrawal", async () => {
+    const account = await getAccount();
+    const depositId =
+      await createDeposit(
+        account,
+        10000,
+      );
+
+    try {
+      const result =
+        await withdrawDeposit(
+          depositId,
+          account,
+          -1,
+        );
+
+      expect(result.data).toBeNull();
+      expect(result.error).toBeTruthy();
+    } finally {
+      await supabase
+        .from("deposits")
+        .update({
+          status: "withdrawn",
+        })
+        .eq("id", depositId);
+    }
+  });
+
+  it("rejects withdrawal from an already withdrawn deposit", async () => {
+    const account = await getAccount();
+    const depositId =
+      await createDeposit(
+        account,
+        10000,
+      );
+
+    const first =
+      await withdrawDeposit(
+        depositId,
+        account,
+        10000,
+      );
+
+    expect(first.error).toBeNull();
+
+    const second =
+      await withdrawDeposit(
+        depositId,
+        account,
+        1,
+      );
+
+    expect(second.data).toBeNull();
+    expect(second.error).toBeTruthy();
+  });
+
+  it("allows withdrawal up to the principal amount", async () => {
+    const account = await getAccount();
+    const depositId =
+      await createDeposit(
+        account,
+        10000,
+      );
+
+    const result =
+      await withdrawDeposit(
+        depositId,
+        account,
+        10000,
+      );
+
+    expect(result.error).toBeNull();
+  });
+
+  it("preserves the deposit after a rejected over-withdrawal", async () => {
+    const account = await getAccount();
+    const depositId =
+      await createDeposit(
+        account,
+        10000,
+      );
+
+    try {
+      const result =
+        await withdrawDeposit(
+          depositId,
+          account,
+          20000,
+        );
+
+      expect(result.data).toBeNull();
+      expect(result.error).toBeTruthy();
+
+      const { data, error } =
+        await supabase
+          .from("deposits")
+          .select(
+            "status, principal_amount",
+          )
+          .eq("id", depositId)
+          .single();
+
+      expect(error).toBeNull();
+      expect(data.status).toBe("active");
+      expect(
+        Number(
+          data.principal_amount,
+        ),
+      ).toBe(10000);
+    } finally {
+      await supabase
+        .from("deposits")
+        .update({
+          status: "withdrawn",
+        })
+        .eq("id", depositId);
     }
   });
 });

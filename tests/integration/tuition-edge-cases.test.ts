@@ -18,266 +18,403 @@ const password =
 
 let supabase: SupabaseClient;
 
-type TuitionStatusRow = {
-  student_id: string;
-  student_name: string;
-  monthly_fee: number | string;
-  paid_amount: number | string;
-  remaining_amount: number | string;
-  payment_status: string;
-};
+beforeAll(async () => {
+  supabase = createClient(
+    supabaseUrl,
+    supabaseKey,
+  );
 
-describe("tuition payment edge cases", () => {
-  beforeAll(async () => {
-    supabase = createClient(
-      supabaseUrl,
-      supabaseKey,
-    );
+  const { error } =
+    await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    const { error } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+  expect(error).toBeNull();
+});
 
-    expect(error).toBeNull();
-  });
+async function getAccount() {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("accounts")
+    .select(
+      "id, currency, account_type, is_system, is_archived",
+    )
+    .eq("currency", "BDT")
+    .eq("account_type", "asset")
+    .eq("is_system", false)
+    .eq("is_archived", false)
+    .limit(1);
 
-  it(
-    "rejects invalid and over-limit tuition payments",
-    async () => {
-      const studentName =
-        `Automated Tuition Edge ${Date.now()}`;
+  expect(error).toBeNull();
+  expect(data).toHaveLength(1);
 
-      /*
-       * Find a real user-owned BDT asset account.
-       */
-      const {
-        data: accounts,
-        error: accountError,
-      } = await supabase
-        .from("accounts")
-        .select(
-          "id, currency, account_type, is_system, is_archived",
-        )
-        .eq("currency", "BDT")
-        .eq("account_type", "asset")
-        .eq("is_system", false)
-        .eq("is_archived", false)
-        .limit(1);
+  return data![0].id;
+}
 
-      expect(accountError).toBeNull();
-      expect(accounts).toHaveLength(1);
-
-      const account = accounts![0];
-
-      /*
-       * Create a student with a 1000 BDT monthly fee.
-       */
-      const {
-        data: studentId,
-        error: createError,
-      } = await supabase.rpc(
-        "create_tuition_student",
-        {
-          p_student_name: studentName,
-          p_guardian_name:
-            "Automated Guardian",
-          p_whatsapp_number: null,
-          p_monthly_fee: 1000,
-          p_due_day: 10,
-          p_notes: "Automated edge test",
-        },
-      );
-
-      expect(createError).toBeNull();
-      expect(studentId).toBeTruthy();
-
-      const month =
-        new Date().toISOString().slice(0, 7) +
-        "-01";
-
-      const paymentDate =
-        new Date()
-          .toISOString()
-          .slice(0, 10);
-
-      /*
-       * ZERO PAYMENT MUST FAIL.
-       */
-      const {
-        error: zeroError,
-      } = await supabase.rpc(
-        "record_tuition_payment",
-        {
-          p_student_id: studentId,
-          p_payment_month: month,
-          p_amount: 0,
-          p_payment_date: paymentDate,
-          p_account_id: account.id,
-          p_notes: null,
-          p_promised_payment_date: null,
-          p_late_reason: null,
-        },
-      );
-
-      expect(zeroError).toBeTruthy();
-
-      /*
-       * NEGATIVE PAYMENT MUST FAIL.
-       */
-      const {
-        error: negativeError,
-      } = await supabase.rpc(
-        "record_tuition_payment",
-        {
-          p_student_id: studentId,
-          p_payment_month: month,
-          p_amount: -100,
-          p_payment_date: paymentDate,
-          p_account_id: account.id,
-          p_notes: null,
-          p_promised_payment_date: null,
-          p_late_reason: null,
-        },
-      );
-
-      expect(negativeError).toBeTruthy();
-
-      /*
-       * OVERPAYMENT MUST FAIL.
-       *
-       * Monthly fee is 1000 BDT.
-       */
-      const {
-        error: overpaymentError,
-      } = await supabase.rpc(
-        "record_tuition_payment",
-        {
-          p_student_id: studentId,
-          p_payment_month: month,
-          p_amount: 1001,
-          p_payment_date: paymentDate,
-          p_account_id: account.id,
-          p_notes: null,
-          p_promised_payment_date: null,
-          p_late_reason: null,
-        },
-      );
-
-      expect(overpaymentError).toBeTruthy();
-
-      /*
-       * VALID PAYMENT SHOULD STILL WORK
-       * AFTER THE FAILED ATTEMPTS.
-       */
-      const {
-        data: transactionId,
-        error: validPaymentError,
-      } = await supabase.rpc(
-        "record_tuition_payment",
-        {
-          p_student_id: studentId,
-          p_payment_month: month,
-          p_amount: 1000,
-          p_payment_date: paymentDate,
-          p_account_id: account.id,
-          p_notes:
-            "Valid edge-case payment",
-          p_promised_payment_date: null,
-          p_late_reason: null,
-        },
-      );
-
-      expect(validPaymentError).toBeNull();
-      expect(transactionId).toBeTruthy();
-
-      /*
-       * MONTH SHOULD NOW BE PAID.
-       */
-      const {
-        data: status,
-        error: statusError,
-      } = await supabase.rpc(
-        "get_tuition_monthly_status",
-        {
-          p_month: month,
-        },
-      );
-
-      expect(statusError).toBeNull();
-      expect(status).toBeTruthy();
-
-      const studentStatus =
-        (status as TuitionStatusRow[]).find(
-          (row) =>
-            row.student_id === studentId,
-        );
-
-      expect(studentStatus).toBeTruthy();
-
-      expect(
-        studentStatus!.payment_status,
-      ).toBe("paid");
-
-      expect(
-        Number(
-          studentStatus!.paid_amount,
-        ),
-      ).toBe(1000);
-
-      expect(
-        Number(
-          studentStatus!.remaining_amount,
-        ),
-      ).toBe(0);
-
-      /*
-       * CLEAN UP THE POSTED PAYMENT FIRST.
-       */
-      const {
-        data: payment,
-        error: paymentLookupError,
-      } = await supabase
-        .from("tuition_payments")
-        .select("id, status")
-        .eq(
-          "transaction_id",
-          transactionId,
-        )
-        .single();
-
-      expect(
-        paymentLookupError,
-      ).toBeNull();
-
-      expect(payment).toBeTruthy();
-      expect(payment!.status).toBe("posted");
-
-      const {
-        error: cancelError,
-      } = await supabase.rpc(
-        "cancel_tuition_payment",
-        {
-          p_payment_id: payment!.id,
-        },
-      );
-
-      expect(cancelError).toBeNull();
-
-      /*
-       * FINAL CLEANUP:
-       * Remove the temporary student.
-       */
-      const {
-        error: cleanupError,
-      } = await supabase
-        .from("tuition_students")
-        .delete()
-        .eq("id", studentId);
-
-      expect(cleanupError).toBeNull();
+async function createStudent(
+  fee = 1000,
+) {
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    "create_tuition_student",
+    {
+      p_student_name:
+        `Tuition Edge ${Date.now()}-${Math.random()}`,
+      p_guardian_name:
+        "Edge Guardian",
+      p_whatsapp_number: null,
+      p_monthly_fee: fee,
+      p_due_day: 10,
+      p_notes:
+        "Tuition edge-case test",
     },
   );
+
+  expect(error).toBeNull();
+  expect(data).toBeTruthy();
+
+  return data as string;
+}
+
+async function recordPayment(
+  studentId: string,
+  accountId: string,
+  amount: number,
+  month: string,
+) {
+  return await supabase.rpc(
+    "record_tuition_payment",
+    {
+      p_student_id: studentId,
+      p_payment_month: month,
+      p_amount: amount,
+      p_payment_date:
+        new Date()
+          .toISOString()
+          .slice(0, 10),
+      p_account_id: accountId,
+      p_notes:
+        "Tuition edge payment",
+      p_promised_payment_date: null,
+      p_late_reason: null,
+    },
+  );
+}
+
+async function getStatus(
+  studentId: string,
+  month: string,
+) {
+  const {
+    data,
+    error,
+  } = await supabase.rpc(
+    "get_tuition_monthly_status",
+    {
+      p_month: month,
+    },
+  );
+
+  expect(error).toBeNull();
+
+  const row = (
+    data as Array<{
+      student_id: string;
+      payment_status: string;
+      paid_amount: number | string;
+      remaining_amount: number | string;
+    }>
+  )?.find(
+    (item) =>
+      item.student_id === studentId,
+  );
+
+  expect(row).toBeTruthy();
+
+  return row!;
+}
+
+describe("tuition edge cases", () => {
+  it("rejects zero payment", async () => {
+    const accountId =
+      await getAccount();
+
+    const studentId =
+      await createStudent();
+
+    const result =
+      await recordPayment(
+        studentId,
+        accountId,
+        0,
+        "2026-09-01",
+      );
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBeTruthy();
+  });
+
+  it("rejects negative payment", async () => {
+    const accountId =
+      await getAccount();
+
+    const studentId =
+      await createStudent();
+
+    const result =
+      await recordPayment(
+        studentId,
+        accountId,
+        -100,
+        "2026-09-01",
+      );
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBeTruthy();
+  });
+
+  it("allows partial payment and reports partial status", async () => {
+    const accountId =
+      await getAccount();
+
+    const studentId =
+      await createStudent(1000);
+
+    const result =
+      await recordPayment(
+        studentId,
+        accountId,
+        400,
+        "2026-09-01",
+      );
+
+    expect(result.error).toBeNull();
+    expect(result.data).toBeTruthy();
+
+    const status =
+      await getStatus(
+        studentId,
+        "2026-09-01",
+      );
+
+    expect(
+      status.payment_status,
+    ).toBe("partial");
+
+    expect(
+      Number(status.paid_amount),
+    ).toBe(400);
+
+    expect(
+      Number(status.remaining_amount),
+    ).toBe(600);
+  });
+
+  it("allows multiple partial payments up to the monthly fee", async () => {
+    const accountId =
+      await getAccount();
+
+    const studentId =
+      await createStudent(1000);
+
+    const first =
+      await recordPayment(
+        studentId,
+        accountId,
+        400,
+        "2026-09-01",
+      );
+
+    expect(first.error).toBeNull();
+
+    const second =
+      await recordPayment(
+        studentId,
+        accountId,
+        600,
+        "2026-09-01",
+      );
+
+    expect(second.error).toBeNull();
+
+    const status =
+      await getStatus(
+        studentId,
+        "2026-09-01",
+      );
+
+    expect(
+      status.payment_status,
+    ).toBe("paid");
+
+    expect(
+      Number(status.paid_amount),
+    ).toBe(1000);
+
+    expect(
+      Number(status.remaining_amount),
+    ).toBe(0);
+  });
+
+  it("rejects payment exceeding the remaining monthly fee", async () => {
+    const accountId =
+      await getAccount();
+
+    const studentId =
+      await createStudent(1000);
+
+    const first =
+      await recordPayment(
+        studentId,
+        accountId,
+        400,
+        "2026-09-01",
+      );
+
+    expect(first.error).toBeNull();
+
+    const second =
+      await recordPayment(
+        studentId,
+        accountId,
+        601,
+        "2026-09-01",
+      );
+
+    expect(second.data).toBeNull();
+    expect(second.error).toBeTruthy();
+
+    const status =
+      await getStatus(
+        studentId,
+        "2026-09-01",
+      );
+
+    expect(
+      Number(status.paid_amount),
+    ).toBe(400);
+
+    expect(
+      Number(status.remaining_amount),
+    ).toBe(600);
+  });
+
+  it("rejects payment after the month is fully paid", async () => {
+    const accountId =
+      await getAccount();
+
+    const studentId =
+      await createStudent(1000);
+
+    const first =
+      await recordPayment(
+        studentId,
+        accountId,
+        1000,
+        "2026-09-01",
+      );
+
+    expect(first.error).toBeNull();
+
+    const second =
+      await recordPayment(
+        studentId,
+        accountId,
+        1,
+        "2026-09-01",
+      );
+
+    expect(second.data).toBeNull();
+    expect(second.error).toBeTruthy();
+  });
+
+  it("keeps a new month unpaid before any payment", async () => {
+    const studentId =
+      await createStudent(1000);
+
+    const status =
+      await getStatus(
+        studentId,
+        "2026-10-01",
+      );
+
+    expect(
+      status.payment_status,
+    ).toBe("unpaid");
+
+    expect(
+      Number(status.paid_amount),
+    ).toBe(0);
+
+    expect(
+      Number(status.remaining_amount),
+    ).toBe(1000);
+  });
+
+  it("rejects payment for a non-existent student", async () => {
+    const accountId =
+      await getAccount();
+
+    const result =
+      await recordPayment(
+        "00000000-0000-0000-0000-000000000000",
+        accountId,
+        100,
+        "2026-09-01",
+      );
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBeTruthy();
+  });
+
+  it("rejects payment using a non-existent account", async () => {
+    const studentId =
+      await createStudent();
+
+    const result =
+      await recordPayment(
+        studentId,
+        "00000000-0000-0000-0000-000000000000",
+        100,
+        "2026-09-01",
+      );
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBeTruthy();
+  });
+
+  it("rejects payment against an archived student", async () => {
+    const accountId =
+      await getAccount();
+
+    const studentId =
+      await createStudent();
+
+    const archive =
+      await supabase.rpc(
+        "archive_tuition_student",
+        {
+          p_student_id: studentId,
+        },
+      );
+
+    expect(archive.error).toBeNull();
+
+    const result =
+      await recordPayment(
+        studentId,
+        accountId,
+        100,
+        "2026-09-01",
+      );
+
+    expect(result.data).toBeNull();
+    expect(result.error).toBeTruthy();
+  });
 });
 

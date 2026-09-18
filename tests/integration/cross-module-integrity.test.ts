@@ -165,7 +165,7 @@ describe("Cross-module financial integrity", () => {
         p_loan_type: "lent",
         p_principal_amount: 100,
         p_currency: "BDT",
-        p_start_date:
+        p_start_datetime:
           new Date().toISOString().slice(0, 10),
         p_due_date: null,
         p_description:
