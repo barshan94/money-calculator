@@ -1,51 +1,66 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
-type DepositSummary = {
-  principal: number;
-  maturity: number;
-};
+export const dynamic = "force-dynamic";
 
 export default async function DepositsPage() {
   const supabase = await createClient();
+  
 
-  const { data: deposits, error } = await supabase
+  const {
+    data: deposits,
+    error,
+  } = await supabase
     .from("deposits")
     .select(
       "id, name, deposit_type, currency, principal_amount, interest_rate, maturity_amount, start_date, maturity_date, status",
     )
     .eq("status", "active")
-    .order("start_date", { ascending: false });
+    .order("start_date", {
+      ascending: false,
+    });
+
 
   if (error) {
-    throw new Error(error.message);
+    throw new Error(
+      `Deposits query failed: ${error.message}`,
+    );
   }
 
-  const items = deposits ?? [];
+  const rows = deposits ?? [];
 
-  const totalsByCurrency = items.reduce(
-    (result, deposit) => {
+  const totals = rows.reduce(
+    (
+      acc: Record<
+        string,
+        {
+          principal: number;
+          maturity: number;
+        }
+      >,
+      deposit,
+    ) => {
       const currency = deposit.currency;
 
-      if (!result[currency]) {
-        result[currency] = {
+      if (!acc[currency]) {
+        acc[currency] = {
           principal: 0,
           maturity: 0,
         };
       }
 
-      result[currency].principal += Number(
+      acc[currency].principal += Number(
         deposit.principal_amount,
       );
 
-      result[currency].maturity += Number(
+      acc[currency].maturity += Number(
         deposit.maturity_amount ??
           deposit.principal_amount,
       );
 
-      return result;
+      return acc;
     },
-    {} as Record<string, DepositSummary>,
+    {},
   );
 
   return (
@@ -59,13 +74,14 @@ export default async function DepositsPage() {
       </div>
 
       <section>
-        {Object.entries(totalsByCurrency).length === 0 ? (
+        {Object.entries(totals).length === 0 ? (
           <p>No active deposits.</p>
         ) : (
-          Object.entries(totalsByCurrency).map(
-            ([currency, totals]) => {
-              const expectedInterest =
-                totals.maturity - totals.principal;
+          Object.entries(totals).map(
+            ([currency, total]) => {
+              const interest =
+                total.maturity -
+                total.principal;
 
               return (
                 <div key={currency}>
@@ -76,7 +92,7 @@ export default async function DepositsPage() {
                       <h3>Total Principal</h3>
                       <p>
                         {currency}{" "}
-                        {totals.principal.toLocaleString(
+                        {total.principal.toLocaleString(
                           "en-BD",
                           {
                             minimumFractionDigits: 2,
@@ -89,7 +105,7 @@ export default async function DepositsPage() {
                       <h3>Expected Maturity</h3>
                       <p>
                         {currency}{" "}
-                        {totals.maturity.toLocaleString(
+                        {total.maturity.toLocaleString(
                           "en-BD",
                           {
                             minimumFractionDigits: 2,
@@ -102,7 +118,7 @@ export default async function DepositsPage() {
                       <h3>Expected Interest</h3>
                       <p>
                         {currency}{" "}
-                        {expectedInterest.toLocaleString(
+                        {interest.toLocaleString(
                           "en-BD",
                           {
                             minimumFractionDigits: 2,
@@ -121,11 +137,11 @@ export default async function DepositsPage() {
       <section>
         <h2>Active Deposits</h2>
 
-        {items.length === 0 ? (
+        {rows.length === 0 ? (
           <p>No active deposits.</p>
         ) : (
           <div>
-            {items.map((deposit) => {
+            {rows.map((deposit) => {
               const principal = Number(
                 deposit.principal_amount,
               );
@@ -169,7 +185,8 @@ export default async function DepositsPage() {
                       )}
                     </p>
 
-                    {deposit.interest_rate !== null && (
+                    {deposit.interest_rate !==
+                      null && (
                       <p>
                         Interest Rate:{" "}
                         {Number(
@@ -197,4 +214,3 @@ export default async function DepositsPage() {
     </main>
   );
 }
-

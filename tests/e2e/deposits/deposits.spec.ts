@@ -1,3 +1,4 @@
+
 import { test, expect } from "@playwright/test";
 
 async function openNewDepositPage(page: any) {
@@ -24,13 +25,13 @@ async function createDeposit(page: any) {
 
   await openNewDepositPage(page);
 
-  await page.getByLabel("Name", { exact: true }).fill(
-    depositName,
-  );
+  await page
+    .getByLabel("Deposit Name", { exact: true })
+    .fill(depositName);
 
   await page
     .getByLabel("Deposit Type", { exact: true })
-    .selectOption("FDR");
+    .selectOption("fixed_deposit");
 
   await page
     .getByLabel("Principal Amount", { exact: true })
@@ -41,7 +42,7 @@ async function createDeposit(page: any) {
     .selectOption("BDT");
 
   await page
-    .getByLabel("Interest Rate", { exact: true })
+    .getByLabel("Interest Rate %", { exact: true })
     .fill("10");
 
   await page
@@ -70,22 +71,46 @@ async function createDeposit(page: any) {
   });
 
   await page.getByRole("button", {
-    name: /create|save/i,
-    exact: false,
+    name: "Save Deposit",
+    exact: true,
   }).click();
 
   await expect(page).toHaveURL(/\/deposits$/);
 
-  await expect(
-    page.getByRole("link", {
-      name: depositName,
-      exact: true,
-    }),
-  ).toBeVisible({
+  const depositLink = page
+    .getByRole("link")
+    .filter({
+      hasText: depositName,
+    })
+    .first();
+
+  await expect(depositLink).toBeVisible({
     timeout: 15000,
   });
 
   return depositName;
+}
+
+async function openDepositDetail(
+  page: any,
+  depositName: string,
+) {
+  const depositLink = page
+    .getByRole("link")
+    .filter({
+      hasText: depositName,
+    })
+    .first();
+
+  await expect(depositLink).toBeVisible({
+    timeout: 15000,
+  });
+
+  await depositLink.click();
+
+  await expect(page).toHaveURL(
+    /\/deposits\/[^/]+$/,
+  );
 }
 
 test("deposits page loads", async ({ page }) => {
@@ -132,14 +157,7 @@ test("created deposit opens detail page", async ({
 }) => {
   const depositName = await createDeposit(page);
 
-  await page.getByRole("link", {
-    name: depositName,
-    exact: true,
-  }).click();
-
-  await expect(page).toHaveURL(
-    /\/deposits\/[^/]+$/,
-  );
+  await openDepositDetail(page, depositName);
 
   await expect(
     page.getByRole("heading", {
@@ -154,10 +172,7 @@ test("deposit detail shows financial information", async ({
 }) => {
   const depositName = await createDeposit(page);
 
-  await page.getByRole("link", {
-    name: depositName,
-    exact: true,
-  }).click();
+  await openDepositDetail(page, depositName);
 
   await expect(
     page.getByText(/principal/i).first(),
@@ -175,10 +190,7 @@ test("deposit detail shows financial information", async ({
 test("deposit edit works", async ({ page }) => {
   const depositName = await createDeposit(page);
 
-  await page.getByRole("link", {
-    name: depositName,
-    exact: true,
-  }).click();
+  await openDepositDetail(page, depositName);
 
   await page.getByRole("link", {
     name: /edit/i,
@@ -191,12 +203,12 @@ test("deposit edit works", async ({ page }) => {
   const updatedName = `${depositName} Updated`;
 
   await page
-    .getByLabel("Name", { exact: true })
+    .getByLabel("Deposit Name", { exact: true })
     .fill(updatedName);
 
   await page.getByRole("button", {
-    name: /save|update/i,
-    exact: false,
+    name: "Save Changes",
+    exact: true,
   }).click();
 
   await expect(page).toHaveURL(
@@ -216,10 +228,7 @@ test("deposit edit works", async ({ page }) => {
 test("deposit withdraw works", async ({ page }) => {
   const depositName = await createDeposit(page);
 
-  await page.getByRole("link", {
-    name: depositName,
-    exact: true,
-  }).click();
+  await openDepositDetail(page, depositName);
 
   await page.getByRole("link", {
     name: /withdraw/i,
@@ -230,7 +239,7 @@ test("deposit withdraw works", async ({ page }) => {
   );
 
   const destinationAccount = page.getByLabel(
-    "Destination Account",
+    "Receive Into",
     { exact: true },
   );
 
@@ -246,20 +255,24 @@ test("deposit withdraw works", async ({ page }) => {
     index: 1,
   });
 
+  await page
+    .getByLabel("Received Amount", { exact: true })
+    .fill("10500");
+
   await page.getByRole("button", {
-    name: /withdraw/i,
-    exact: false,
+    name: "Withdraw Deposit",
+    exact: true,
   }).click();
 
   await expect(page).toHaveURL(
-    /\/deposits\/[^/]+$/,
+    /\/deposits$/,
   );
 
   await expect(
-    page.getByText(/withdrawn|closed|inactive/i).first(),
-  ).toBeVisible({
+    page.getByRole("link").filter({
+      hasText: depositName,
+    }),
+  ).not.toBeVisible({
     timeout: 15000,
   });
 });
-
-

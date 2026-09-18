@@ -40,7 +40,9 @@ export default function NewDepositPage() {
     async function loadAccounts() {
       const { data, error } = await supabase
         .from("accounts")
-        .select("id, name, currency, account_type")
+        .select(
+          "id, name, currency, account_type",
+        )
         .eq("is_archived", false)
         .eq("is_system", false)
         .order("name");
@@ -162,9 +164,14 @@ export default function NewDepositPage() {
 
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Deposit Name</label>
+          <label htmlFor="deposit-name">
+            Deposit Name
+          </label>
 
           <input
+            id="deposit-name"
+            name="depositName"
+            type="text"
             value={name}
             onChange={(event) =>
               setName(event.target.value)
@@ -175,9 +182,13 @@ export default function NewDepositPage() {
         </div>
 
         <div>
-          <label>Deposit Type</label>
+          <label htmlFor="deposit-type">
+            Deposit Type
+          </label>
 
           <select
+            id="deposit-type"
+            name="depositType"
             value={depositType}
             onChange={(event) =>
               setDepositType(event.target.value)
@@ -192,14 +203,20 @@ export default function NewDepositPage() {
             <option value="security_deposit">
               Security Deposit
             </option>
-            <option value="other">Other</option>
+            <option value="other">
+              Other
+            </option>
           </select>
         </div>
 
         <div>
-          <label>Principal Amount</label>
+          <label htmlFor="principal-amount">
+            Principal Amount
+          </label>
 
           <input
+            id="principal-amount"
+            name="principalAmount"
             type="number"
             min="0.01"
             step="0.01"
@@ -212,9 +229,13 @@ export default function NewDepositPage() {
         </div>
 
         <div>
-          <label>Currency</label>
+          <label htmlFor="deposit-currency">
+            Currency
+          </label>
 
           <select
+            id="deposit-currency"
+            name="currency"
             value={currency}
             onChange={(event) => {
               setCurrency(event.target.value);
@@ -229,9 +250,13 @@ export default function NewDepositPage() {
         </div>
 
         <div>
-          <label>Interest Rate %</label>
+          <label htmlFor="interest-rate">
+            Interest Rate %
+          </label>
 
           <input
+            id="interest-rate"
+            name="interestRate"
             type="number"
             min="0"
             step="0.01"
@@ -244,9 +269,13 @@ export default function NewDepositPage() {
         </div>
 
         <div>
-          <label>Maturity Amount</label>
+          <label htmlFor="maturity-amount">
+            Maturity Amount
+          </label>
 
           <input
+            id="maturity-amount"
+            name="maturityAmount"
             type="number"
             min="0"
             step="0.01"
@@ -259,9 +288,13 @@ export default function NewDepositPage() {
         </div>
 
         <div>
-          <label>Source Account</label>
+          <label htmlFor="source-account">
+            Source Account
+          </label>
 
           <select
+            id="source-account"
+            name="sourceAccount"
             value={accountId}
             onChange={(event) =>
               setAccountId(event.target.value)
@@ -284,9 +317,13 @@ export default function NewDepositPage() {
         </div>
 
         <div>
-          <label>Start Date</label>
+          <label htmlFor="start-date">
+            Start Date
+          </label>
 
           <input
+            id="start-date"
+            name="startDate"
             type="date"
             value={startDate}
             onChange={(event) =>
@@ -297,9 +334,13 @@ export default function NewDepositPage() {
         </div>
 
         <div>
-          <label>Maturity Date</label>
+          <label htmlFor="maturity-date">
+            Maturity Date
+          </label>
 
           <input
+            id="maturity-date"
+            name="maturityDate"
             type="date"
             value={maturityDate}
             onChange={(event) =>
@@ -309,9 +350,13 @@ export default function NewDepositPage() {
         </div>
 
         <div>
-          <label>Description</label>
+          <label htmlFor="deposit-description">
+            Description
+          </label>
 
           <textarea
+            id="deposit-description"
+            name="description"
             value={description}
             onChange={(event) =>
               setDescription(event.target.value)
@@ -320,7 +365,10 @@ export default function NewDepositPage() {
           />
         </div>
 
-        <button type="submit" disabled={saving}>
+        <button
+          type="submit"
+          disabled={saving}
+        >
           {saving ? "Saving..." : "Save Deposit"}
         </button>
       </form>
