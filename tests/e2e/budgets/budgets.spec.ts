@@ -440,27 +440,31 @@ test.describe("Budgets", () => {
           level: 3,
           exact: true,
         })
-        .locator("xpath=ancestor::section[1]");
+        .locator("xpath=ancestor::section[1]")
+        .filter({
+          has: page
+            .locator("span")
+            .filter({
+              hasText: moneyRegex(amount),
+            }),
+        })
+        .filter({
+          has: page.getByText("Archived", {
+            exact: true,
+          }),
+        });
+
+    await expect(
+      archivedCard,
+    ).toHaveCount(1, {
+      timeout: 15000,
+    });
 
     await expect(
       archivedCard,
     ).toBeVisible({
       timeout: 15000,
     });
-
-    await expect(
-      archivedCard
-        .locator("span")
-        .filter({
-          hasText: moneyRegex(amount),
-        }),
-    ).toHaveCount(1);
-
-    await expect(
-      archivedCard.getByText("Archived", {
-        exact: true,
-      }),
-    ).toBeVisible();
 
     const deleteButton =
       archivedCard.getByRole(
@@ -494,15 +498,33 @@ test.describe("Budgets", () => {
 
     await page.reload();
 
+    const deletedCard =
+      page
+        .getByRole("heading", {
+          name: categoryName,
+          level: 3,
+          exact: true,
+        })
+        .locator("xpath=ancestor::section[1]")
+        .filter({
+          has: page
+            .locator("span")
+            .filter({
+              hasText: moneyRegex(amount),
+            }),
+        })
+        .filter({
+          has: page.getByText("Archived", {
+            exact: true,
+          }),
+        });
+
     await expect(
-      page.getByRole("heading", {
-        name: categoryName,
-        level: 3,
-        exact: true,
-      }),
+      deletedCard,
     ).toHaveCount(0, {
       timeout: 15000,
     });
   });
 });
+
 
