@@ -7,11 +7,17 @@ function escapeRegex(value: string) {
   );
 }
 
-function moneyText(amount: string) {
-  return `BDT ${Number(amount).toLocaleString("en-US", {
+function moneyAmount(amount: string) {
+  return Number(amount).toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })}`;
+  });
+}
+
+function moneyRegex(amount: string) {
+  return new RegExp(
+    `^BDT\\s+${escapeRegex(moneyAmount(amount))}$`,
+  );
 }
 
 function budgetCard(
@@ -23,10 +29,6 @@ function budgetCard(
     `^${escapeRegex(categoryName)}$`,
   );
 
-  const amountRegex = new RegExp(
-    `^${escapeRegex(moneyText(amount))}$`,
-  );
-
   return page
     .locator("section")
     .filter({
@@ -36,7 +38,7 @@ function budgetCard(
     })
     .filter({
       has: page.locator("span").filter({
-        hasText: amountRegex,
+        hasText: moneyRegex(amount),
       }),
     })
     .filter({
@@ -427,10 +429,6 @@ test.describe("Budgets", () => {
       `^${escapeRegex(categoryName)}$`,
     );
 
-    const amountRegex = new RegExp(
-      `^${escapeRegex(moneyText(amount))}$`,
-    );
-
     const archivedCard = page
       .locator("section")
       .filter({
@@ -440,7 +438,7 @@ test.describe("Budgets", () => {
       })
       .filter({
         has: page.locator("span").filter({
-          hasText: amountRegex,
+          hasText: moneyRegex(amount),
         }),
       })
       .filter({
@@ -498,7 +496,7 @@ test.describe("Budgets", () => {
         })
         .filter({
           has: page.locator("span").filter({
-            hasText: amountRegex,
+            hasText: moneyRegex(amount),
           }),
         })
         .filter({
@@ -511,5 +509,4 @@ test.describe("Budgets", () => {
     });
   });
 });
-
 
