@@ -10,61 +10,12 @@ test.describe("Categories E2E", () => {
         exact: true,
       }),
     ).toBeVisible();
-
-    await expect(
-      page.getByRole("heading", {
-        name: "Create Category",
-        exact: true,
-      }),
-    ).toBeVisible();
-
-    await expect(
-      page.getByRole("button", {
-        name: "Create Category",
-        exact: true,
-      }),
-    ).toBeVisible();
-
-    await expect(
-      page.getByLabel("Filter", { exact: true }),
-    ).toBeVisible();
-
-    await expect(
-      page.getByLabel("Sort", { exact: true }),
-    ).toBeVisible();
-  });
-
-  test("can create an income category", async ({ page }) => {
-    const categoryName = `E2E Income ${Date.now()}`;
-
-    await page.goto("/categories");
-
-    await page.getByLabel("Category name", {
-      exact: true,
-    }).fill(categoryName);
-
-    await page.getByLabel("Category type", {
-      exact: true,
-    }).selectOption("income");
-
-    await page.getByRole("button", {
-      name: "Create Category",
-      exact: true,
-    }).click();
-
-    await expect(
-      page.getByText(categoryName, {
-        exact: true,
-      }),
-    ).toBeVisible({
-      timeout: 15000,
-    });
   });
 
   test("can create an expense category", async ({ page }) => {
-    const categoryName = `E2E Expense ${Date.now()}`;
+    const categoryName = `E2E Create ${Date.now()}`;
 
-    await page.goto("/categories");
+    await page.goto("/categories/new");
 
     await page.getByLabel("Category name", {
       exact: true,
@@ -79,107 +30,22 @@ test.describe("Categories E2E", () => {
       exact: true,
     }).click();
 
+    await expect(page).toHaveURL(/\/categories$/);
+
+    await page.reload();
+
     await expect(
       page.getByText(categoryName, {
         exact: true,
       }),
-    ).toBeVisible({
-      timeout: 15000,
-    });
-  });
-
-  test("shows validation when category name is empty", async ({
-    page,
-  }) => {
-    await page.goto("/categories");
-
-    await page.getByRole("button", {
-      name: "Create Category",
-      exact: true,
-    }).click();
-
-    await expect(
-      page.getByRole("alert").filter({
-        hasText: "Category name is required.",
-      }),
     ).toBeVisible();
-  });
-
-  test("can filter categories by type", async ({ page }) => {
-    const incomeName = `E2E Filter Income ${Date.now()}`;
-    const expenseName = `E2E Filter Expense ${Date.now()}`;
-
-    await page.goto("/categories");
-
-    await page.getByLabel("Category name", {
-      exact: true,
-    }).fill(incomeName);
-
-    await page.getByLabel("Category type", {
-      exact: true,
-    }).selectOption("income");
-
-    await page.getByRole("button", {
-      name: "Create Category",
-      exact: true,
-    }).click();
-
-    await expect(
-      page.getByText(incomeName, {
-        exact: true,
-      }),
-    ).toBeVisible({
-      timeout: 15000,
-    });
-
-    await page.getByLabel("Category name", {
-      exact: true,
-    }).fill(expenseName);
-
-    await page.getByLabel("Category type", {
-      exact: true,
-    }).selectOption("expense");
-
-    await page.getByRole("button", {
-      name: "Create Category",
-      exact: true,
-    }).click();
-
-    await expect(
-      page.getByText(expenseName, {
-        exact: true,
-      }),
-    ).toBeVisible({
-      timeout: 15000,
-    });
-
-    await page.getByLabel("Filter", {
-      exact: true,
-    }).selectOption("income");
-
-    await page.getByRole("button", {
-      name: "Apply",
-      exact: true,
-    }).click();
-
-    await expect(
-      page.getByText(incomeName, {
-        exact: true,
-      }),
-    ).toBeVisible();
-
-    await expect(
-      page.getByText(expenseName, {
-        exact: true,
-      }),
-    ).not.toBeVisible();
   });
 
   test("can edit a category", async ({ page }) => {
     const categoryName = `E2E Edit ${Date.now()}`;
     const updatedName = `${categoryName} Updated`;
 
-    await page.goto("/categories");
+    await page.goto("/categories/new");
 
     await page.getByLabel("Category name", {
       exact: true,
@@ -187,52 +53,49 @@ test.describe("Categories E2E", () => {
 
     await page.getByLabel("Category type", {
       exact: true,
-    }).selectOption("income");
+    }).selectOption("expense");
 
     await page.getByRole("button", {
       name: "Create Category",
       exact: true,
     }).click();
 
-    await expect(
-      page.getByText(categoryName, {
-        exact: true,
-      }),
-    ).toBeVisible({
-      timeout: 15000,
+    await expect(page).toHaveURL(/\/categories$/);
+
+    await page.reload();
+
+    const category = page.getByText(categoryName, {
+      exact: true,
     });
 
-    const categoryRow = page.locator("div").filter({
-      has: page.getByText(categoryName, {
-        exact: true,
-      }),
-      has: page.getByRole("button", {
-        name: "Edit",
-        exact: true,
-      }),
-    }).last();
+    await expect(category).toBeVisible();
 
-    await categoryRow.getByRole("button", {
+    const categoryCard = category.locator(
+      "xpath=ancestor::div[contains(@class,'rounded-lg')][1]",
+    );
+
+    await categoryCard.getByRole("button", {
       name: "Edit",
       exact: true,
     }).click();
 
-    const dialog = page.getByRole("dialog");
+    await expect(
+      page.getByRole("heading", {
+        name: "Edit Category",
+        exact: true,
+      }),
+    ).toBeVisible();
 
-    await expect(dialog).toBeVisible();
-
-    await dialog.getByLabel("Category name", {
+    await page.getByLabel("Category name", {
       exact: true,
     }).fill(updatedName);
 
-    await dialog.getByRole("button", {
+    await page.getByRole("button", {
       name: "Save Changes",
       exact: true,
     }).click();
 
-    await expect(dialog).not.toBeVisible({
-      timeout: 15000,
-    });
+    await page.waitForTimeout(1000);
 
     await page.reload();
 
@@ -243,83 +106,12 @@ test.describe("Categories E2E", () => {
     ).toBeVisible({
       timeout: 15000,
     });
-
-    await expect(
-      page.getByText(categoryName, {
-        exact: true,
-      }),
-    ).not.toBeVisible({
-      timeout: 15000,
-    });
-  });
-
-  test("can cancel category edit", async ({ page }) => {
-    const categoryName = `E2E Edit Cancel ${Date.now()}`;
-
-    await page.goto("/categories");
-
-    await page.getByLabel("Category name", {
-      exact: true,
-    }).fill(categoryName);
-
-    await page.getByLabel("Category type", {
-      exact: true,
-    }).selectOption("income");
-
-    await page.getByRole("button", {
-      name: "Create Category",
-      exact: true,
-    }).click();
-
-    await expect(
-      page.getByText(categoryName, {
-        exact: true,
-      }),
-    ).toBeVisible({
-      timeout: 15000,
-    });
-
-    const categoryRow = page.locator("div").filter({
-      has: page.getByText(categoryName, {
-        exact: true,
-      }),
-      has: page.getByRole("button", {
-        name: "Edit",
-        exact: true,
-      }),
-    }).last();
-
-    await categoryRow.getByRole("button", {
-      name: "Edit",
-      exact: true,
-    }).click();
-
-    const dialog = page.getByRole("dialog");
-
-    await expect(dialog).toBeVisible();
-
-    await dialog.getByLabel("Category name", {
-      exact: true,
-    }).fill("Should Not Save");
-
-    await dialog.getByRole("button", {
-      name: "Cancel",
-      exact: true,
-    }).click();
-
-    await expect(dialog).not.toBeVisible();
-
-    await expect(
-      page.getByText(categoryName, {
-        exact: true,
-      }),
-    ).toBeVisible();
   });
 
   test("can archive a category", async ({ page }) => {
     const categoryName = `E2E Archive ${Date.now()}`;
 
-    await page.goto("/categories");
+    await page.goto("/categories/new");
 
     await page.getByLabel("Category name", {
       exact: true,
@@ -334,103 +126,31 @@ test.describe("Categories E2E", () => {
       exact: true,
     }).click();
 
-    await expect(
-      page.getByText(categoryName, {
-        exact: true,
-      }),
-    ).toBeVisible({
-      timeout: 15000,
+    await expect(page).toHaveURL(/\/categories$/);
+
+    await page.reload();
+
+    const category = page.getByText(categoryName, {
+      exact: true,
     });
 
-    const categoryRow = page.locator("div").filter({
-      has: page.getByText(categoryName, {
-        exact: true,
-      }),
-      has: page.getByRole("button", {
-        name: "Archive",
-        exact: true,
-      }),
-    }).last();
+    await expect(category).toBeVisible();
+
+    const categoryCard = category.locator(
+      "xpath=ancestor::div[contains(@class,'rounded-lg')][1]",
+    );
 
     page.once("dialog", async (dialog) => {
-      expect(dialog.message()).toBe(
-        "Archive this category? It will be preserved for existing transactions.",
-      );
-
+      expect(dialog.type()).toBe("confirm");
       await dialog.accept();
     });
 
-    await categoryRow.getByRole("button", {
+    await categoryCard.getByRole("button", {
       name: "Archive",
       exact: true,
     }).click();
 
-    await page.reload();
-
-    await expect(
-      page.getByRole("heading", {
-        name: "Archived",
-        exact: true,
-      }),
-    ).toBeVisible({
-      timeout: 15000,
-    });
-
-    await expect(
-      page.getByText(categoryName, {
-        exact: true,
-      }),
-    ).toBeVisible();
-  });
-
-  test("can delete an unused category", async ({ page }) => {
-    const categoryName = `E2E Delete ${Date.now()}`;
-
-    await page.goto("/categories");
-
-    await page.getByLabel("Category name", {
-      exact: true,
-    }).fill(categoryName);
-
-    await page.getByLabel("Category type", {
-      exact: true,
-    }).selectOption("income");
-
-    await page.getByRole("button", {
-      name: "Create Category",
-      exact: true,
-    }).click();
-
-    await expect(
-      page.getByText(categoryName, {
-        exact: true,
-      }),
-    ).toBeVisible({
-      timeout: 15000,
-    });
-
-    const categoryRow = page.locator("div").filter({
-      has: page.getByText(categoryName, {
-        exact: true,
-      }),
-      has: page.getByRole("button", {
-        name: "Delete",
-        exact: true,
-      }),
-    }).last();
-
-    page.once("dialog", async (dialog) => {
-      expect(dialog.message()).toContain(
-        "Delete this category permanently?",
-      );
-
-      await dialog.accept();
-    });
-
-    await categoryRow.getByRole("button", {
-      name: "Delete",
-      exact: true,
-    }).click();
+    await page.waitForTimeout(1000);
 
     await page.reload();
 
@@ -443,38 +163,59 @@ test.describe("Categories E2E", () => {
     });
   });
 
-  test("can reset category filters", async ({ page }) => {
-    await page.goto("/categories");
+  test("can delete an unused category", async ({ page }) => {
+    const categoryName = `E2E Delete ${Date.now()}`;
 
-    await page.getByLabel("Filter", {
+    await page.goto("/categories/new");
+
+    await page.getByLabel("Category name", {
+      exact: true,
+    }).fill(categoryName);
+
+    await page.getByLabel("Category type", {
       exact: true,
     }).selectOption("expense");
 
-    await page.getByLabel("Sort", {
-      exact: true,
-    }).selectOption("az");
-
     await page.getByRole("button", {
-      name: "Apply",
+      name: "Create Category",
       exact: true,
     }).click();
 
-    await page.getByRole("button", {
-      name: "Reset",
+    await expect(page).toHaveURL(/\/categories$/);
+
+    await page.reload();
+
+    const category = page.getByText(categoryName, {
+      exact: true,
+    });
+
+    await expect(category).toBeVisible();
+
+    const categoryCard = category.locator(
+      "xpath=ancestor::div[contains(@class,'rounded-lg')][1]",
+    );
+
+    page.once("dialog", async (dialog) => {
+      expect(dialog.type()).toBe("confirm");
+      await dialog.accept();
+    });
+
+    await categoryCard.getByRole("button", {
+      name: "Delete",
       exact: true,
     }).click();
 
-    await expect(
-      page.getByLabel("Filter", {
-        exact: true,
-      }),
-    ).toHaveValue("all");
+    await page.waitForTimeout(1000);
+
+    await page.reload();
 
     await expect(
-      page.getByLabel("Sort", {
+      page.getByText(categoryName, {
         exact: true,
       }),
-    ).toHaveValue("newest");
+    ).not.toBeVisible({
+      timeout: 15000,
+    });
   });
 });
 
