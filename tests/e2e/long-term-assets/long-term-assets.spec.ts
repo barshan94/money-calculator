@@ -6,7 +6,8 @@ test.describe("Long-Term Assets E2E", () => {
 
     await expect(
       page.getByRole("heading", {
-        name: /long-term assets/i,
+        name: "Long-Term Assets",
+        exact: true,
       }),
     ).toBeVisible();
   });
