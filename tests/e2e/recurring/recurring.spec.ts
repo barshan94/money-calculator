@@ -1,3 +1,4 @@
+
 import { test, expect } from "@playwright/test";
 
 test.describe("Recurring Transactions E2E", () => {
@@ -31,7 +32,8 @@ test.describe("Recurring Transactions E2E", () => {
 
     await expect(
       page.getByRole("heading", {
-        name: /new recurring transaction/i,
+        name: "New Recurring Transaction",
+        exact: true,
       }),
     ).toBeVisible();
 
@@ -75,21 +77,27 @@ test.describe("Recurring Transactions E2E", () => {
     ).toBeVisible();
   });
 
-  test("recurring form shows validation for empty submission", async ({
-    page,
-  }) => {
+  test("name is required by the recurring form", async ({ page }) => {
     await page.goto("/recurring/new");
 
-    await page.getByRole("button", {
-      name: "Create Recurring Transaction",
+    const nameInput = page.getByLabel("Name", {
       exact: true,
-    }).click();
+    });
 
-    await expect(
-      page.locator("main").getByText("Enter a name.", {
-        exact: true,
-      }),
-    ).toBeVisible();
+    await expect(nameInput).toHaveJSProperty(
+      "required",
+      true,
+    );
+
+    await expect(nameInput).toHaveJSProperty(
+      "value",
+      "",
+    );
+
+    await expect(nameInput).toHaveJSProperty(
+      "validity.valid",
+      false,
+    );
   });
 
   test("can create a recurring expense", async ({ page }) => {
