@@ -1,37 +1,30 @@
 import { test, expect } from "@playwright/test";
 
-async function openNewCategory(page: any) {
-  await page.goto("/categories/new");
-
-  await expect(
-    page.getByRole("heading", {
-      name: "New Category",
-      exact: true,
-    }),
-  ).toBeVisible({
-    timeout: 15000,
-  });
-
-  await expect(
-    page.getByLabel("Category name", {
-      exact: true,
-    }),
-  ).toBeVisible({
-    timeout: 15000,
-  });
-}
-
 async function createExpenseCategory(
   page: any,
   categoryName: string,
 ) {
-  await openNewCategory(page);
+  await page.goto("/categories");
 
-  await page
-    .getByLabel("Category name", {
+  await expect(
+    page.getByRole("heading", {
+      name: "Categories",
       exact: true,
-    })
-    .fill(categoryName);
+    }),
+  ).toBeVisible({
+    timeout: 15000,
+  });
+
+  const nameInput = page.getByLabel(
+    "Category name",
+    { exact: true },
+  );
+
+  await expect(nameInput).toBeVisible({
+    timeout: 15000,
+  });
+
+  await nameInput.fill(categoryName);
 
   await page
     .getByLabel("Category type", {
@@ -43,15 +36,6 @@ async function createExpenseCategory(
     name: "Create Category",
     exact: true,
   }).click();
-
-  await expect(page).toHaveURL(
-    /\/categories$/,
-    {
-      timeout: 15000,
-    },
-  );
-
-  await page.reload();
 
   await expect(
     page.getByText(categoryName, {
@@ -131,24 +115,25 @@ test.describe("Categories E2E", () => {
     }).click();
 
     await expect(
-      page.getByRole("heading", {
-        name: "Edit Category",
-        exact: true,
-      }),
+      page.getByRole("dialog"),
     ).toBeVisible({
       timeout: 15000,
     });
 
     await page
+      .getByRole("dialog")
       .getByLabel("Category name", {
         exact: true,
       })
       .fill(updatedName);
 
-    await page.getByRole("button", {
-      name: "Save Changes",
-      exact: true,
-    }).click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", {
+        name: "Save Changes",
+        exact: true,
+      })
+      .click();
 
     await page.waitForTimeout(1000);
     await page.reload();
@@ -246,5 +231,4 @@ test.describe("Categories E2E", () => {
     });
   });
 });
-
 

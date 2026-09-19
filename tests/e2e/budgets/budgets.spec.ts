@@ -220,20 +220,22 @@ test.describe("Budgets", () => {
     await page.goto("/budgets");
     await page.reload();
 
-    await expect(
-      page.getByRole("link", {
-        name: "Edit",
-        exact: true,
-      }).last(),
-    ).toBeVisible({
+    const updatedCard =
+      newestBudgetCard(page);
+
+    await expect(updatedCard).toBeVisible({
       timeout: 15000,
     });
 
-    await expect(
-      page.getByText("৳15,000.00", {
+    const budgetRow = updatedCard
+      .getByText("Budget", {
         exact: true,
-      }),
-    ).toBeVisible({
+      })
+      .locator("xpath=..");
+
+    await expect(
+      budgetRow,
+    ).toContainText("15,000", {
       timeout: 15000,
     });
 
@@ -386,4 +388,5 @@ test.describe("Budgets", () => {
       .toBe(countBefore - 1);
   });
 });
+
 
