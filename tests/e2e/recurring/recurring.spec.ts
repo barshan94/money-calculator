@@ -86,8 +86,10 @@ test.describe("Recurring Transactions E2E", () => {
     }).click();
 
     await expect(
-      page.getByRole("alert"),
-    ).toContainText("Enter a name.");
+      page.locator("main").getByText("Enter a name.", {
+        exact: true,
+      }),
+    ).toBeVisible();
   });
 
   test("can create a recurring expense", async ({ page }) => {
@@ -117,19 +119,13 @@ test.describe("Recurring Transactions E2E", () => {
       exact: true,
     }).fill(new Date().toISOString().slice(0, 10));
 
-    const category = page.getByLabel("Category", {
+    await page.getByLabel("Category", {
       exact: true,
-    });
+    }).selectOption({ index: 1 });
 
-    await expect(category).toBeVisible();
-    await category.selectOption({ index: 1 });
-
-    const sourceAccount = page.getByLabel("Source Account", {
+    await page.getByLabel("Source Account", {
       exact: true,
-    });
-
-    await expect(sourceAccount).toBeVisible();
-    await sourceAccount.selectOption({ index: 1 });
+    }).selectOption({ index: 1 });
 
     await page.getByLabel("Description", {
       exact: true,
@@ -194,6 +190,7 @@ test.describe("Recurring Transactions E2E", () => {
       expect(dialog.message()).toBe(
         "Process all recurring transactions that are currently due?",
       );
+
       await dialog.accept();
     });
 
@@ -226,6 +223,7 @@ test.describe("Recurring Transactions E2E", () => {
       expect(dialog.message()).toBe(
         "Run this recurring transaction now?",
       );
+
       await dialog.accept();
     });
 
@@ -246,33 +244,72 @@ test.describe("Recurring Transactions E2E", () => {
   test("Pause button can archive a recurring transaction", async ({
     page,
   }) => {
-    await page.goto("/recurring");
+    const recurringName = `E2E Pause ${Date.now()}`;
 
-    const recurringCards = page.locator("section");
+    await page.goto("/recurring/new");
 
-    if ((await recurringCards.count()) === 0) {
-      test.skip();
-    }
+    await page.getByLabel("Name", { exact: true }).fill(
+      recurringName,
+    );
 
-    const firstCard = recurringCards.first();
+    await page.getByLabel("Type", { exact: true }).selectOption(
+      "expense",
+    );
 
-    const recurringName = await firstCard
-      .getByRole("heading", { level: 2 })
-      .innerText();
+    await page.getByLabel("Amount", { exact: true }).fill("101");
+
+    await page.getByLabel("Currency", { exact: true }).selectOption(
+      "BDT",
+    );
+
+    await page.getByLabel("Frequency", { exact: true }).selectOption(
+      "monthly",
+    );
+
+    await page.getByLabel("Next Run Date", {
+      exact: true,
+    }).fill(new Date().toISOString().slice(0, 10));
+
+    await page.getByLabel("Category", {
+      exact: true,
+    }).selectOption({ index: 1 });
+
+    await page.getByLabel("Source Account", {
+      exact: true,
+    }).selectOption({ index: 1 });
+
+    await page.getByRole("button", {
+      name: "Create Recurring Transaction",
+      exact: true,
+    }).click();
+
+    await expect(page).toHaveURL(/\/recurring$/);
+
+    const card = page.locator("section").filter({
+      has: page.getByRole("heading", {
+        name: recurringName,
+        exact: true,
+      }),
+    });
+
+    await expect(card).toBeVisible();
 
     page.once("dialog", async (dialog) => {
       expect(dialog.message()).toBe(
         "Pause this recurring transaction? Existing transaction history will be preserved.",
       );
+
       await dialog.accept();
     });
 
-    await firstCard.getByRole("button", {
+    await card.getByRole("button", {
       name: "Pause",
       exact: true,
     }).click();
 
-    await expect(page).toHaveURL(/\/recurring$/);
+    await expect(page).toHaveURL(/\/recurring$/, {
+      timeout: 15000,
+    });
 
     await expect(
       page.locator("section").filter({
@@ -280,11 +317,10 @@ test.describe("Recurring Transactions E2E", () => {
           name: recurringName,
           exact: true,
         }),
-      }).first(),
-    ).not.toBeVisible({
+      }),
+    ).toHaveCount(0, {
       timeout: 15000,
     });
   });
 });
-
 
