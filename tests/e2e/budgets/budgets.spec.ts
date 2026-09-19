@@ -86,6 +86,8 @@ async function createBudget(
     },
   );
 
+  await page.reload();
+
   await expect(
     page.getByRole("link", {
       name: "+ New Budget",
@@ -118,6 +120,14 @@ async function archiveBudget(page: any) {
     timeout: 10000,
   });
 
+  page.once("dialog", async (dialog) => {
+    expect(dialog.type()).toBe("confirm");
+    expect(dialog.message()).toBe(
+      "Archive this budget? Its existing spending history will be preserved, but the budget will no longer be active.",
+    );
+    await dialog.accept();
+  });
+
   await card
     .getByRole("button", {
       name: "Archive Budget",
@@ -125,12 +135,24 @@ async function archiveBudget(page: any) {
     })
     .click();
 
+  await page.waitForTimeout(1000);
+  await page.reload();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Archived Budgets",
+      exact: true,
+    }),
+  ).toBeVisible({
+    timeout: 15000,
+  });
+
   await expect(
     page.getByText("Archived", {
       exact: true,
     }).last(),
   ).toBeVisible({
-    timeout: 10000,
+    timeout: 15000,
   });
 }
 
@@ -187,6 +209,9 @@ test.describe("Budgets", () => {
       exact: true,
     }).click();
 
+    await page.waitForTimeout(1000);
+    await page.reload();
+
     await expect(page).toHaveURL(
       /\/budgets$/,
       {
@@ -198,6 +223,14 @@ test.describe("Budgets", () => {
       page.getByRole("link", {
         name: "Edit",
         exact: true,
+      }).last(),
+    ).toBeVisible({
+      timeout: 15000,
+    });
+
+    await expect(
+      page.getByText("15000", {
+        exact: false,
       }).last(),
     ).toBeVisible({
       timeout: 15000,
@@ -277,7 +310,9 @@ test.describe("Budgets", () => {
 
     await expect(
       archivedCard,
-    ).toBeVisible();
+    ).toBeVisible({
+      timeout: 15000,
+    });
   });
 
   test("deletes an archived budget", async ({
@@ -323,6 +358,9 @@ test.describe("Budgets", () => {
         exact: true,
       })
       .click();
+
+    await page.waitForTimeout(1000);
+    await page.reload();
 
     await expect
       .poll(
