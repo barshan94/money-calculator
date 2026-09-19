@@ -35,14 +35,12 @@ function budgetCard(
       }),
     })
     .filter({
-      has: page.locator("div").filter({
-        has: page.locator("span").filter({
-          hasText: amountRegex,
-        }),
+      has: page.locator("span").filter({
+        hasText: amountRegex,
       }),
     })
     .filter({
-      has: page.locator("button").filter({
+      has: page.locator("button", {
         hasText: "Archive Budget",
       }),
     })
@@ -59,6 +57,14 @@ async function selectE2EExpenseCategory(page: any) {
     timeout: 15000,
   });
 
+  await expect(
+    category.locator(
+      'option[value]:not([value=""])',
+    ).first(),
+  ).toBeAttached({
+    timeout: 15000,
+  });
+
   const options = category.locator(
     'option[value]:not([value=""])',
   );
@@ -66,14 +72,22 @@ async function selectE2EExpenseCategory(page: any) {
   const count = await options.count();
 
   for (let i = count - 1; i >= 0; i--) {
-    const text = await options.nth(i).textContent();
+    const option = options.nth(i);
 
-    if (text?.trim().startsWith("E2E Expense ")) {
+    const text = (
+      await option.textContent()
+    )?.trim();
+
+    if (text?.startsWith("E2E Expense ")) {
       await category.selectOption({
-        index: i + 1,
+        label: text,
       });
 
-      return text.trim();
+      await expect(category).toHaveValue(
+        await option.getAttribute("value"),
+      );
+
+      return text;
     }
   }
 
@@ -497,7 +511,5 @@ test.describe("Budgets", () => {
     });
   });
 });
-
-
 
 
