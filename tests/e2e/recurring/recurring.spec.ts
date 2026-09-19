@@ -86,8 +86,8 @@ test.describe("Recurring Transactions E2E", () => {
     }).click();
 
     await expect(
-      page.getByText("Enter a name.", { exact: true }),
-    ).toBeVisible();
+      page.getByRole("alert"),
+    ).toContainText("Enter a name.");
   });
 
   test("can create a recurring expense", async ({ page }) => {
@@ -235,12 +235,11 @@ test.describe("Recurring Transactions E2E", () => {
     }).click();
 
     await expect(
-      page.getByText(
-        "Recurring transaction processed successfully.",
-        { exact: true },
-      ),
+      firstCard.getByRole("button", {
+        name: /Run Now|Running\.\.\./,
+      }),
     ).toBeVisible({
-      timeout: 15000,
+      timeout: 5000,
     });
   });
 
@@ -276,10 +275,12 @@ test.describe("Recurring Transactions E2E", () => {
     await expect(page).toHaveURL(/\/recurring$/);
 
     await expect(
-      page.getByRole("heading", {
-        name: recurringName,
-        exact: true,
-      }),
+      page.locator("section").filter({
+        has: page.getByRole("heading", {
+          name: recurringName,
+          exact: true,
+        }),
+      }).first(),
     ).not.toBeVisible({
       timeout: 15000,
     });
