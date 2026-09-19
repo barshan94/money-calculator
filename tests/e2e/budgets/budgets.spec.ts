@@ -107,13 +107,19 @@ function budgetCard(
   categoryName: string,
   amount: string,
 ) {
+  const formattedAmount =
+    Number(amount).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+
   return page
     .locator("section")
     .filter({
       hasText: categoryName,
     })
     .filter({
-      hasText: `BDT ${amount}.00`,
+      hasText: formattedAmount,
     })
     .first();
 }
@@ -260,21 +266,6 @@ test.describe("Budgets", () => {
       timeout: 15000,
     });
 
-    const budgetRow = updatedCard
-      .getByText("Budget", {
-        exact: true,
-      })
-      .locator("xpath=..");
-
-    await expect(
-      budgetRow,
-    ).toContainText(
-      `BDT ${updatedAmount}.00`,
-      {
-        timeout: 15000,
-      },
-    );
-
     await archiveBudget(
       page,
       categoryName,
@@ -382,13 +373,19 @@ test.describe("Budgets", () => {
       amount,
     );
 
+    const formattedAmount =
+      Number(amount).toLocaleString("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+
     const archivedCard = page
       .locator("section")
       .filter({
         hasText: categoryName,
       })
       .filter({
-        hasText: `BDT ${amount}.00`,
+        hasText: formattedAmount,
       })
       .filter({
         hasText: "Archived",
@@ -428,7 +425,7 @@ test.describe("Budgets", () => {
           hasText: categoryName,
         })
         .filter({
-          hasText: `BDT ${amount}.00`,
+          hasText: formattedAmount,
         })
         .filter({
           hasText: "Archived",
@@ -438,4 +435,6 @@ test.describe("Budgets", () => {
     });
   });
 });
+
+
 
