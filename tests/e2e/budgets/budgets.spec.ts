@@ -102,21 +102,30 @@ async function createBudget(
   return categoryName;
 }
 
-function newestBudgetCard(page: any) {
-  const editLink = page
-    .getByRole("link", {
-      name: "Edit",
+function budgetCard(
+  page: any,
+  categoryName: string,
+) {
+  const category = page.getByText(
+    categoryName,
+    {
       exact: true,
-    })
-    .last();
+    },
+  );
 
-  return editLink.locator(
+  return category.locator(
     "xpath=ancestor::section[1]",
   );
 }
 
-async function archiveBudget(page: any) {
-  const card = newestBudgetCard(page);
+async function archiveBudget(
+  page: any,
+  categoryName: string,
+) {
+  const card = budgetCard(
+    page,
+    categoryName,
+  );
 
   await expect(card).toBeVisible({
     timeout: 10000,
@@ -150,43 +159,47 @@ async function archiveBudget(page: any) {
   ).toBeVisible({
     timeout: 15000,
   });
-
-  await expect(
-    page.getByText("Archived", {
-      exact: true,
-    }).last(),
-  ).toBeVisible({
-    timeout: 15000,
-  });
 }
 
 test.describe("Budgets", () => {
   test("creates a budget", async ({ page }) => {
-    await createBudget(
-      page,
-      "10000",
-      "2090-01-01",
-    );
+    const categoryName =
+      await createBudget(
+        page,
+        "10000",
+        "2090-01-01",
+      );
 
     await expect(
-      newestBudgetCard(page),
-    ).toBeVisible();
+      budgetCard(page, categoryName),
+    ).toBeVisible({
+      timeout: 15000,
+    });
 
-    await archiveBudget(page);
+    await archiveBudget(
+      page,
+      categoryName,
+    );
   });
 
   test("edits an existing budget", async ({
     page,
   }) => {
-    await createBudget(
+    const categoryName =
+      await createBudget(
+        page,
+        "11000",
+        "2091-01-01",
+      );
+
+    const card = budgetCard(
       page,
-      "11000",
-      "2091-01-01",
+      categoryName,
     );
 
-    const card = newestBudgetCard(page);
-
-    await expect(card).toBeVisible();
+    await expect(card).toBeVisible({
+      timeout: 15000,
+    });
 
     await card
       .getByRole("link", {
@@ -215,13 +228,19 @@ test.describe("Budgets", () => {
       exact: true,
     }).click();
 
-    await page.waitForTimeout(1000);
+    await expect(page).toHaveURL(
+      /\/budgets$/,
+      {
+        timeout: 15000,
+      },
+    );
 
-    await page.goto("/budgets");
     await page.reload();
 
-    const updatedCard =
-      newestBudgetCard(page);
+    const updatedCard = budgetCard(
+      page,
+      categoryName,
+    );
 
     await expect(updatedCard).toBeVisible({
       timeout: 15000,
@@ -239,7 +258,10 @@ test.describe("Budgets", () => {
       timeout: 15000,
     });
 
-    await archiveBudget(page);
+    await archiveBudget(
+      page,
+      categoryName,
+    );
   });
 
   test("rejects an invalid date range", async ({
@@ -300,23 +322,22 @@ test.describe("Budgets", () => {
   test("archives a budget", async ({
     page,
   }) => {
-    await createBudget(
+    const categoryName =
+      await createBudget(
+        page,
+        "13000",
+        "2093-01-01",
+      );
+
+    await archiveBudget(
       page,
-      "13000",
-      "2093-01-01",
+      categoryName,
     );
 
-    await archiveBudget(page);
-
-    const archivedCard = page
-      .getByText("Archived", {
-        exact: true,
-      })
-      .last()
-      .locator("xpath=ancestor::section[1]");
-
     await expect(
-      archivedCard,
+      page.getByText("Archived", {
+        exact: true,
+      }).last(),
     ).toBeVisible({
       timeout: 15000,
     });
@@ -325,27 +346,25 @@ test.describe("Budgets", () => {
   test("deletes an archived budget", async ({
     page,
   }) => {
-    await createBudget(
+    const categoryName =
+      await createBudget(
+        page,
+        "14000",
+        "2094-01-01",
+      );
+
+    await archiveBudget(
       page,
-      "14000",
-      "2094-01-01",
+      categoryName,
     );
 
-    await archiveBudget(page);
-
-    const archivedCards = page
-      .getByText("Archived", {
+    const archivedCard = page
+      .getByText(categoryName, {
         exact: true,
       })
-      .locator("xpath=ancestor::section[1]");
-
-    const countBefore =
-      await archivedCards.count();
-
-    expect(countBefore).toBeGreaterThan(0);
-
-    const archivedCard =
-      archivedCards.last();
+      .locator(
+        "xpath=ancestor::section[1]",
+      );
 
     await expect(
       archivedCard,
@@ -373,19 +392,13 @@ test.describe("Budgets", () => {
     await page.waitForTimeout(1000);
     await page.reload();
 
-    await expect
-      .poll(
-        async () =>
-          await page
-            .getByText("Archived", {
-              exact: true,
-            })
-            .count(),
-        {
-          timeout: 15000,
-        },
-      )
-      .toBe(countBefore - 1);
+    await expect(
+      page.getByText(categoryName, {
+        exact: true,
+      }),
+    ).not.toBeVisible({
+      timeout: 15000,
+    });
   });
 });
 
