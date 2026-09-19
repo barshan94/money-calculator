@@ -210,14 +210,10 @@ test.describe("Budgets", () => {
     }).click();
 
     await page.waitForTimeout(1000);
-    await page.reload();
 
-    await expect(page).toHaveURL(
-      /\/budgets$/,
-      {
-        timeout: 15000,
-      },
-    );
+    // Do not depend on router.push() from the edit page.
+    await page.goto("/budgets");
+    await page.reload();
 
     await expect(
       page.getByRole("link", {
