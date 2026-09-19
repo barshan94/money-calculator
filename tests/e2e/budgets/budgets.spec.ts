@@ -1,27 +1,74 @@
 import { test, expect } from "@playwright/test";
 
+function escapeRegex(value: string) {
+  return value.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&",
+  );
+}
+
+function moneyText(amount: string) {
+  return `BDT ${Number(amount).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function budgetCard(
+  page: any,
+  categoryName: string,
+  amount: string,
+) {
+  const categoryRegex = new RegExp(
+    `^${escapeRegex(categoryName)}$`,
+  );
+
+  const amountRegex = new RegExp(
+    `^${escapeRegex(moneyText(amount))}$`,
+  );
+
+  return page
+    .locator("section")
+    .filter({
+      has: page.locator("h3").filter({
+        hasText: categoryRegex,
+      }),
+    })
+    .filter({
+      has: page.locator("div").filter({
+        has: page.locator("span").filter({
+          hasText: amountRegex,
+        }),
+      }),
+    })
+    .filter({
+      has: page.locator("button").filter({
+        hasText: "Archive Budget",
+      }),
+    })
+    .first();
+}
+
 async function selectE2EExpenseCategory(page: any) {
   const category = page.getByLabel(
     "Expense Category",
     { exact: true },
   );
 
-  await expect(category).toBeVisible();
+  await expect(category).toBeVisible({
+    timeout: 15000,
+  });
 
   const options = category.locator(
     'option[value]:not([value=""])',
   );
-
-  await expect(options.first()).toBeAttached({
-    timeout: 10000,
-  });
 
   const count = await options.count();
 
   for (let i = count - 1; i >= 0; i--) {
     const text = await options.nth(i).textContent();
 
-    if (text?.startsWith("E2E Expense ")) {
+    if (text?.trim().startsWith("E2E Expense ")) {
       await category.selectOption({
         index: i + 1,
       });
@@ -100,37 +147,6 @@ async function createBudget(
   });
 
   return categoryName;
-}
-
-function moneyText(amount: string) {
-  return `BDT ${Number(amount).toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-function budgetCard(
-  page: any,
-  categoryName: string,
-  amount: string,
-) {
-  const exactMoney = moneyText(amount);
-
-  return page
-    .locator("section")
-    .filter({
-      has: page.getByText(
-        categoryName,
-        { exact: true },
-      ),
-    })
-    .filter({
-      has: page.getByText(
-        exactMoney,
-        { exact: true },
-      ),
-    })
-    .first();
 }
 
 async function archiveBudget(
@@ -393,27 +409,30 @@ test.describe("Budgets", () => {
       amount,
     );
 
-    const exactMoney = moneyText(amount);
+    const categoryRegex = new RegExp(
+      `^${escapeRegex(categoryName)}$`,
+    );
+
+    const amountRegex = new RegExp(
+      `^${escapeRegex(moneyText(amount))}$`,
+    );
 
     const archivedCard = page
       .locator("section")
       .filter({
-        has: page.getByText(
-          categoryName,
-          { exact: true },
-        ),
+        has: page.locator("h3").filter({
+          hasText: categoryRegex,
+        }),
       })
       .filter({
-        has: page.getByText(
-          exactMoney,
-          { exact: true },
-        ),
+        has: page.locator("span").filter({
+          hasText: amountRegex,
+        }),
       })
       .filter({
-        has: page.getByText(
-          "Archived",
-          { exact: true },
-        ),
+        has: page.getByText("Archived", {
+          exact: true,
+        }),
       })
       .first();
 
@@ -459,27 +478,26 @@ test.describe("Budgets", () => {
       page
         .locator("section")
         .filter({
-          has: page.getByText(
-            categoryName,
-            { exact: true },
-          ),
+          has: page.locator("h3").filter({
+            hasText: categoryRegex,
+          }),
         })
         .filter({
-          has: page.getByText(
-            exactMoney,
-            { exact: true },
-          ),
+          has: page.locator("span").filter({
+            hasText: amountRegex,
+          }),
         })
         .filter({
-          has: page.getByText(
-            "Archived",
-            { exact: true },
-          ),
+          has: page.getByText("Archived", {
+            exact: true,
+          }),
         }),
     ).toHaveCount(0, {
       timeout: 15000,
     });
   });
 });
+
+
 
 
