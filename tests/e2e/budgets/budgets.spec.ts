@@ -227,7 +227,7 @@ test.describe("Budgets", () => {
       await createBudget(
         page,
         amount,
-        "2090-01-01",
+        "2026-01-01",
       );
 
     await expect(
@@ -257,7 +257,7 @@ test.describe("Budgets", () => {
       await createBudget(
         page,
         originalAmount,
-        "2091-01-01",
+        "2026-02-01",
       );
 
     const card = budgetCard(
@@ -387,7 +387,7 @@ test.describe("Budgets", () => {
       await createBudget(
         page,
         amount,
-        "2093-01-01",
+        "2026-03-01",
       );
 
     await archiveBudget(
@@ -414,7 +414,7 @@ test.describe("Budgets", () => {
       await createBudget(
         page,
         amount,
-        "2094-01-01",
+        "2026-04-01",
       );
 
     await archiveBudget(
