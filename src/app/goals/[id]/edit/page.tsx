@@ -6,35 +6,50 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useParams, useRouter } from "next/navigation";
+import {
+  useParams,
+  useRouter,
+} from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function EditGoalPage() {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(
+    () => createClient(),
+    [],
+  );
+
   const router = useRouter();
   const params = useParams();
 
   const goalId = params.id as string;
 
   const [name, setName] = useState("");
-  const [goalType, setGoalType] = useState("savings");
-  const [targetAmount, setTargetAmount] = useState("");
-  const [targetDate, setTargetDate] = useState("");
-  const [description, setDescription] = useState("");
+  const [goalType, setGoalType] =
+    useState("savings");
+  const [targetAmount, setTargetAmount] =
+    useState("");
+  const [targetDate, setTargetDate] =
+    useState("");
+  const [description, setDescription] =
+    useState("");
 
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
+  const [loading, setLoading] =
+    useState(true);
+  const [saving, setSaving] =
+    useState(false);
+  const [message, setMessage] =
+    useState("");
 
   useEffect(() => {
     async function loadGoal() {
-      const { data, error } = await supabase
-        .from("goals")
-        .select(
-          "name, goal_type, target_amount, target_date, description, status",
-        )
-        .eq("id", goalId)
-        .single();
+      const { data, error } =
+        await supabase
+          .from("goals")
+          .select(
+            "name, goal_type, target_amount, target_date, description, status",
+          )
+          .eq("id", goalId)
+          .single();
 
       if (error) {
         setMessage(error.message);
@@ -43,22 +58,30 @@ export default function EditGoalPage() {
       }
 
       if (data.status !== "active") {
-        setMessage("This goal is no longer active.");
+        setMessage(
+          "This goal is no longer active.",
+        );
         setLoading(false);
         return;
       }
 
       setName(data.name);
       setGoalType(data.goal_type);
-      setTargetAmount(String(data.target_amount));
-      setTargetDate(data.target_date ?? "");
-      setDescription(data.description ?? "");
+      setTargetAmount(
+        String(data.target_amount),
+      );
+      setTargetDate(
+        data.target_date ?? "",
+      );
+      setDescription(
+        data.description ?? "",
+      );
 
       setLoading(false);
     }
 
     loadGoal();
-  }, [goalId]);
+  }, [goalId, supabase]);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -72,22 +95,30 @@ export default function EditGoalPage() {
       return;
     }
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-      setMessage("Target amount must be greater than zero.");
+    if (
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      setMessage(
+        "Target amount must be greater than zero.",
+      );
       return;
     }
 
     setSaving(true);
     setMessage("");
 
-    const { error } = await supabase.rpc("update_goal", {
-      p_goal_id: goalId,
-      p_name: name.trim(),
-      p_goal_type: goalType,
-      p_target_amount: amount,
-      p_target_date: targetDate || null,
-      p_description: description.trim() || null,
-    });
+    const { error } =
+      await supabase.rpc("update_goal", {
+        p_goal_id: goalId,
+        p_name: name.trim(),
+        p_goal_type: goalType,
+        p_target_amount: amount,
+        p_target_date:
+          targetDate || null,
+        p_description:
+          description.trim() || null,
+      });
 
     if (error) {
       setMessage(error.message);
@@ -116,9 +147,13 @@ export default function EditGoalPage() {
 
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Goal Name</label>
+          <label htmlFor="goal-name">
+            Goal Name
+          </label>
 
           <input
+            id="goal-name"
+            name="name"
             value={name}
             onChange={(event) =>
               setName(event.target.value)
@@ -128,67 +163,107 @@ export default function EditGoalPage() {
         </div>
 
         <div>
-          <label>Goal Type</label>
+          <label htmlFor="goal-type">
+            Goal Type
+          </label>
 
           <select
+            id="goal-type"
+            name="goalType"
             value={goalType}
             onChange={(event) =>
               setGoalType(event.target.value)
             }
           >
-            <option value="savings">Savings</option>
+            <option value="savings">
+              Savings
+            </option>
+
             <option value="emergency_fund">
               Emergency Fund
             </option>
-            <option value="donation">Donation</option>
-            <option value="investment">Investment</option>
+
+            <option value="donation">
+              Donation
+            </option>
+
+            <option value="investment">
+              Investment
+            </option>
+
             <option value="debt_repayment">
               Debt Repayment
             </option>
-            <option value="other">Other</option>
+
+            <option value="other">
+              Other
+            </option>
           </select>
         </div>
 
         <div>
-          <label>Target Amount</label>
+          <label htmlFor="target-amount">
+            Target Amount
+          </label>
 
           <input
+            id="target-amount"
+            name="targetAmount"
             type="number"
             min="0.01"
             step="0.01"
             value={targetAmount}
             onChange={(event) =>
-              setTargetAmount(event.target.value)
+              setTargetAmount(
+                event.target.value,
+              )
             }
             required
           />
         </div>
 
         <div>
-          <label>Target Date</label>
+          <label htmlFor="target-date">
+            Target Date
+          </label>
 
           <input
+            id="target-date"
+            name="targetDate"
             type="date"
             value={targetDate}
             onChange={(event) =>
-              setTargetDate(event.target.value)
+              setTargetDate(
+                event.target.value,
+              )
             }
           />
         </div>
 
         <div>
-          <label>Description</label>
+          <label htmlFor="goal-description">
+            Description
+          </label>
 
           <textarea
+            id="goal-description"
+            name="description"
             value={description}
             onChange={(event) =>
-              setDescription(event.target.value)
+              setDescription(
+                event.target.value,
+              )
             }
           />
         </div>
 
-        <button type="submit" disabled={saving}>
-          {saving ? "Saving..." : "Save Changes"}
+        <button
+          type="submit"
+          disabled={saving}
+        >
+          {saving
+            ? "Saving..."
+            : "Save Changes"}
         </button>
       </form>
     </main>

@@ -89,12 +89,42 @@ async function getNonBDTAccount() {
       .eq("is_system", false)
       .eq("is_archived", false)
       .limit(1)
-      .single();
+      .maybeSingle();
 
   expect(error).toBeNull();
-  expect(data).toBeTruthy();
 
-  return data;
+  if (data) {
+    return data;
+  }
+
+  const accountName =
+    `E2E USD Loan Test ${Date.now()}`;
+
+  const { data: created, error: createError } =
+    await supabase.rpc(
+      "create_account",
+      {
+        p_name: accountName,
+        p_account_type: "asset",
+        p_currency: "USD",
+        p_liquidity_class: "immediate",
+      },
+    );
+
+  expect(createError).toBeNull();
+  expect(created).toBeTruthy();
+
+  const { data: account, error: fetchError } =
+    await supabase
+      .from("accounts")
+      .select("id, currency")
+      .eq("id", created)
+      .single();
+
+  expect(fetchError).toBeNull();
+  expect(account).toBeTruthy();
+
+  return account;
 }
 
 async function createLoan(

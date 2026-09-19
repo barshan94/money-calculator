@@ -1,4 +1,8 @@
-import { chromium, test as setup } from "@playwright/test";
+import {
+  chromium,
+  expect,
+  test as setup,
+} from "@playwright/test";
 
 setup("authenticate", async () => {
   const email = process.env.PLAYWRIGHT_TEST_EMAIL;
@@ -45,7 +49,6 @@ setup("authenticate", async () => {
     (await context.cookies()).map((cookie) => cookie.name),
   );
 
-  // Prepare an E2E asset account for financial tests.
   const accountName = `E2E Cash ${Date.now()}`;
 
   await page.goto("http://127.0.0.1:3000/accounts/new", {
@@ -76,6 +79,36 @@ setup("authenticate", async () => {
   );
 
   console.log("E2E ACCOUNT:", accountName);
+
+  const categoryName = `E2E Expense ${Date.now()}`;
+
+  await page.goto("http://127.0.0.1:3000/categories", {
+    waitUntil: "networkidle",
+    timeout: 30000,
+  });
+
+  await page
+    .getByLabel("Category name")
+    .fill(categoryName);
+
+  await page
+    .getByLabel("Category type")
+    .selectOption("expense");
+
+  await page.getByRole("button", {
+    name: "Create Category",
+    exact: true,
+  }).click();
+
+  await expect(
+    page.getByText(categoryName, {
+      exact: true,
+    }),
+  ).toBeVisible({
+    timeout: 15000,
+  });
+
+  console.log("E2E CATEGORY:", categoryName);
 
   await context.storageState({
     path: "playwright/.auth/user.json",

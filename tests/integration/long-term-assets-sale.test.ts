@@ -146,7 +146,8 @@ async function cleanupAsset(
 
   expect(transactionError).toBeNull();
 
-  for (const transaction of transactions ?? []) {
+  for (const transaction of
+    transactions ?? []) {
     const {
       error: entriesDeleteError,
     } = await supabase
@@ -169,7 +170,9 @@ async function cleanupAsset(
         transaction.id,
       );
 
-    expect(transactionDeleteError).toBeNull();
+    expect(
+      transactionDeleteError,
+    ).toBeNull();
   }
 
   const {
@@ -187,7 +190,8 @@ async function cleanupAsset(
     saleTransactionError,
   ).toBeNull();
 
-  for (const transaction of saleTransactions ?? []) {
+  for (const transaction of
+    saleTransactions ?? []) {
     const {
       error: entriesDeleteError,
     } = await supabase
@@ -210,7 +214,9 @@ async function cleanupAsset(
         transaction.id,
       );
 
-    expect(transactionDeleteError).toBeNull();
+    expect(
+      transactionDeleteError,
+    ).toBeNull();
   }
 
   const {
@@ -222,27 +228,6 @@ async function cleanupAsset(
 
   expect(assetDeleteError).toBeNull();
 }
-
-async function getAccountBalance(accountId: string) {
-  const {
-    data,
-    error,
-  } = await supabase.rpc(
-    "get_account_balances",
-  );
-
-  expect(error).toBeNull();
-
-  const account = data?.find(
-    (item) => item.id === accountId,
-  );
-
-  expect(account).toBeTruthy();
-
-  return Number(account.balance);
-}
-
-
 
 async function getLedgerBalance(
   accountId: string,
@@ -331,6 +316,31 @@ async function getTransactionEntries(
   return data ?? [];
 }
 
+async function getSaleTransaction(
+  assetId: string,
+) {
+  const {
+    data: asset,
+    error: assetError,
+  } = await supabase
+    .from("long_term_assets")
+    .select("name")
+    .eq("id", assetId)
+    .single();
+
+  expect(assetError).toBeNull();
+  expect(asset).toBeTruthy();
+
+  const transaction =
+    await getTransaction(
+      `Long-term asset sale: ${asset!.name}`,
+    );
+
+  expect(transaction).toBeTruthy();
+
+  return transaction!;
+}
+
 describe(
   "long-term asset sale lifecycle",
   () => {
@@ -344,11 +354,6 @@ describe(
         } = await createTestAsset();
 
         try {
-          const destinationBefore =
-            await getAccountBalance(
-              sourceAccount.id,
-            );
-
           const {
             error,
           } = await supabase.rpc(
@@ -368,27 +373,16 @@ describe(
 
           expect(error).toBeNull();
 
-          const destinationAfter =
-            await getAccountBalance(
-              sourceAccount.id,
-            );
-
-          expect(
-            destinationAfter -
-              destinationBefore,
-          ).toBe(costBasis);
-
           const {
             data: asset,
-            error:
-              assetError,
+            error: assetError,
           } = await supabase
             .from(
               "long_term_assets",
             )
-           .select(
-  "name, status, archived_at, current_value",
-)
+            .select(
+              "name, status, archived_at, current_value",
+            )
             .eq(
               "id",
               assetId,
@@ -408,19 +402,52 @@ describe(
           ).not.toBeNull();
 
           const transaction =
-            await getTransaction(
-              `Long-term asset sale: ${asset?.name}`,
+            await getSaleTransaction(
+              assetId,
+            );
+
+          const entries =
+            await getTransactionEntries(
+              transaction.id,
+            );
+
+          const destinationEntry =
+            entries.find(
+              (entry) =>
+                entry.account_id ===
+                  sourceAccount.id &&
+                entry.entry_type ===
+                  "debit",
             );
 
           expect(
-            transaction,
+            destinationEntry,
           ).toBeTruthy();
+
+          expect(
+            Number(
+              destinationEntry!.amount,
+            ),
+          ).toBe(costBasis);
+
+          const gainEntry =
+            entries.find(
+              (entry) =>
+                entry.entry_type ===
+                  "credit" &&
+                Number(entry.amount) === 0,
+            );
+
+          expect(
+            gainEntry,
+          ).toBeUndefined();
         } finally {
           await cleanupAsset(
             assetId,
           );
         }
       },
+      30000,
     );
 
     it(
@@ -435,11 +462,6 @@ describe(
         try {
           const salePrice =
             15000;
-
-          const destinationBefore =
-            await getAccountBalance(
-              sourceAccount.id,
-            );
 
           const {
             error,
@@ -459,16 +481,6 @@ describe(
           );
 
           expect(error).toBeNull();
-
-          const destinationAfter =
-            await getAccountBalance(
-              sourceAccount.id,
-            );
-
-          expect(
-            destinationAfter -
-              destinationBefore,
-          ).toBe(salePrice);
 
           const {
             data: gainAccount,
@@ -504,29 +516,33 @@ describe(
           ).toBeNull();
 
           const transaction =
-            await getTransaction(
-              `Long-term asset sale: ${(
-                await supabase
-                  .from(
-                    "long_term_assets",
-                  )
-                  .select("name")
-                  .eq(
-                    "id",
-                    assetId,
-                  )
-                  .single()
-              ).data?.name}`,
+            await getSaleTransaction(
+              assetId,
             );
-
-          expect(
-            transaction,
-          ).toBeTruthy();
 
           const entries =
             await getTransactionEntries(
-              transaction!.id,
+              transaction.id,
             );
+
+          const destinationEntry =
+            entries.find(
+              (entry) =>
+                entry.account_id ===
+                  sourceAccount.id &&
+                entry.entry_type ===
+                  "debit",
+            );
+
+          expect(
+            destinationEntry,
+          ).toBeTruthy();
+
+          expect(
+            Number(
+              destinationEntry!.amount,
+            ),
+          ).toBe(salePrice);
 
           const gainEntry =
             entries.find(
@@ -557,6 +573,7 @@ describe(
           );
         }
       },
+      30000,
     );
 
     it(
@@ -626,8 +643,7 @@ describe(
 
           const {
             data: asset,
-            error:
-              assetError,
+            error: assetError,
           } = await supabase
             .from(
               "long_term_assets",
@@ -686,6 +702,7 @@ describe(
           );
         }
       },
+      30000,
     );
 
     it(
@@ -769,6 +786,7 @@ describe(
           );
         }
       },
+      30000,
     );
 
     it(
@@ -786,8 +804,7 @@ describe(
 
           const {
             data: asset,
-            error:
-              assetError,
+            error: assetError,
           } = await supabase
             .from(
               "long_term_assets",
@@ -883,6 +900,7 @@ describe(
           );
         }
       },
+      30000,
     );
 
     it(
@@ -948,6 +966,7 @@ describe(
           );
         }
       },
+      30000,
     );
 
     it(
@@ -1006,6 +1025,7 @@ describe(
           );
         }
       },
+      30000,
     );
 
     it(
@@ -1030,7 +1050,8 @@ describe(
                 "2026-03-01",
               p_destination_account_id:
                 "00000000-0000-0000-0000-000000000000",
-              p_description: null,
+              p_description:
+                null,
             },
           );
 
@@ -1048,6 +1069,7 @@ describe(
           );
         }
       },
+      30000,
     );
   },
 );

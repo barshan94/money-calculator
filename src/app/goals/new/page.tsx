@@ -33,20 +33,25 @@ export default function NewGoalPage() {
     }
 
     if (!Number.isFinite(amount) || amount <= 0) {
-      setMessage("Target amount must be greater than zero.");
+      setMessage(
+        "Target amount must be greater than zero.",
+      );
       return;
     }
 
     setSaving(true);
 
-    const { error } = await supabase.rpc("create_goal", {
-      p_name: name.trim(),
-      p_goal_type: goalType,
-      p_currency: currency,
-      p_target_amount: amount,
-      p_target_date: targetDate || null,
-      p_description: description.trim() || null,
-    });
+    const { error } = await supabase.rpc(
+      "create_goal",
+      {
+        p_name: name.trim(),
+        p_goal_type: goalType,
+        p_currency: currency,
+        p_target_amount: amount,
+        p_target_date: targetDate || null,
+        p_description: description.trim() || null,
+      },
+    );
 
     if (error) {
       setMessage(error.message);
@@ -66,41 +71,73 @@ export default function NewGoalPage() {
 
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Goal Name</label>
+          <label htmlFor="goal-name">
+            Goal Name
+          </label>
+
           <input
+            id="goal-name"
+            name="name"
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) =>
+              setName(e.target.value)
+            }
             placeholder="Emergency Fund"
             required
           />
         </div>
 
         <div>
-          <label>Goal Type</label>
+          <label htmlFor="goal-type">
+            Goal Type
+          </label>
 
           <select
+            id="goal-type"
+            name="goalType"
             value={goalType}
-            onChange={(e) => setGoalType(e.target.value)}
+            onChange={(e) =>
+              setGoalType(e.target.value)
+            }
           >
-            <option value="savings">Savings</option>
+            <option value="savings">
+              Savings
+            </option>
+
             <option value="emergency_fund">
               Emergency Fund
             </option>
-            <option value="donation">Donation</option>
-            <option value="investment">Investment</option>
+
+            <option value="donation">
+              Donation
+            </option>
+
+            <option value="investment">
+              Investment
+            </option>
+
             <option value="debt_repayment">
               Debt Repayment
             </option>
-            <option value="other">Other</option>
+
+            <option value="other">
+              Other
+            </option>
           </select>
         </div>
 
         <div>
-          <label>Currency</label>
+          <label htmlFor="goal-currency">
+            Currency
+          </label>
 
           <select
+            id="goal-currency"
+            name="currency"
             value={currency}
-            onChange={(e) => setCurrency(e.target.value)}
+            onChange={(e) =>
+              setCurrency(e.target.value)
+            }
           >
             <option value="BDT">BDT</option>
             <option value="USD">USD</option>
@@ -110,9 +147,13 @@ export default function NewGoalPage() {
         </div>
 
         <div>
-          <label>Target Amount</label>
+          <label htmlFor="target-amount">
+            Target Amount
+          </label>
 
           <input
+            id="target-amount"
+            name="targetAmount"
             type="number"
             min="0.01"
             step="0.01"
@@ -125,9 +166,13 @@ export default function NewGoalPage() {
         </div>
 
         <div>
-          <label>Target Date</label>
+          <label htmlFor="target-date">
+            Target Date
+          </label>
 
           <input
+            id="target-date"
+            name="targetDate"
             type="date"
             value={targetDate}
             onChange={(e) =>
@@ -137,9 +182,13 @@ export default function NewGoalPage() {
         </div>
 
         <div>
-          <label>Description</label>
+          <label htmlFor="goal-description">
+            Description
+          </label>
 
           <textarea
+            id="goal-description"
+            name="description"
             value={description}
             onChange={(e) =>
               setDescription(e.target.value)
@@ -147,8 +196,13 @@ export default function NewGoalPage() {
           />
         </div>
 
-        <button type="submit" disabled={saving}>
-          {saving ? "Creating..." : "Create Goal"}
+        <button
+          type="submit"
+          disabled={saving}
+        >
+          {saving
+            ? "Creating..."
+            : "Create Goal"}
         </button>
       </form>
     </main>
