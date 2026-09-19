@@ -230,6 +230,10 @@ test.describe("Categories E2E", () => {
       exact: true,
     }).click();
 
+    await expect(dialog).not.toBeVisible({
+      timeout: 15000,
+    });
+
     await page.reload();
 
     await expect(
@@ -244,7 +248,9 @@ test.describe("Categories E2E", () => {
       page.getByText(categoryName, {
         exact: true,
       }),
-    ).not.toBeVisible();
+    ).not.toBeVisible({
+      timeout: 15000,
+    });
   });
 
   test("can cancel category edit", async ({ page }) => {

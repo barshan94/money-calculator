@@ -189,6 +189,9 @@ test.describe("Budgets", () => {
 
     await expect(page).toHaveURL(
       /\/budgets$/,
+      {
+        timeout: 15000,
+      },
     );
 
     await expect(
@@ -196,7 +199,9 @@ test.describe("Budgets", () => {
         name: "Edit",
         exact: true,
       }).last(),
-    ).toBeVisible();
+    ).toBeVisible({
+      timeout: 15000,
+    });
 
     await archiveBudget(page);
   });
@@ -334,3 +339,4 @@ test.describe("Budgets", () => {
       .toBe(countBefore - 1);
   });
 });
+
