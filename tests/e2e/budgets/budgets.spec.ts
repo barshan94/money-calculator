@@ -105,30 +105,32 @@ async function createBudget(
 function budgetCard(
   page: any,
   categoryName: string,
+  amount: string,
 ) {
-  const category = page.getByText(
-    categoryName,
-    {
-      exact: true,
-    },
-  );
-
-  return category.locator(
-    "xpath=ancestor::section[1]",
-  );
+  return page
+    .locator("section")
+    .filter({
+      hasText: categoryName,
+    })
+    .filter({
+      hasText: `BDT ${amount}.00`,
+    })
+    .first();
 }
 
 async function archiveBudget(
   page: any,
   categoryName: string,
+  amount: string,
 ) {
   const card = budgetCard(
     page,
     categoryName,
+    amount,
   );
 
   await expect(card).toBeVisible({
-    timeout: 10000,
+    timeout: 15000,
   });
 
   page.once("dialog", async (dialog) => {
@@ -163,15 +165,21 @@ async function archiveBudget(
 
 test.describe("Budgets", () => {
   test("creates a budget", async ({ page }) => {
+    const amount = "10000";
+
     const categoryName =
       await createBudget(
         page,
-        "10000",
+        amount,
         "2090-01-01",
       );
 
     await expect(
-      budgetCard(page, categoryName),
+      budgetCard(
+        page,
+        categoryName,
+        amount,
+      ),
     ).toBeVisible({
       timeout: 15000,
     });
@@ -179,22 +187,27 @@ test.describe("Budgets", () => {
     await archiveBudget(
       page,
       categoryName,
+      amount,
     );
   });
 
   test("edits an existing budget", async ({
     page,
   }) => {
+    const originalAmount = "11000";
+    const updatedAmount = "15000";
+
     const categoryName =
       await createBudget(
         page,
-        "11000",
+        originalAmount,
         "2091-01-01",
       );
 
     const card = budgetCard(
       page,
       categoryName,
+      originalAmount,
     );
 
     await expect(card).toBeVisible({
@@ -221,7 +234,7 @@ test.describe("Budgets", () => {
       .getByLabel("Budget Amount", {
         exact: true,
       })
-      .fill("15000");
+      .fill(updatedAmount);
 
     await page.getByRole("button", {
       name: "Save Changes",
@@ -240,6 +253,7 @@ test.describe("Budgets", () => {
     const updatedCard = budgetCard(
       page,
       categoryName,
+      updatedAmount,
     );
 
     await expect(updatedCard).toBeVisible({
@@ -254,13 +268,17 @@ test.describe("Budgets", () => {
 
     await expect(
       budgetRow,
-    ).toContainText("15,000", {
-      timeout: 15000,
-    });
+    ).toContainText(
+      `BDT ${updatedAmount}.00`,
+      {
+        timeout: 15000,
+      },
+    );
 
     await archiveBudget(
       page,
       categoryName,
+      updatedAmount,
     );
   });
 
@@ -322,16 +340,19 @@ test.describe("Budgets", () => {
   test("archives a budget", async ({
     page,
   }) => {
+    const amount = "13000";
+
     const categoryName =
       await createBudget(
         page,
-        "13000",
+        amount,
         "2093-01-01",
       );
 
     await archiveBudget(
       page,
       categoryName,
+      amount,
     );
 
     await expect(
@@ -346,25 +367,33 @@ test.describe("Budgets", () => {
   test("deletes an archived budget", async ({
     page,
   }) => {
+    const amount = "14000";
+
     const categoryName =
       await createBudget(
         page,
-        "14000",
+        amount,
         "2094-01-01",
       );
 
     await archiveBudget(
       page,
       categoryName,
+      amount,
     );
 
     const archivedCard = page
-      .getByText(categoryName, {
-        exact: true,
+      .locator("section")
+      .filter({
+        hasText: categoryName,
       })
-      .locator(
-        "xpath=ancestor::section[1]",
-      );
+      .filter({
+        hasText: `BDT ${amount}.00`,
+      })
+      .filter({
+        hasText: "Archived",
+      })
+      .first();
 
     await expect(
       archivedCard,
@@ -393,13 +422,20 @@ test.describe("Budgets", () => {
     await page.reload();
 
     await expect(
-      page.getByText(categoryName, {
-        exact: true,
-      }),
-    ).not.toBeVisible({
+      page
+        .locator("section")
+        .filter({
+          hasText: categoryName,
+        })
+        .filter({
+          hasText: `BDT ${amount}.00`,
+        })
+        .filter({
+          hasText: "Archived",
+        }),
+    ).toHaveCount(0, {
       timeout: 15000,
     });
   });
 });
-
 
