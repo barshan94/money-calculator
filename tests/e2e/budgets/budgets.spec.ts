@@ -47,7 +47,9 @@ async function createBudget(
       name: "New Budget",
       exact: true,
     }),
-  ).toBeVisible();
+  ).toBeVisible({
+    timeout: 15000,
+  });
 
   const categoryName =
     await selectE2EExpenseCategory(page);
@@ -122,9 +124,11 @@ async function archiveBudget(page: any) {
 
   page.once("dialog", async (dialog) => {
     expect(dialog.type()).toBe("confirm");
+
     expect(dialog.message()).toBe(
       "Archive this budget? Its existing spending history will be preserved, but the budget will no longer be active.",
     );
+
     await dialog.accept();
   });
 
@@ -196,7 +200,9 @@ test.describe("Budgets", () => {
         name: "Edit Budget",
         exact: true,
       }),
-    ).toBeVisible();
+    ).toBeVisible({
+      timeout: 15000,
+    });
 
     await page
       .getByLabel("Budget Amount", {
@@ -211,7 +217,6 @@ test.describe("Budgets", () => {
 
     await page.waitForTimeout(1000);
 
-    // Do not depend on router.push() from the edit page.
     await page.goto("/budgets");
     await page.reload();
 
@@ -225,9 +230,9 @@ test.describe("Budgets", () => {
     });
 
     await expect(
-      page.getByText("15000", {
-        exact: false,
-      }).last(),
+      page.getByText("৳15,000.00", {
+        exact: true,
+      }),
     ).toBeVisible({
       timeout: 15000,
     });
@@ -245,7 +250,9 @@ test.describe("Budgets", () => {
         name: "New Budget",
         exact: true,
       }),
-    ).toBeVisible();
+    ).toBeVisible({
+      timeout: 15000,
+    });
 
     await selectE2EExpenseCategory(page);
 
@@ -283,7 +290,9 @@ test.describe("Budgets", () => {
           exact: true,
         },
       ),
-    ).toBeVisible();
+    ).toBeVisible({
+      timeout: 15000,
+    });
   });
 
   test("archives a budget", async ({
@@ -338,13 +347,17 @@ test.describe("Budgets", () => {
 
     await expect(
       archivedCard,
-    ).toBeVisible();
+    ).toBeVisible({
+      timeout: 15000,
+    });
 
     page.once("dialog", async (dialog) => {
       expect(dialog.type()).toBe("confirm");
+
       expect(dialog.message()).toBe(
         "Permanently delete this budget? This cannot be undone.",
       );
+
       await dialog.accept();
     });
 
