@@ -102,24 +102,33 @@ async function createBudget(
   return categoryName;
 }
 
+function moneyText(amount: string) {
+  return `BDT ${Number(amount).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
 function budgetCard(
   page: any,
   categoryName: string,
   amount: string,
 ) {
-  const formattedAmount =
-    Number(amount).toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
+  const exactMoney = moneyText(amount);
 
   return page
     .locator("section")
     .filter({
-      hasText: categoryName,
+      has: page.getByText(
+        categoryName,
+        { exact: true },
+      ),
     })
     .filter({
-      hasText: formattedAmount,
+      has: page.getByText(
+        exactMoney,
+        { exact: true },
+      ),
     })
     .first();
 }
@@ -139,6 +148,16 @@ async function archiveBudget(
     timeout: 15000,
   });
 
+  const archiveButton = card.getByRole(
+    "button",
+    {
+      name: "Archive Budget",
+      exact: true,
+    },
+  );
+
+  await expect(archiveButton).toHaveCount(1);
+
   page.once("dialog", async (dialog) => {
     expect(dialog.type()).toBe("confirm");
 
@@ -149,14 +168,15 @@ async function archiveBudget(
     await dialog.accept();
   });
 
-  await card
-    .getByRole("button", {
-      name: "Archive Budget",
-      exact: true,
-    })
-    .click();
+  await archiveButton.click();
 
-  await page.waitForTimeout(1000);
+  await expect(page).toHaveURL(
+    /\/budgets$/,
+    {
+      timeout: 15000,
+    },
+  );
+
   await page.reload();
 
   await expect(
@@ -373,22 +393,27 @@ test.describe("Budgets", () => {
       amount,
     );
 
-    const formattedAmount =
-      Number(amount).toLocaleString("en-US", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-      });
+    const exactMoney = moneyText(amount);
 
     const archivedCard = page
       .locator("section")
       .filter({
-        hasText: categoryName,
+        has: page.getByText(
+          categoryName,
+          { exact: true },
+        ),
       })
       .filter({
-        hasText: formattedAmount,
+        has: page.getByText(
+          exactMoney,
+          { exact: true },
+        ),
       })
       .filter({
-        hasText: "Archived",
+        has: page.getByText(
+          "Archived",
+          { exact: true },
+        ),
       })
       .first();
 
@@ -397,6 +422,17 @@ test.describe("Budgets", () => {
     ).toBeVisible({
       timeout: 15000,
     });
+
+    const deleteButton =
+      archivedCard.getByRole(
+        "button",
+        {
+          name: "Delete Budget",
+          exact: true,
+        },
+      );
+
+    await expect(deleteButton).toHaveCount(1);
 
     page.once("dialog", async (dialog) => {
       expect(dialog.type()).toBe("confirm");
@@ -408,33 +444,42 @@ test.describe("Budgets", () => {
       await dialog.accept();
     });
 
-    await archivedCard
-      .getByRole("button", {
-        name: "Delete Budget",
-        exact: true,
-      })
-      .click();
+    await deleteButton.click();
 
-    await page.waitForTimeout(1000);
+    await expect(page).toHaveURL(
+      /\/budgets$/,
+      {
+        timeout: 15000,
+      },
+    );
+
     await page.reload();
 
     await expect(
       page
         .locator("section")
         .filter({
-          hasText: categoryName,
+          has: page.getByText(
+            categoryName,
+            { exact: true },
+          ),
         })
         .filter({
-          hasText: formattedAmount,
+          has: page.getByText(
+            exactMoney,
+            { exact: true },
+          ),
         })
         .filter({
-          hasText: "Archived",
+          has: page.getByText(
+            "Archived",
+            { exact: true },
+          ),
         }),
     ).toHaveCount(0, {
       timeout: 15000,
     });
   });
 });
-
 
 
