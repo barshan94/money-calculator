@@ -1,3 +1,5 @@
+import { test, expect } from "@playwright/test";
+
 test("dashboard shows financial position", async ({
   page,
 }) => {
@@ -52,7 +54,3 @@ test("dashboard shows financial position", async ({
       .filter({ hasText: /^Recurring/ }),
   ).toBeVisible();
 });
-
-
-
-
