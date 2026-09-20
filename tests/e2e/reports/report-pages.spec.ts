@@ -102,7 +102,7 @@ test.describe("Individual Reports E2E", () => {
 
     await expect(
       page.getByRole("heading", {
-        name: "Investments",
+        name: "Investments Report",
         exact: true,
         level: 1,
       }),
