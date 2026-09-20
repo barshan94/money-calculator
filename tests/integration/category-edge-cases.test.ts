@@ -1,5 +1,6 @@
 import {
   beforeAll,
+  afterAll,
   describe,
   expect,
   it,
@@ -8,6 +9,7 @@ import {
   createClient,
   type SupabaseClient,
 } from "@supabase/supabase-js";
+import { randomUUID } from "node:crypto";
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -23,35 +25,99 @@ const password =
 
 let supabase: SupabaseClient;
 
+const createdCategoryIds: string[] = [];
+const createdRecurringIds: string[] = [];
+
+function uniqueName(prefix: string) {
+  return `${prefix} ${Date.now()} ${randomUUID()}`;
+}
+
 async function createTestCategory(
   name: string,
   type: "income" | "expense",
 ) {
-  const { data, error } = await supabase.rpc(
-    "create_category",
-    {
-      p_name: name,
-      p_category_type: type,
-    },
-  );
+  const { data, error } =
+    await supabase.rpc(
+      "create_category",
+      {
+        p_name: name,
+        p_category_type: type,
+      },
+    );
 
   expect(error).toBeNull();
   expect(data).toBeTruthy();
 
-  return data as string;
+  const categoryId = data as string;
+  createdCategoryIds.push(categoryId);
+
+  return categoryId;
 }
 
-async function deleteTestCategory(
+async function createTransactionHistory(
   categoryId: string,
 ) {
-  const { error } = await supabase.rpc(
-    "delete_category",
+  const {
+    data: category,
+    error: categoryError,
+  } = await supabase
+    .from("categories")
+    .select("ledger_account_id")
+    .eq("id", categoryId)
+    .single();
+
+  expect(categoryError).toBeNull();
+  expect(category?.ledger_account_id).toBeTruthy();
+
+  const {
+    data: accounts,
+    error: accountError,
+  } = await supabase
+    .from("accounts")
+    .select("id, currency")
+    .eq("account_type", "asset")
+    .eq("is_system", false)
+    .eq("is_archived", false)
+    .eq("currency", "BDT")
+    .limit(1);
+
+  expect(accountError).toBeNull();
+  expect(accounts).toHaveLength(1);
+
+  const {
+    data: transactionId,
+    error: transactionError,
+  } = await supabase.rpc(
+    "create_transaction",
     {
-      p_category_id: categoryId,
+      p_transaction_date:
+        new Date().toISOString(),
+      p_description:
+        uniqueName("Category History"),
+      p_reference: null,
+      p_notes: null,
+      p_entries: [
+        {
+          account_id:
+            category!.ledger_account_id,
+          category_id: categoryId,
+          amount: 100,
+          entry_type: "debit",
+        },
+        {
+          account_id: accounts![0].id,
+          category_id: null,
+          amount: 100,
+          entry_type: "credit",
+        },
+      ],
     },
   );
 
-  expect(error).toBeNull();
+  expect(transactionError).toBeNull();
+  expect(transactionId).toBeTruthy();
+
+  return transactionId as string;
 }
 
 describe("category edge cases", () => {
@@ -70,9 +136,29 @@ describe("category edge cases", () => {
     expect(error).toBeNull();
   });
 
+  afterAll(async () => {
+    for (const recurringId of createdRecurringIds) {
+      await supabase
+        .from("recurring_transactions")
+        .delete()
+        .eq("id", recurringId);
+    }
+
+    for (const categoryId of createdCategoryIds) {
+      await supabase.rpc(
+        "delete_category",
+        {
+          p_category_id: categoryId,
+        },
+      );
+    }
+
+    await supabase.auth.signOut();
+  });
+
   it("creates a category with a matching ledger account", async () => {
     const name =
-      `Category Create ${Date.now()}`;
+      uniqueName("Category Create");
 
     const categoryId =
       await createTestCategory(
@@ -80,33 +166,39 @@ describe("category edge cases", () => {
         "expense",
       );
 
-    const { data: category, error: categoryError } =
-      await supabase
-        .from("categories")
-        .select(
-          "id, name, category_type, ledger_account_id",
-        )
-        .eq("id", categoryId)
-        .single();
+    const {
+      data: category,
+      error: categoryError,
+    } = await supabase
+      .from("categories")
+      .select(
+        "id, name, category_type, ledger_account_id",
+      )
+      .eq("id", categoryId)
+      .single();
 
     expect(categoryError).toBeNull();
     expect(category?.name).toBe(name);
     expect(category?.category_type).toBe(
       "expense",
     );
-    expect(category?.ledger_account_id).toBeTruthy();
+    expect(
+      category?.ledger_account_id,
+    ).toBeTruthy();
 
-    const { data: account, error: accountError } =
-      await supabase
-        .from("accounts")
-        .select(
-          "id, name, account_type, is_system",
-        )
-        .eq(
-          "id",
-          category!.ledger_account_id,
-        )
-        .single();
+    const {
+      data: account,
+      error: accountError,
+    } = await supabase
+      .from("accounts")
+      .select(
+        "id, name, account_type, is_system",
+      )
+      .eq(
+        "id",
+        category!.ledger_account_id,
+      )
+      .single();
 
     expect(accountError).toBeNull();
     expect(account?.name).toBe(name);
@@ -114,13 +206,11 @@ describe("category edge cases", () => {
       "expense",
     );
     expect(account?.is_system).toBe(true);
-
-    await deleteTestCategory(categoryId);
   });
 
   it("renames a category and its ledger account together", async () => {
     const originalName =
-      `Category Rename ${Date.now()}`;
+      uniqueName("Category Rename");
 
     const categoryId =
       await createTestCategory(
@@ -135,8 +225,10 @@ describe("category edge cases", () => {
         .eq("id", categoryId)
         .single();
 
+    expect(before?.ledger_account_id).toBeTruthy();
+
     const newName =
-      `Category Renamed ${Date.now()}`;
+      uniqueName("Category Renamed");
 
     const { error } =
       await supabase.rpc(
@@ -163,14 +255,18 @@ describe("category edge cases", () => {
     expect(category?.category_type).toBe(
       "expense",
     );
-    expect(category?.ledger_account_id).toBe(
+    expect(
+      category?.ledger_account_id,
+    ).toBe(
       before!.ledger_account_id,
     );
 
     const { data: account } =
       await supabase
         .from("accounts")
-        .select("name, account_type")
+        .select(
+          "name, account_type",
+        )
         .eq(
           "id",
           before!.ledger_account_id,
@@ -181,13 +277,11 @@ describe("category edge cases", () => {
     expect(account?.account_type).toBe(
       "expense",
     );
-
-    await deleteTestCategory(categoryId);
   });
 
   it("allows type change for an unused category", async () => {
     const name =
-      `Category Type ${Date.now()}`;
+      uniqueName("Category Type");
 
     const categoryId =
       await createTestCategory(
@@ -216,9 +310,9 @@ describe("category edge cases", () => {
         .eq("id", categoryId)
         .single();
 
-    expect(category?.category_type).toBe(
-      "income",
-    );
+    expect(
+      category?.category_type,
+    ).toBe("income");
 
     const { data: account } =
       await supabase
@@ -233,59 +327,67 @@ describe("category edge cases", () => {
     expect(account?.account_type).toBe(
       "income",
     );
-
-    await deleteTestCategory(categoryId);
   });
 
   it("blocks type change when transaction history exists", async () => {
-    const { data: category, error } =
-      await supabase
-        .from("categories")
-        .select("id, category_type")
-        .eq("name", "test")
-        .single();
+    const name =
+      uniqueName(
+        "Category Type History",
+      );
 
-    expect(error).toBeNull();
-    expect(category?.category_type).toBe(
-      "expense",
+    const categoryId =
+      await createTestCategory(
+        name,
+        "expense",
+      );
+
+    await createTransactionHistory(
+      categoryId,
     );
 
     const { error: updateError } =
       await supabase.rpc(
         "update_category",
         {
-          p_category_id: category!.id,
-          p_name: "test",
+          p_category_id: categoryId,
+          p_name: name,
           p_category_type: "income",
         },
       );
 
     expect(updateError).toBeTruthy();
-    expect(updateError!.message).toContain(
+    expect(
+      updateError!.message,
+    ).toContain(
       "Category type cannot be changed",
     );
   });
 
   it("blocks deletion when transaction history exists", async () => {
-    const { data: category, error } =
-      await supabase
-        .from("categories")
-        .select("id")
-        .eq("name", "test")
-        .single();
+    const categoryId =
+      await createTestCategory(
+        uniqueName(
+          "Category Delete History",
+        ),
+        "expense",
+      );
 
-    expect(error).toBeNull();
+    await createTransactionHistory(
+      categoryId,
+    );
 
     const { error: deleteError } =
       await supabase.rpc(
         "delete_category",
         {
-          p_category_id: category!.id,
+          p_category_id: categoryId,
         },
       );
 
     expect(deleteError).toBeTruthy();
-    expect(deleteError!.message).toContain(
+    expect(
+      deleteError!.message,
+    ).toContain(
       "transaction history",
     );
   });
@@ -293,24 +395,29 @@ describe("category edge cases", () => {
   it("blocks deletion when a budget references the category", async () => {
     const categoryId =
       await createTestCategory(
-        `Category Budget ${Date.now()}`,
+        uniqueName("Category Budget"),
         "expense",
       );
 
-    const { data: categoryAccount, error: accountError } =
-      await supabase
-        .from("categories")
-        .select(`
-          accounts!inner(currency)
-        `)
-        .eq("id", categoryId)
-        .single();
+    const {
+      data: categoryAccount,
+      error: accountError,
+    } = await supabase
+      .from("categories")
+      .select(`
+        accounts!inner(currency)
+      `)
+      .eq("id", categoryId)
+      .single();
 
     expect(accountError).toBeNull();
 
-    const row = categoryAccount as unknown as {
-      accounts: { currency: string };
-    };
+    const row =
+      categoryAccount as unknown as {
+        accounts: {
+          currency: string;
+        };
+      };
 
     const { error: budgetError } =
       await supabase.rpc(
@@ -318,7 +425,8 @@ describe("category edge cases", () => {
         {
           p_category_id: categoryId,
           p_amount: 1000,
-          p_currency: row.accounts.currency,
+          p_currency:
+            row.accounts.currency,
           p_period: "monthly",
           p_start_date:
             new Date()
@@ -339,60 +447,80 @@ describe("category edge cases", () => {
       );
 
     expect(deleteError).toBeTruthy();
-    expect(deleteError!.message).toContain(
-      "budget",
-    );
-
-    /*
-      Category intentionally remains because
-      the budget depends on it.
-    */
+    expect(
+      deleteError!.message,
+    ).toContain("budget");
   });
 
   it("blocks deletion when an active recurring transaction references the category", async () => {
     const categoryId =
       await createTestCategory(
-        `Category Recurring ${Date.now()}`,
+        uniqueName(
+          "Category Recurring",
+        ),
         "expense",
       );
 
-    const { data: account, error: accountError } =
-      await supabase
-        .from("accounts")
-        .select(
-          "id, currency",
-        )
-        .eq("account_type", "asset")
-        .eq("is_system", false)
-        .eq("is_archived", false)
-        .limit(1)
-        .single();
+    const {
+      data: account,
+      error: accountError,
+    } = await supabase
+      .from("accounts")
+      .select(
+        "id, currency",
+      )
+      .eq(
+        "account_type",
+        "asset",
+      )
+      .eq(
+        "is_system",
+        false,
+      )
+      .eq(
+        "is_archived",
+        false,
+      )
+      .limit(1)
+      .single();
 
     expect(accountError).toBeNull();
 
-    const { error: recurringError } =
-      await supabase.rpc(
-        "create_recurring_transaction",
-        {
-          p_name:
-            `Category Recurring ${Date.now()}`,
-          p_amount: 100,
-          p_currency: account!.currency,
-          p_frequency: "monthly",
-          p_next_run_date:
-            new Date()
-              .toISOString()
-              .slice(0, 10),
-          p_transaction_type: "expense",
-          p_category_id: categoryId,
-          p_source_account_id: account!.id,
-          p_destination_account_id: null,
-          p_description:
-            "Category integrity test",
-        },
-      );
+    const {
+      data: recurringId,
+      error: recurringError,
+    } = await supabase.rpc(
+      "create_recurring_transaction",
+      {
+        p_name:
+          uniqueName(
+            "Category Recurring",
+          ),
+        p_amount: 100,
+        p_currency:
+          account!.currency,
+        p_frequency: "monthly",
+        p_next_run_date:
+          "2099-01-01",
+        p_transaction_type:
+          "expense",
+        p_category_id:
+          categoryId,
+        p_source_account_id:
+          account!.id,
+        p_destination_account_id:
+          null,
+        p_description:
+          "Category integrity test",
+      },
+    );
 
     expect(recurringError).toBeNull();
+    expect(recurringId).toBeTruthy();
+
+    createdRecurringIds.push(
+      recurringId as string,
+    );
 
     const { error: deleteError } =
       await supabase.rpc(
@@ -403,29 +531,30 @@ describe("category edge cases", () => {
       );
 
     expect(deleteError).toBeTruthy();
-    expect(deleteError!.message).toContain(
+    expect(
+      deleteError!.message,
+    ).toContain(
       "active recurring",
     );
-
-    /*
-      Category intentionally remains because
-      the active recurring transaction depends on it.
-    */
   });
 
   it("deletes an unused category and its ledger account", async () => {
     const categoryId =
       await createTestCategory(
-        `Category Delete ${Date.now()}`,
+        uniqueName(
+          "Category Delete",
+        ),
         "expense",
       );
 
-    const { data: category, error } =
-      await supabase
-        .from("categories")
-        .select("ledger_account_id")
-        .eq("id", categoryId)
-        .single();
+    const {
+      data: category,
+      error,
+    } = await supabase
+      .from("categories")
+      .select("ledger_account_id")
+      .eq("id", categoryId)
+      .single();
 
     expect(error).toBeNull();
 
@@ -442,22 +571,25 @@ describe("category edge cases", () => {
 
     expect(deleteError).toBeNull();
 
-    const { data: deletedCategory } =
-      await supabase
-        .from("categories")
-        .select("id")
-        .eq("id", categoryId)
-        .maybeSingle();
+    const {
+      data: deletedCategory,
+    } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("id", categoryId)
+      .maybeSingle();
 
     expect(deletedCategory).toBeNull();
 
-    const { data: deletedAccount } =
-      await supabase
-        .from("accounts")
-        .select("id")
-        .eq("id", ledgerAccountId)
-        .maybeSingle();
+    const {
+      data: deletedAccount,
+    } = await supabase
+      .from("accounts")
+      .select("id")
+      .eq("id", ledgerAccountId)
+      .maybeSingle();
 
     expect(deletedAccount).toBeNull();
   });
 });
+
