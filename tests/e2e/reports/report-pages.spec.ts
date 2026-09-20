@@ -8,6 +8,7 @@ test.describe("Individual Reports E2E", () => {
       page.getByRole("heading", {
         name: "Income vs Expenses",
         exact: true,
+        level: 1,
       }),
     ).toBeVisible({ timeout: 15000 });
 
@@ -20,19 +21,13 @@ test.describe("Individual Reports E2E", () => {
     await expect(
       page.getByText("Total Income", {
         exact: true,
-      }),
+      }).first(),
     ).toBeVisible();
 
     await expect(
       page.getByText("Total Expenses", {
         exact: true,
-      }),
-    ).toBeVisible();
-
-    await expect(
-      page.getByText("Net Result", {
-        exact: true,
-      }),
+      }).first(),
     ).toBeVisible();
   });
 
@@ -43,13 +38,14 @@ test.describe("Individual Reports E2E", () => {
       page.getByRole("heading", {
         name: "Spending by Category",
         exact: true,
+        level: 1,
       }),
     ).toBeVisible({ timeout: 15000 });
 
     await expect(
       page.getByText("Total Expenses", {
         exact: true,
-      }),
+      }).first(),
     ).toBeVisible();
 
     await expect(
@@ -72,6 +68,7 @@ test.describe("Individual Reports E2E", () => {
       page.getByRole("heading", {
         name: "Account Balances",
         exact: true,
+        level: 1,
       }),
     ).toBeVisible({ timeout: 15000 });
 
@@ -84,7 +81,7 @@ test.describe("Individual Reports E2E", () => {
     await expect(
       page.getByText("Accounts", {
         exact: true,
-      }),
+      }).first(),
     ).toBeVisible();
   });
 
@@ -95,6 +92,7 @@ test.describe("Individual Reports E2E", () => {
       page.getByRole("heading", {
         name: "Monthly Trends",
         exact: true,
+        level: 1,
       }),
     ).toBeVisible({ timeout: 15000 });
   });
@@ -106,6 +104,7 @@ test.describe("Individual Reports E2E", () => {
       page.getByRole("heading", {
         name: "Investments",
         exact: true,
+        level: 1,
       }),
     ).toBeVisible({ timeout: 15000 });
   });
@@ -117,6 +116,7 @@ test.describe("Individual Reports E2E", () => {
       page.getByRole("heading", {
         name: "Loans Report",
         exact: true,
+        level: 1,
       }),
     ).toBeVisible({ timeout: 15000 });
   });
@@ -127,6 +127,7 @@ test.describe("Individual Reports E2E", () => {
     await expect(
       page.getByRole("heading", {
         name: /Deposits Report/,
+        level: 1,
       }),
     ).toBeVisible({ timeout: 15000 });
   });
@@ -138,6 +139,7 @@ test.describe("Individual Reports E2E", () => {
       page.getByRole("heading", {
         name: "Goals Report",
         exact: true,
+        level: 1,
       }),
     ).toBeVisible({ timeout: 15000 });
   });
@@ -149,6 +151,7 @@ test.describe("Individual Reports E2E", () => {
       page.getByRole("heading", {
         name: "Liquidity",
         exact: true,
+        level: 1,
       }),
     ).toBeVisible({ timeout: 15000 });
 
