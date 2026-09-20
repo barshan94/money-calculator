@@ -1,4 +1,9 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import {
+  beforeAll,
+  describe,
+  expect,
+  it,
+} from "vitest";
 import {
   createClient,
   type SupabaseClient,
@@ -29,6 +34,7 @@ if (!email || !password) {
 }
 
 let supabase: SupabaseClient;
+let testUserId: string;
 
 beforeAll(async () => {
   supabase = createClient(
@@ -43,6 +49,16 @@ beforeAll(async () => {
     });
 
   expect(error).toBeNull();
+
+  const {
+    data: userData,
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  expect(userError).toBeNull();
+  expect(userData.user).toBeTruthy();
+
+  testUserId = userData.user!.id;
 });
 
 async function getTestAccount() {
@@ -54,11 +70,60 @@ async function getTestAccount() {
     .select(
       "id, name, currency, account_type, is_system, is_archived",
     )
+    .eq(
+      "user_id",
+      testUserId,
+    )
     .eq("currency", "BDT")
     .eq("account_type", "asset")
     .eq("is_system", false)
     .eq("is_archived", false)
     .limit(1)
+    .single();
+
+  expect(error).toBeNull();
+  expect(data).toBeTruthy();
+
+  return data!;
+}
+
+async function getSystemAccount(
+  name: string,
+  accountType: string,
+  currency: string,
+) {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("accounts")
+    .select(
+      "id, name, currency, account_type, is_system, is_archived",
+    )
+    .eq(
+      "user_id",
+      testUserId,
+    )
+    .eq(
+      "name",
+      name,
+    )
+    .eq(
+      "currency",
+      currency,
+    )
+    .eq(
+      "account_type",
+      accountType,
+    )
+    .eq(
+      "is_system",
+      true,
+    )
+    .eq(
+      "is_archived",
+      false,
+    )
     .single();
 
   expect(error).toBeNull();
@@ -76,6 +141,7 @@ async function createTestAsset() {
 
   const purchasePrice = 10000;
   const acquisitionCost = 500;
+
   const costBasis =
     purchasePrice +
     acquisitionCost;
@@ -227,43 +293,6 @@ async function cleanupAsset(
     .eq("id", assetId);
 
   expect(assetDeleteError).toBeNull();
-}
-
-async function getLedgerBalance(
-  accountId: string,
-) {
-  const {
-    data,
-    error,
-  } = await supabase
-    .from("transaction_entries")
-    .select(
-      "amount, entry_type",
-    )
-    .eq(
-      "account_id",
-      accountId,
-    );
-
-  expect(error).toBeNull();
-
-  return (data ?? []).reduce(
-    (total, entry) => {
-      const amount =
-        Number(entry.amount);
-
-      return (
-        total +
-        (
-          entry.entry_type ===
-          "debit"
-            ? amount
-            : -amount
-        )
-      );
-    },
-    0,
-  );
 }
 
 async function getTransaction(
@@ -482,38 +511,12 @@ describe(
 
           expect(error).toBeNull();
 
-          const {
-            data: gainAccount,
-            error:
-              gainAccountError,
-          } = await supabase
-            .from("accounts")
-            .select("id")
-            .eq(
-              "name",
+          const gainAccount =
+            await getSystemAccount(
               "Gain on Long-Term Asset Sale",
-            )
-            .eq(
-              "currency",
-              "BDT",
-            )
-            .eq(
-              "account_type",
               "income",
-            )
-            .eq(
-              "is_system",
-              true,
-            )
-            .eq(
-              "is_archived",
-              false,
-            )
-            .single();
-
-          expect(
-            gainAccountError,
-          ).toBeNull();
+              "BDT",
+            );
 
           const transaction =
             await getSaleTransaction(
@@ -548,7 +551,7 @@ describe(
             entries.find(
               (entry) =>
                 entry.account_id ===
-                gainAccount!.id,
+                gainAccount.id,
             );
 
           expect(
@@ -608,38 +611,12 @@ describe(
 
           expect(error).toBeNull();
 
-          const {
-            data: lossAccount,
-            error:
-              lossAccountError,
-          } = await supabase
-            .from("accounts")
-            .select("id")
-            .eq(
-              "name",
+          const lossAccount =
+            await getSystemAccount(
               "Loss on Long-Term Asset Sale",
-            )
-            .eq(
-              "currency",
-              "BDT",
-            )
-            .eq(
-              "account_type",
               "expense",
-            )
-            .eq(
-              "is_system",
-              true,
-            )
-            .eq(
-              "is_archived",
-              false,
-            )
-            .single();
-
-          expect(
-            lossAccountError,
-          ).toBeNull();
+              "BDT",
+            );
 
           const {
             data: asset,
@@ -677,7 +654,7 @@ describe(
             entries.find(
               (entry) =>
                 entry.account_id ===
-                lossAccount!.id,
+                lossAccount.id,
             );
 
           expect(
@@ -715,42 +692,11 @@ describe(
         } = await createTestAsset();
 
         try {
-          const {
-            data: assetAccount,
-            error:
-              assetAccountError,
-          } = await supabase
-            .from("accounts")
-            .select("id")
-            .eq(
-              "name",
+          const assetAccount =
+            await getSystemAccount(
               "Long-Term Assets",
-            )
-            .eq(
-              "currency",
-              "BDT",
-            )
-            .eq(
-              "account_type",
               "asset",
-            )
-            .eq(
-              "is_system",
-              true,
-            )
-            .eq(
-              "is_archived",
-              false,
-            )
-            .single();
-
-          expect(
-            assetAccountError,
-          ).toBeNull();
-
-          const before =
-            await getLedgerBalance(
-              assetAccount!.id,
+              "BDT",
             );
 
           const {
@@ -772,14 +718,38 @@ describe(
 
           expect(error).toBeNull();
 
-          const after =
-            await getLedgerBalance(
-              assetAccount!.id,
+          const saleTransaction =
+            await getSaleTransaction(
+              assetId,
             );
 
           expect(
-            after - before,
-          ).toBe(-costBasis);
+            saleTransaction.status,
+          ).toBe("posted");
+
+          const saleEntries =
+            await getTransactionEntries(
+              saleTransaction.id,
+            );
+
+          const assetCreditEntry =
+            saleEntries.find(
+              (entry) =>
+                entry.account_id ===
+                  assetAccount.id &&
+                entry.entry_type ===
+                  "credit",
+            );
+
+          expect(
+            assetCreditEntry,
+          ).toBeTruthy();
+
+          expect(
+            Number(
+              assetCreditEntry!.amount,
+            ),
+          ).toBe(costBasis);
         } finally {
           await cleanupAsset(
             assetId,
@@ -1073,3 +1043,4 @@ describe(
     );
   },
 );
+

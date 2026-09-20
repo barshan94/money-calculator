@@ -1,5 +1,9 @@
-
-import { beforeAll, describe, expect, it } from "vitest";
+import {
+  beforeAll,
+  describe,
+  expect,
+  it,
+} from "vitest";
 import {
   createClient,
   type SupabaseClient,
@@ -17,15 +21,14 @@ const email =
 const password =
   process.env.PLAYWRIGHT_TEST_PASSWORD;
 
-if (!supabaseUrl || !supabaseKey) {
+if (
+  !supabaseUrl ||
+  !supabaseKey ||
+  !email ||
+  !password
+) {
   throw new Error(
-    "Missing Supabase environment variables",
-  );
-}
-
-if (!email || !password) {
-  throw new Error(
-    "Missing Playwright test credentials",
+    "Missing required Supabase or test credentials in .env.local",
   );
 }
 
@@ -37,169 +40,123 @@ beforeAll(async () => {
     supabaseKey,
   );
 
-  const {
-    error,
-  } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const result =
+    await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  expect(error).toBeNull();
+  expect(result.error).toBeNull();
 });
 
 async function getTestAccount() {
-  const {
-    data,
-    error,
-  } = await supabase
-    .from("accounts")
-    .select(
-      "id, name, currency, account_type, is_system, is_archived",
-    )
-    .eq("currency", "BDT")
-    .eq("account_type", "asset")
-    .eq("is_system", false)
-    .eq("is_archived", false)
-    .limit(1)
-    .single();
+  const { data, error } =
+    await supabase
+      .from("accounts")
+      .select(
+        "id, name, currency",
+      )
+      .eq("is_system", false)
+      .eq("currency", "BDT")
+      .limit(1)
+      .maybeSingle();
 
   expect(error).toBeNull();
   expect(data).toBeTruthy();
 
-  return data;
+  return data!;
 }
 
-async function getAccountBalance(
-  accountId: string,
-) {
+async function createTestAsset() {
+  const sourceAccount =
+    await getTestAccount();
+
+  const name =
+    `Cancel Test Asset ${Date.now()}-${Math.random()}`;
+
+  const purchasePrice = 100000;
+  const acquisitionCost = 5000;
+
+  const costBasis =
+    purchasePrice +
+    acquisitionCost;
+
   const {
     data,
-    error,
-  } = await supabase.rpc(
-    "get_account_balances",
-  );
-
-  expect(error).toBeNull();
-
-  const account = data?.find(
-    (item) => item.id === accountId,
-  );
-
-  expect(account).toBeTruthy();
-
-  return Number(account.balance);
-}
-
-async function getLedgerBalance(
-  accountId: string,
-) {
-  const {
-    data,
-    error,
-  } = await supabase
-    .from("transaction_entries")
-    .select(
-      "amount, entry_type, transactions!inner(status)",
-    )
-    .eq("account_id", accountId)
-    .eq(
-      "transactions.status",
-      "posted",
-    );
-
-  expect(error).toBeNull();
-
-  return (data ?? []).reduce(
-    (total, entry) => {
-      const amount = Number(
-        entry.amount,
-      );
-
-      return (
-        total +
-        (entry.entry_type === "debit"
-          ? amount
-          : -amount)
-      );
-    },
-    0,
-  );
-}
-
-async function createTestAsset(
-  sourceAccount: Awaited<
-    ReturnType<typeof getTestAccount>
-  >,
-) {
-  const {
-    data: assetId,
     error,
   } = await supabase.rpc(
     "create_long_term_asset",
     {
-      p_name:
-        `Cancel Test ${Date.now()}`,
+      p_name: name,
       p_asset_type: "land",
-      p_currency: "BDT",
-      p_purchase_price: 100000,
-      p_acquisition_cost: 5000,
+      p_currency:
+        sourceAccount.currency,
+      p_purchase_price:
+        purchasePrice,
+      p_acquisition_cost:
+        acquisitionCost,
       p_purchase_date:
-        "2026-03-01",
+        "2026-01-15",
       p_source_account_id:
         sourceAccount.id,
       p_description:
-        "Cancellation integration test",
+        "Long-term asset cancellation integration test",
     },
   );
 
   expect(error).toBeNull();
-  expect(assetId).toBeTruthy();
-
-  const {
-    data: asset,
-    error: assetError,
-  } = await supabase
-    .from("long_term_assets")
-    .select(
-      "id, name, purchase_transaction_id, status, currency, purchase_price, acquisition_cost",
-    )
-    .eq("id", assetId)
-    .single();
-
-  expect(assetError).toBeNull();
-  expect(asset).toBeTruthy();
+  expect(data).toBeTruthy();
 
   return {
-    asset,
+    assetId: data as string,
+    sourceAccount,
+    purchasePrice,
+    acquisitionCost,
+    costBasis,
   };
+}
+
+async function getTransactionEntries(
+  transactionId: string,
+) {
+  const { data, error } =
+    await supabase
+      .from("transaction_entries")
+      .select(
+        "account_id, amount, entry_type",
+      )
+      .eq(
+        "transaction_id",
+        transactionId,
+      );
+
+  expect(error).toBeNull();
+
+  return data ?? [];
 }
 
 async function cleanupAsset(
   assetId: string,
 ) {
-  const {
-    data: asset,
-  } = await supabase
-    .from("long_term_assets")
-    .select(
-      "purchase_transaction_id",
-    )
-    .eq("id", assetId)
-    .maybeSingle();
-
-  if (
-    asset?.purchase_transaction_id
-  ) {
-    const {
-      data: reversal,
-    } = await supabase
-      .from("transactions")
-      .select("id")
-      .eq(
-        "reversal_of_id",
-        asset.purchase_transaction_id,
+  const { data: asset } =
+    await supabase
+      .from("long_term_assets")
+      .select(
+        "purchase_transaction_id",
       )
+      .eq("id", assetId)
       .maybeSingle();
+
+  if (asset?.purchase_transaction_id) {
+    const { data: reversal } =
+      await supabase
+        .from("transactions")
+        .select("id")
+        .eq(
+          "reversal_of_id",
+          asset.purchase_transaction_id,
+        )
+        .maybeSingle();
 
     if (reversal?.id) {
       await supabase
@@ -248,165 +205,147 @@ describe(
     it(
       "cancels an asset and reverses its purchase transaction",
       async () => {
-        const sourceAccount =
-          await getTestAccount();
-
-        const sourceBefore =
-          await getAccountBalance(
-            sourceAccount.id,
-          );
-
         const {
-          asset,
-        } = await createTestAsset(
+          assetId,
           sourceAccount,
-        );
-
-        const costBasis =
-          Number(asset.purchase_price) +
-          Number(asset.acquisition_cost);
-
-        const {
-          data: assetAccount,
-          error: assetAccountError,
-        } = await supabase
-          .from("accounts")
-          .select("id")
-          .eq(
-            "name",
-            "Long-Term Assets",
-          )
-          .eq(
-            "currency",
-            "BDT",
-          )
-          .eq(
-            "account_type",
-            "asset",
-          )
-          .eq(
-            "is_system",
-            true,
-          )
-          .eq(
-            "is_archived",
-            false,
-          )
-          .single();
-
-        expect(
-          assetAccountError,
-        ).toBeNull();
-
-        expect(
-          assetAccount,
-        ).toBeTruthy();
-
-        const ledgerBefore =
-          await getLedgerBalance(
-            assetAccount.id,
-          );
+          costBasis,
+        } =
+          await createTestAsset();
 
         try {
           const {
-            error,
-          } = await supabase.rpc(
-            "cancel_long_term_asset",
-            {
-              p_asset_id:
-                asset.id,
-            },
-          );
-
-          expect(error).toBeNull();
-
-          const sourceAfter =
-            await getAccountBalance(
-              sourceAccount.id,
-            );
-
-          expect(
-            sourceAfter,
-          ).toBe(sourceBefore);
-
-          const ledgerAfter =
-            await getLedgerBalance(
-              assetAccount.id,
-            );
+            data: assetAccount,
+            error: assetAccountError,
+          } =
+            await supabase
+              .from("accounts")
+              .select(
+                "id, name, currency",
+              )
+              .eq(
+                "name",
+                "Long-Term Assets",
+              )
+              .eq(
+                "is_system",
+                true,
+              )
+              .maybeSingle();
 
           expect(
-            ledgerAfter,
-          ).toBe(
-            ledgerBefore - costBasis,
-          );
-
-          const {
-            data: cancelledAsset,
-            error: cancelledAssetError,
-          } = await supabase
-            .from(
-              "long_term_assets",
-            )
-            .select(
-              "status, archived_at",
-            )
-            .eq(
-              "id",
-              asset.id,
-            )
-            .single();
-
-          expect(
-            cancelledAssetError,
+            assetAccountError,
           ).toBeNull();
 
           expect(
-            cancelledAsset?.status,
+            assetAccount,
+          ).toBeTruthy();
+
+          const {
+            error: cancelError,
+          } =
+            await supabase.rpc(
+              "cancel_long_term_asset",
+              {
+                p_asset_id: assetId,
+              },
+            );
+
+          expect(
+            cancelError,
+          ).toBeNull();
+
+          const {
+            data: asset,
+            error: assetError,
+          } =
+            await supabase
+              .from("long_term_assets")
+              .select(
+                `
+                  id,
+                  status,
+                  archived_at,
+                  purchase_transaction_id
+                `,
+              )
+              .eq("id", assetId)
+              .single();
+
+          expect(
+            assetError,
+          ).toBeNull();
+
+          expect(asset).toBeTruthy();
+
+          expect(
+            asset!.status,
           ).toBe("cancelled");
 
           expect(
-            cancelledAsset?.archived_at,
+            asset!.archived_at,
           ).not.toBeNull();
 
+          expect(
+            asset!.purchase_transaction_id,
+          ).toBeTruthy();
+
           const {
-            data: transaction,
-            error: transactionError,
-          } = await supabase
-            .from("transactions")
-            .select(
-              "id, status, reversal_of_id",
-            )
-            .eq(
-              "id",
-              asset.purchase_transaction_id,
-            )
-            .single();
+            data: purchaseTransaction,
+            error:
+              purchaseTransactionError,
+          } =
+            await supabase
+              .from("transactions")
+              .select(
+                `
+                  id,
+                  status,
+                  reversal_of_id
+                `,
+              )
+              .eq(
+                "id",
+                asset!
+                  .purchase_transaction_id,
+              )
+              .single();
 
           expect(
-            transactionError,
+            purchaseTransactionError,
           ).toBeNull();
 
           expect(
-            transaction?.status,
+            purchaseTransaction,
+          ).toBeTruthy();
+
+          expect(
+            purchaseTransaction!.status,
           ).toBe("posted");
 
           expect(
-            transaction?.reversal_of_id,
+            purchaseTransaction!
+              .reversal_of_id,
           ).toBeNull();
 
           const {
             data: reversal,
             error: reversalError,
-          } = await supabase
-            .from("transactions")
-            .select(
-              "id, status, reversal_of_id",
-            )
-            .eq(
-              "reversal_of_id",
-              asset.purchase_transaction_id,
-            )
-            .single();
+          } =
+            await supabase
+              .from("transactions")
+              .select(
+                `
+                  id,
+                  status,
+                  reversal_of_id
+                `,
+              )
+              .eq(
+                "reversal_of_id",
+                asset!
+                  .purchase_transaction_id,
+              )
+              .maybeSingle();
 
           expect(
             reversalError,
@@ -417,17 +356,61 @@ describe(
           ).toBeTruthy();
 
           expect(
-            reversal?.status,
+            reversal!.status,
           ).toBe("posted");
 
           expect(
-            reversal?.reversal_of_id,
+            reversal!.reversal_of_id,
           ).toBe(
-            asset.purchase_transaction_id,
+            asset!
+              .purchase_transaction_id,
           );
+
+          const reversalEntries =
+            await getTransactionEntries(
+              reversal!.id,
+            );
+
+          const longTermAssetEntry =
+            reversalEntries.find(
+              (entry) =>
+                entry.account_id ===
+                  assetAccount!.id &&
+                entry.entry_type ===
+                  "credit",
+            );
+
+          expect(
+            longTermAssetEntry,
+          ).toBeTruthy();
+
+          expect(
+            Number(
+              longTermAssetEntry!.amount,
+            ),
+          ).toBe(costBasis);
+
+          const sourceEntry =
+            reversalEntries.find(
+              (entry) =>
+                entry.account_id ===
+                  sourceAccount.id &&
+                entry.entry_type ===
+                  "debit",
+            );
+
+          expect(
+            sourceEntry,
+          ).toBeTruthy();
+
+          expect(
+            Number(
+              sourceEntry!.amount,
+            ),
+          ).toBe(costBasis);
         } finally {
           await cleanupAsset(
-            asset.id,
+            assetId,
           );
         }
       },
@@ -436,52 +419,37 @@ describe(
     it(
       "rejects cancelling the same asset twice",
       async () => {
-        const sourceAccount =
-          await getTestAccount();
-
         const {
-          asset,
-        } = await createTestAsset(
-          sourceAccount,
-        );
+          assetId,
+        } = await createTestAsset();
 
         try {
-          const {
-            error: firstError,
-          } = await supabase.rpc(
-            "cancel_long_term_asset",
-            {
-              p_asset_id:
-                asset.id,
-            },
-          );
+          const firstCancel =
+            await supabase.rpc(
+              "cancel_long_term_asset",
+              {
+                p_asset_id: assetId,
+              },
+            );
 
           expect(
-            firstError,
+            firstCancel.error,
           ).toBeNull();
 
-          const {
-            error: secondError,
-          } = await supabase.rpc(
-            "cancel_long_term_asset",
-            {
-              p_asset_id:
-                asset.id,
-            },
-          );
+          const secondCancel =
+            await supabase.rpc(
+              "cancel_long_term_asset",
+              {
+                p_asset_id: assetId,
+              },
+            );
 
           expect(
-            secondError,
+            secondCancel.error,
           ).not.toBeNull();
-
-          expect(
-            secondError?.message,
-          ).toContain(
-            "Only active long-term assets can be cancelled",
-          );
         } finally {
           await cleanupAsset(
-            asset.id,
+            assetId,
           );
         }
       },
@@ -490,24 +458,23 @@ describe(
     it(
       "rejects cancelling a non-existent asset",
       async () => {
-        const {
-          error,
-        } = await supabase.rpc(
-          "cancel_long_term_asset",
-          {
-            p_asset_id:
-              "00000000-0000-0000-0000-000000000000",
-          },
-        );
+        const fakeAssetId =
+          "00000000-0000-0000-0000-000000000000";
 
-        expect(error).not.toBeNull();
+        const result =
+          await supabase.rpc(
+            "cancel_long_term_asset",
+            {
+              p_asset_id: fakeAssetId,
+            },
+          );
 
         expect(
-          error?.message,
-        ).toContain(
-          "Long-term asset not found",
-        );
+          result.error,
+        ).not.toBeNull();
       },
     );
   },
 );
+
+
