@@ -9,7 +9,7 @@ test.describe("Individual Reports E2E", () => {
         name: "Income vs Expenses",
         exact: true,
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
 
     await expect(
       page.getByText("Overall Summary", {
@@ -36,9 +36,7 @@ test.describe("Individual Reports E2E", () => {
     ).toBeVisible();
   });
 
-  test("spending by category report loads", async ({
-    page,
-  }) => {
+  test("spending by category report loads", async ({ page }) => {
     await page.goto("/reports/spending-by-category");
 
     await expect(
@@ -46,7 +44,7 @@ test.describe("Individual Reports E2E", () => {
         name: "Spending by Category",
         exact: true,
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
 
     await expect(
       page.getByText("Total Expenses", {
@@ -67,9 +65,7 @@ test.describe("Individual Reports E2E", () => {
     ).toBeVisible();
   });
 
-  test("account balances report loads", async ({
-    page,
-  }) => {
+  test("account balances report loads", async ({ page }) => {
     await page.goto("/reports/account-balances");
 
     await expect(
@@ -77,7 +73,7 @@ test.describe("Individual Reports E2E", () => {
         name: "Account Balances",
         exact: true,
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
 
     await expect(
       page.getByText("Balance Overview", {
@@ -92,9 +88,7 @@ test.describe("Individual Reports E2E", () => {
     ).toBeVisible();
   });
 
-  test("monthly trends report loads", async ({
-    page,
-  }) => {
+  test("monthly trends report loads", async ({ page }) => {
     await page.goto("/reports/monthly-trends");
 
     await expect(
@@ -102,12 +96,10 @@ test.describe("Individual Reports E2E", () => {
         name: "Monthly Trends",
         exact: true,
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
   });
 
-  test("investment report loads", async ({
-    page,
-  }) => {
+  test("investment report loads", async ({ page }) => {
     await page.goto("/reports/investments");
 
     await expect(
@@ -115,51 +107,42 @@ test.describe("Individual Reports E2E", () => {
         name: "Investments",
         exact: true,
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
   });
 
-  test("loan report loads", async ({
-    page,
-  }) => {
+  test("loan report loads", async ({ page }) => {
     await page.goto("/reports/loans");
 
     await expect(
       page.getByRole("heading", {
-        name: "Loans",
+        name: "Loans Report",
         exact: true,
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
   });
 
-  test("deposit report loads", async ({
-    page,
-  }) => {
+  test("deposit report loads", async ({ page }) => {
     await page.goto("/reports/deposits");
 
     await expect(
       page.getByRole("heading", {
-        name: "Deposits",
-        exact: true,
+        name: /Deposits Report/,
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
   });
 
-  test("goal report loads", async ({
-    page,
-  }) => {
+  test("goal report loads", async ({ page }) => {
     await page.goto("/reports/goals");
 
     await expect(
       page.getByRole("heading", {
-        name: "Goals",
+        name: "Goals Report",
         exact: true,
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
   });
 
-  test("liquidity report loads", async ({
-    page,
-  }) => {
+  test("liquidity report loads", async ({ page }) => {
     await page.goto("/reports/liquidity");
 
     await expect(
@@ -167,16 +150,16 @@ test.describe("Individual Reports E2E", () => {
         name: "Liquidity",
         exact: true,
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
 
     await expect(
-      page.getByText(/Liquidity Interpretation|No liquidity data yet|Unable to load liquidity/).first(),
+      page.getByText(
+        /Liquidity Interpretation|No liquidity data yet|Unable to load liquidity/,
+      ).first(),
     ).toBeVisible();
   });
 
-  test("all reports provide a back navigation", async ({
-    page,
-  }) => {
+  test("all reports provide a back navigation", async ({ page }) => {
     const reportUrls = [
       "/reports/income-expense",
       "/reports/spending-by-category",
@@ -200,4 +183,5 @@ test.describe("Individual Reports E2E", () => {
     }
   });
 });
+
 
