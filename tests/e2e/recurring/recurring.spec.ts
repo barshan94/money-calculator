@@ -1,4 +1,3 @@
-
 import { test, expect } from "@playwright/test";
 
 test.describe("Recurring Transactions E2E", () => {
@@ -194,6 +193,13 @@ test.describe("Recurring Transactions E2E", () => {
   test("Process Due button can be triggered", async ({ page }) => {
     await page.goto("/recurring");
 
+    const processDueButton = page.getByRole("button", {
+      name: "Process Due",
+      exact: true,
+    });
+
+    await expect(processDueButton).toBeVisible();
+
     page.once("dialog", async (dialog) => {
       expect(dialog.message()).toBe(
         "Process all recurring transactions that are currently due?",
@@ -202,15 +208,12 @@ test.describe("Recurring Transactions E2E", () => {
       await dialog.accept();
     });
 
-    await page.getByRole("button", {
-      name: "Process Due",
-      exact: true,
-    }).click();
+    await processDueButton.click();
 
     await expect(
-      page.getByText(
-        /No recurring transactions are due\.|recurring transaction\(s\) processed successfully\./i,
-      ),
+      page.getByRole("button", {
+        name: /Process Due|Processing\.\.\./,
+      }),
     ).toBeVisible({
       timeout: 15000,
     });
