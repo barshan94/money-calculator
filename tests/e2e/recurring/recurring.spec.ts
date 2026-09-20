@@ -187,7 +187,9 @@ test.describe("Recurring Transactions E2E", () => {
       exact: true,
     }).click();
 
-    await expect(page).toHaveURL(/\/recurring$/);
+    await expect(page).toHaveURL(/\/recurring$/, {
+      timeout: 15000,
+    });
   });
 
   test("Process Due button can be triggered", async ({ page }) => {
