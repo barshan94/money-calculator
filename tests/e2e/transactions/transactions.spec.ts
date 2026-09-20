@@ -4,8 +4,7 @@ async function createExpense(
   page: any,
   amount: string,
 ) {
-  const description =
-    `E2E Expense ${Date.now()}`;
+  const description = `E2E Expense ${Date.now()}`;
 
   await page.goto("/transactions/new");
 
@@ -277,6 +276,9 @@ test("cancel a transaction and keep audit history", async ({
   ).toBeVisible();
 
   await expect(
-    page.getByText(/cancel/i).first(),
+    page.getByText("↩ Reversed", {
+      exact: true,
+    }).first(),
   ).toBeVisible();
 });
+
