@@ -1,5 +1,17 @@
 import { test, expect } from "@playwright/test";
 
+function reportLink(
+  page: any,
+  name: string,
+) {
+  return page
+    .locator('a[href^="/reports/"]')
+    .filter({
+      hasText: name,
+    })
+    .first();
+}
+
 test("reports page loads", async ({ page }) => {
   await page.goto("/reports");
 
@@ -23,41 +35,20 @@ test("reports page shows financial summary", async ({
 }) => {
   await page.goto("/reports");
 
-  await expect(
-    page.getByText("Total Income", {
-      exact: true,
-    }).first(),
-  ).toBeVisible();
-
-  await expect(
-    page.getByText("Total Expenses", {
-      exact: true,
-    }).first(),
-  ).toBeVisible();
-
-  await expect(
-    page.getByText("Net Result", {
-      exact: true,
-    }).first(),
-  ).toBeVisible();
-
-  await expect(
-    page.getByText("Total Assets", {
-      exact: true,
-    }).first(),
-  ).toBeVisible();
-
-  await expect(
-    page.getByText("Total Liabilities", {
-      exact: true,
-    }).first(),
-  ).toBeVisible();
-
-  await expect(
-    page.getByText("Net Worth", {
-      exact: true,
-    }).first(),
-  ).toBeVisible();
+  for (const label of [
+    "Total Income",
+    "Total Expenses",
+    "Net Result",
+    "Total Assets",
+    "Total Liabilities",
+    "Net Worth",
+  ]) {
+    await expect(
+      page.getByText(label, {
+        exact: true,
+      }).first(),
+    ).toBeVisible();
+  }
 });
 
 test("reports page shows detailed report links", async ({
@@ -79,9 +70,7 @@ test("reports page shows detailed report links", async ({
 
   for (const report of reports) {
     await expect(
-      page.getByRole("link", {
-        name: new RegExp(`^${report}`),
-      }),
+      reportLink(page, report),
     ).toBeVisible();
   }
 });
@@ -91,9 +80,10 @@ test("income vs expenses report navigation works", async ({
 }) => {
   await page.goto("/reports");
 
-  await page.getByRole("link", {
-    name: /^Income vs Expenses/,
-  }).click();
+  await reportLink(
+    page,
+    "Income vs Expenses",
+  ).click();
 
   await expect(page).toHaveURL(
     /\/reports\/income-expense$/,
@@ -105,9 +95,10 @@ test("spending by category report navigation works", async ({
 }) => {
   await page.goto("/reports");
 
-  await page.getByRole("link", {
-    name: /^Spending by Category/,
-  }).click();
+  await reportLink(
+    page,
+    "Spending by Category",
+  ).click();
 
   await expect(page).toHaveURL(
     /\/reports\/spending-by-category$/,
@@ -119,9 +110,10 @@ test("account balances report navigation works", async ({
 }) => {
   await page.goto("/reports");
 
-  await page.getByRole("link", {
-    name: /^Account Balances/,
-  }).click();
+  await reportLink(
+    page,
+    "Account Balances",
+  ).click();
 
   await expect(page).toHaveURL(
     /\/reports\/account-balances$/,
@@ -133,9 +125,10 @@ test("monthly trends report navigation works", async ({
 }) => {
   await page.goto("/reports");
 
-  await page.getByRole("link", {
-    name: /^Monthly Trends/,
-  }).click();
+  await reportLink(
+    page,
+    "Monthly Trends",
+  ).click();
 
   await expect(page).toHaveURL(
     /\/reports\/monthly-trends$/,
@@ -147,9 +140,10 @@ test("investment report navigation works", async ({
 }) => {
   await page.goto("/reports");
 
-  await page.getByRole("link", {
-    name: /^Investments/,
-  }).click();
+  await reportLink(
+    page,
+    "Investments",
+  ).click();
 
   await expect(page).toHaveURL(
     /\/reports\/investments$/,
@@ -161,9 +155,10 @@ test("loan report navigation works", async ({
 }) => {
   await page.goto("/reports");
 
-  await page.getByRole("link", {
-    name: /^Loans/,
-  }).click();
+  await reportLink(
+    page,
+    "Loans",
+  ).click();
 
   await expect(page).toHaveURL(
     /\/reports\/loans$/,
@@ -175,9 +170,10 @@ test("deposit report navigation works", async ({
 }) => {
   await page.goto("/reports");
 
-  await page.getByRole("link", {
-    name: /^Deposits/,
-  }).click();
+  await reportLink(
+    page,
+    "Deposits",
+  ).click();
 
   await expect(page).toHaveURL(
     /\/reports\/deposits$/,
@@ -189,9 +185,10 @@ test("goal report navigation works", async ({
 }) => {
   await page.goto("/reports");
 
-  await page.getByRole("link", {
-    name: /^Goals/,
-  }).click();
+  await reportLink(
+    page,
+    "Goals",
+  ).click();
 
   await expect(page).toHaveURL(
     /\/reports\/goals$/,
@@ -203,12 +200,14 @@ test("liquidity report navigation works", async ({
 }) => {
   await page.goto("/reports");
 
-  await page.getByRole("link", {
-    name: /^Liquidity/,
-  }).click();
+  await reportLink(
+    page,
+    "Liquidity",
+  ).click();
 
   await expect(page).toHaveURL(
     /\/reports\/liquidity$/,
   );
 });
+
 
