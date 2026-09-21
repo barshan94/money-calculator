@@ -67,7 +67,11 @@ export default function LoginPage() {
       <h1>Login</h1>
 
       <form onSubmit={handleLogin}>
+        <label htmlFor="login-email">
+          Email
+        </label>
         <input
+          id="login-email"
           type="email"
           placeholder="Email"
           value={email}
@@ -77,7 +81,11 @@ export default function LoginPage() {
           required
         />
 
+        <label htmlFor="login-password">
+          Password
+        </label>
         <input
+          id="login-password"
           type="password"
           placeholder="Password"
           value={password}
@@ -109,7 +117,7 @@ export default function LoginPage() {
         </button>
       </p>
 
-      {message && <p>{message}</p>}
+      {message && <p role="alert">{message}</p>}
 
       <p>
         Don't have an account?{" "}
@@ -120,3 +128,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
+

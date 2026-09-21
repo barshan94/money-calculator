@@ -162,7 +162,79 @@ test.describe("Individual Reports E2E", () => {
     ).toBeVisible();
   });
 
-  test("all reports provide a back navigation", async ({ page }) => {
+  test("net-worth forecast report loads", async ({
+    page,
+  }) => {
+    await page.goto("/reports/net-worth-forecast");
+
+    await expect(
+      page.getByRole("heading", {
+        name: "Net-Worth Forecast",
+        exact: true,
+        level: 1,
+      }),
+    ).toBeVisible({ timeout: 15000 });
+
+    await expect(
+      page.getByRole("heading", {
+        name: "Forecast settings",
+        exact: true,
+        level: 2,
+      }),
+    ).toBeVisible();
+
+    await expect(
+      page.getByLabel("Historical lookback"),
+    ).toBeVisible();
+
+    await expect(
+      page.getByLabel("Forecast horizon"),
+    ).toBeVisible();
+  });
+
+  test("net-worth forecast settings stay on the forecast page", async ({
+    page,
+  }) => {
+    await page.goto(
+      "/reports/net-worth-forecast?lookback=6&horizon=6",
+    );
+
+    await expect(
+      page.getByRole("heading", {
+        name: "Net-Worth Forecast",
+        exact: true,
+        level: 1,
+      }),
+    ).toBeVisible({ timeout: 15000 });
+
+    await page
+      .getByLabel("Historical lookback")
+      .selectOption("3");
+
+    await expect(page).toHaveURL(
+      /\/reports\/net-worth-forecast\?lookback=3&horizon=6$/,
+    );
+
+    await expect(
+      page.getByRole("heading", {
+        name: "Net-Worth Forecast",
+        exact: true,
+        level: 1,
+      }),
+    ).toBeVisible({ timeout: 15000 });
+
+    await page
+      .getByLabel("Forecast horizon")
+      .selectOption("12");
+
+    await expect(page).toHaveURL(
+      /\/reports\/net-worth-forecast\?lookback=3&horizon=12$/,
+    );
+  });
+
+  test("all reports provide a back navigation", async ({
+    page,
+  }) => {
     const reportUrls = [
       "/reports/income-expense",
       "/reports/spending-by-category",
@@ -173,6 +245,7 @@ test.describe("Individual Reports E2E", () => {
       "/reports/deposits",
       "/reports/goals",
       "/reports/liquidity",
+      "/reports/net-worth-forecast",
     ];
 
     for (const url of reportUrls) {
@@ -186,5 +259,4 @@ test.describe("Individual Reports E2E", () => {
     }
   });
 });
-
 

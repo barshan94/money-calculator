@@ -83,6 +83,7 @@ export default async function ReportsPage() {
           }}
         >
           <h2 style={{ marginTop: 0 }}>No financial data yet</h2>
+
           <p style={{ opacity: 0.7 }}>
             Start adding accounts and transactions to see your financial
             reports here.
@@ -163,6 +164,7 @@ export default async function ReportsPage() {
                 <h3 style={{ margin: "0 0 8px", fontSize: "15px" }}>
                   Total Income
                 </h3>
+
                 <p
                   style={{
                     margin: 0,
@@ -184,6 +186,7 @@ export default async function ReportsPage() {
                 <h3 style={{ margin: "0 0 8px", fontSize: "15px" }}>
                   Total Expenses
                 </h3>
+
                 <p
                   style={{
                     margin: 0,
@@ -205,6 +208,7 @@ export default async function ReportsPage() {
                 <h3 style={{ margin: "0 0 8px", fontSize: "15px" }}>
                   Net Result
                 </h3>
+
                 <p
                   style={{
                     margin: 0,
@@ -226,6 +230,7 @@ export default async function ReportsPage() {
                 <h3 style={{ margin: "0 0 8px", fontSize: "15px" }}>
                   Total Assets
                 </h3>
+
                 <p
                   style={{
                     margin: 0,
@@ -247,6 +252,7 @@ export default async function ReportsPage() {
                 <h3 style={{ margin: "0 0 8px", fontSize: "15px" }}>
                   Total Liabilities
                 </h3>
+
                 <p
                   style={{
                     margin: 0,
@@ -268,6 +274,7 @@ export default async function ReportsPage() {
                 <h3 style={{ margin: "0 0 8px", fontSize: "15px" }}>
                   Net Worth
                 </h3>
+
                 <p
                   style={{
                     margin: 0,
@@ -281,17 +288,7 @@ export default async function ReportsPage() {
             </div>
 
             {monthlyNetWorth.length > 0 && (
-              <div
-                style={{
-                  marginTop: "24px",
-                  border: "1px solid #ddd",
-                  borderRadius: "12px",
-                  padding: "20px",
-                  overflow: "hidden",
-                }}
-              >
-                <h3 style={{ marginTop: 0 }}>Net Worth Trend</h3>
-
+              <div style={{ marginTop: "24px" }}>
                 <MonthlyNetWorthChart data={monthlyNetWorth} />
               </div>
             )}
@@ -313,6 +310,12 @@ export default async function ReportsPage() {
         >
           {[
             ["Income vs Expenses", "/reports/income-expense"],
+            [
+              "Income & Expense Trends",
+              "/reports/income-expense-trends",
+            ],
+            ["Cash-Flow Forecast", "/reports/cash-flow-forecast"],
+            ["Net-Worth Forecast", "/reports/net-worth-forecast"],
             ["Spending by Category", "/reports/spending-by-category"],
             ["Account Balances", "/reports/account-balances"],
             ["Monthly Trends", "/reports/monthly-trends"],
@@ -321,6 +324,7 @@ export default async function ReportsPage() {
             ["Deposits", "/reports/deposits"],
             ["Goals", "/reports/goals"],
             ["Liquidity", "/reports/liquidity"],
+            ["Financial Health", "/reports/financial-health"],
           ].map(([label, href]) => (
             <Link
               key={href}
@@ -335,6 +339,7 @@ export default async function ReportsPage() {
               }}
             >
               {label}
+
               <span
                 style={{
                   display: "block",

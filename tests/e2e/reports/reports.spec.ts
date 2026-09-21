@@ -58,6 +58,9 @@ test("reports page shows detailed report links", async ({
 
   const reports = [
     "Income vs Expenses",
+    "Income & Expense Trends",
+    "Cash-Flow Forecast",
+    "Net-Worth Forecast",
     "Spending by Category",
     "Account Balances",
     "Monthly Trends",
@@ -66,6 +69,7 @@ test("reports page shows detailed report links", async ({
     "Deposits",
     "Goals",
     "Liquidity",
+    "Financial Health",
   ];
 
   for (const report of reports) {
@@ -87,6 +91,51 @@ test("income vs expenses report navigation works", async ({
 
   await expect(page).toHaveURL(
     /\/reports\/income-expense$/,
+  );
+});
+
+test("income & expense trends report navigation works", async ({
+  page,
+}) => {
+  await page.goto("/reports");
+
+  await reportLink(
+    page,
+    "Income & Expense Trends",
+  ).click();
+
+  await expect(page).toHaveURL(
+    /\/reports\/income-expense-trends$/,
+  );
+});
+
+test("cash-flow forecast report navigation works", async ({
+  page,
+}) => {
+  await page.goto("/reports");
+
+  await reportLink(
+    page,
+    "Cash-Flow Forecast",
+  ).click();
+
+  await expect(page).toHaveURL(
+    /\/reports\/cash-flow-forecast$/,
+  );
+});
+
+test("net-worth forecast report navigation works", async ({
+  page,
+}) => {
+  await page.goto("/reports");
+
+  await reportLink(
+    page,
+    "Net-Worth Forecast",
+  ).click();
+
+  await expect(page).toHaveURL(
+    /\/reports\/net-worth-forecast$/,
   );
 });
 
@@ -210,4 +259,18 @@ test("liquidity report navigation works", async ({
   );
 });
 
+test("financial health report navigation works", async ({
+  page,
+}) => {
+  await page.goto("/reports");
+
+  await reportLink(
+    page,
+    "Financial Health",
+  ).click();
+
+  await expect(page).toHaveURL(
+    /\/reports\/financial-health$/,
+  );
+});
 
