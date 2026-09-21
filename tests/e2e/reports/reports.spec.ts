@@ -1,17 +1,36 @@
 import { test, expect } from "@playwright/test";
 
+const reportRoutes: Record<string, string> = {
+  "Income vs Expenses": "/reports/income-expense",
+  "Income & Expense Trends": "/reports/income-expense-trends",
+  "Cash-Flow Forecast": "/reports/cash-flow-forecast",
+  "Net-Worth Forecast": "/reports/net-worth-forecast",
+  "Spending by Category": "/reports/spending-by-category",
+  "Account Balances": "/reports/account-balances",
+  "Monthly Trends": "/reports/monthly-trends",
+  Investments: "/reports/investments",
+  Loans: "/reports/loans",
+  Deposits: "/reports/deposits",
+  Goals: "/reports/goals",
+  Liquidity: "/reports/liquidity",
+  "Financial Health": "/reports/financial-health",
+};
+
 function reportLink(
   page: any,
   name: string,
 ) {
-  return page
-    .locator('a[href^="/reports/"]')
-    .filter({
-      has: page.getByText(name, {
-        exact: true,
-      }),
-    })
-    .first();
+  const href = reportRoutes[name];
+
+  if (!href) {
+    throw new Error(
+      `Unknown report route: ${name}`,
+    );
+  }
+
+  return page.locator(
+    `a[href="${href}"]`,
+  );
 }
 
 test("reports page loads", async ({ page }) => {
@@ -275,4 +294,5 @@ test("financial health report navigation works", async ({
     /\/reports\/financial-health$/,
   );
 });
+
 
