@@ -18,21 +18,22 @@ type MonthlyNetWorth = {
 };
 
 type Props = {
+  currency: string;
   data: MonthlyNetWorth[];
 };
 
 export default function MonthlyNetWorthChart({
+  currency,
   data,
 }: Props) {
   const chartData = data.map((item) => ({
     ...item,
-    month: new Date(item.month).toLocaleDateString(
-      "en-BD",
-      {
-        month: "short",
-        year: "numeric",
-      },
-    ),
+    month: new Date(
+      item.month,
+    ).toLocaleDateString("en-BD", {
+      month: "short",
+      year: "numeric",
+    }),
   }));
 
   return (
@@ -43,7 +44,9 @@ export default function MonthlyNetWorthChart({
         height: 450,
       }}
     >
-      <h2>Net Worth Trend</h2>
+      <h2>
+        Net Worth Trend ({currency})
+      </h2>
 
       <ResponsiveContainer
         width="100%"
@@ -58,12 +61,11 @@ export default function MonthlyNetWorthChart({
 
           <Tooltip
             formatter={(value) =>
-              `BDT ${Number(value).toLocaleString(
-                "en-BD",
-                {
-                  minimumFractionDigits: 2,
-                },
-              )}`
+              `${currency} ${Number(
+                value,
+              ).toLocaleString("en-BD", {
+                minimumFractionDigits: 2,
+              })}`
             }
           />
 

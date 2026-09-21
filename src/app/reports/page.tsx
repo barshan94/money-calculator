@@ -1,139 +1,159 @@
-import Link from "next/link";
-
 import MonthlyNetWorthChart from "@/components/reports/monthly-net-worth-chart";
 import { getMonthlyNetWorth } from "@/lib/finance/get-monthly-net-worth";
 import { getReportsSummary } from "@/lib/finance/get-reports-summary";
 
 export default async function ReportsPage() {
-  const [summary, monthlyNetWorth] =
-    await Promise.all([
-      getReportsSummary(),
-      getMonthlyNetWorth(),
-    ]);
+  const summary = await getReportsSummary();
+
+  const currencies = Array.from(
+    new Set([
+      ...Object.keys(summary.income),
+      ...Object.keys(summary.expenses),
+      ...Object.keys(summary.assets),
+      ...Object.keys(summary.liabilities),
+    ]),
+  );
+
+  const monthlyNetWorthByCurrency =
+    await Promise.all(
+      currencies.map(async (currency) => ({
+        currency,
+        data: await getMonthlyNetWorth(currency),
+      })),
+    );
 
   return (
     <main
       style={{
-        maxWidth: "1100px",
+        maxWidth: 1200,
         margin: "0 auto",
         padding: "24px 16px 48px",
       }}
     >
-      <div
-        style={{
-          marginBottom: "24px",
-        }}
-      >
-        <Link href="/">
-          ← Back to Dashboard
-        </Link>
-      </div>
-
-      <header
-        style={{
-          marginBottom: "32px",
-        }}
-      >
-        <h1>Reports</h1>
-
-        <p
-          style={{
-            opacity: 0.75,
-          }}
-        >
-          Review your financial activity, trends,
-          forecasts, and financial intelligence.
-        </p>
-      </header>
+      <h1>Reports</h1>
 
       <section
         style={{
-          marginBottom: "32px",
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(220px, 1fr))",
+          gap: 16,
+          marginTop: 24,
         }}
       >
-        <h2>Financial Overview</h2>
+        {currencies.map((currency) => {
+          const income =
+            summary.income[currency] ?? 0;
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "16px",
-            marginTop: "16px",
-          }}
-        >
-          {summary.map((item) => (
-            <div
-              key={item.currency}
-              style={{
-                border: "1px solid #ddd",
-                borderRadius: "12px",
-                padding: "18px",
-              }}
+          const expenses =
+            summary.expenses[currency] ?? 0;
+
+          const assets =
+            summary.assets[currency] ?? 0;
+
+          const liabilities =
+            summary.liabilities[currency] ?? 0;
+
+          const net = income - expenses;
+
+          return (
+            <section
+              key={currency}
+              className="card"
             >
-              <h3>{item.currency}</h3>
+              <h2>{currency}</h2>
 
               <p>
-                Income: {item.totalIncome}
+                <strong>Income:</strong>{" "}
+                {income.toLocaleString("en-BD", {
+                  minimumFractionDigits: 2,
+                })}
               </p>
 
               <p>
-                Expenses: {item.totalExpenses}
+                <strong>Expenses:</strong>{" "}
+                {expenses.toLocaleString("en-BD", {
+                  minimumFractionDigits: 2,
+                })}
               </p>
 
               <p>
-                Net: {item.net}
+                <strong>Net:</strong>{" "}
+                {net.toLocaleString("en-BD", {
+                  minimumFractionDigits: 2,
+                })}
               </p>
 
               <p>
-                Transactions: {item.transactionCount}
+                <strong>Assets:</strong>{" "}
+                {assets.toLocaleString("en-BD", {
+                  minimumFractionDigits: 2,
+                })}
               </p>
-            </div>
-          ))}
-        </div>
+
+              <p>
+                <strong>Liabilities:</strong>{" "}
+                {liabilities.toLocaleString("en-BD", {
+                  minimumFractionDigits: 2,
+                })}
+              </p>
+            </section>
+          );
+        })}
       </section>
 
-      <section>
-        <h2>Monthly Net Worth</h2>
-
-        {monthlyNetWorth.length === 0 ? (
-          <p
-            style={{
-              opacity: 0.75,
-            }}
-          >
-            No monthly net-worth data is available yet.
-          </p>
-        ) : (
-          <div style={{ marginTop: "24px" }}>
+      <section
+        style={{
+          display: "grid",
+          gap: 24,
+          marginTop: 32,
+        }}
+      >
+        {monthlyNetWorthByCurrency.map(
+          (item) => (
             <MonthlyNetWorthChart
-              data={monthlyNetWorth}
+              key={item.currency}
+              currency={item.currency}
+              data={item.data}
             />
-          </div>
+          ),
         )}
       </section>
 
-      <section>
+      <section
+        className="card"
+        style={{ marginTop: 32 }}
+      >
         <h2>Detailed Reports</h2>
 
         <div
           style={{
             display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "12px",
-            marginTop: "16px",
+            gap: 12,
+            marginTop: 16,
           }}
         >
           {[
-            ["Income vs Expenses", "/reports/income-expense"],
+            [
+              "Income vs Expenses",
+              "/reports/income-expense",
+            ],
             [
               "Income & Expense Trends",
               "/reports/income-expense-trends",
             ],
-            ["Cash-Flow Forecast", "/reports/cash-flow-forecast"],
-            ["Net-Worth Forecast", "/reports/net-worth-forecast"],
-            ["Goal Forecast", "/reports/goal-forecast"],
+            [
+              "Cash-Flow Forecast",
+              "/reports/cash-flow-forecast",
+            ],
+            [
+              "Net-Worth Forecast",
+              "/reports/net-worth-forecast",
+            ],
+            [
+              "Goal Forecast",
+              "/reports/goal-forecast",
+            ],
             [
               "Budget Intelligence",
               "/reports/budget-intelligence",
@@ -142,42 +162,64 @@ export default async function ReportsPage() {
               "Liquidity & Risk Warnings",
               "/reports/liquidity-risk",
             ],
-            ["What-if Simulation", "/reports/what-if"],
-            ["Spending by Category", "/reports/spending-by-category"],
-            ["Account Balances", "/reports/account-balances"],
-            ["Monthly Trends", "/reports/monthly-trends"],
-            ["Investments", "/reports/investments"],
-            ["Loans", "/reports/loans"],
-            ["Deposits", "/reports/deposits"],
-            ["Goals", "/reports/goals"],
-            ["Liquidity", "/reports/liquidity"],
-            ["Financial Health", "/reports/financial-health"],
+            [
+              "What-if Simulation",
+              "/reports/what-if",
+            ],
+            [
+              "Financial Insights",
+              "/reports/financial-insights",
+            ],
+            [
+              "Spending by Category",
+              "/reports/spending-by-category",
+            ],
+            [
+              "Account Balances",
+              "/reports/account-balances",
+            ],
+            [
+              "Monthly Trends",
+              "/reports/monthly-trends",
+            ],
+            [
+              "Investments",
+              "/reports/investments",
+            ],
+            [
+              "Loans",
+              "/reports/loans",
+            ],
+            [
+              "Deposits",
+              "/reports/deposits",
+            ],
+            [
+              "Goals",
+              "/reports/goals",
+            ],
+            [
+              "Liquidity",
+              "/reports/liquidity",
+            ],
+            [
+              "Financial Health",
+              "/reports/financial-health",
+            ],
           ].map(([label, href]) => (
-            <Link
+            <a
               key={href}
               href={href}
               style={{
                 display: "block",
-                padding: "18px",
+                padding: "12px 14px",
                 border: "1px solid #ddd",
-                borderRadius: "12px",
+                borderRadius: 8,
                 textDecoration: "none",
-                fontWeight: 600,
               }}
             >
               {label}
-
-              <span
-                style={{
-                  display: "block",
-                  marginTop: "6px",
-                  fontSize: "13px",
-                  opacity: 0.65,
-                }}
-              >
-                View report →
-              </span>
-            </Link>
+            </a>
           ))}
         </div>
       </section>
