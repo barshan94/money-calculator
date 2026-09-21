@@ -4,14 +4,16 @@ function reportLink(
   page: any,
   name: string,
 ) {
+  const escapedName = name.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&",
+  );
+
   return page
     .locator('a[href^="/reports/"]')
     .filter({
       hasText: new RegExp(
-        `^${name.replace(
-          /[.*+?^${}()|[\]\\]/g,
-          "\\$&",
-        )}$`,
+        `^${escapedName}\\s+View report →$`,
       ),
     })
     .first();
