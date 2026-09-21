@@ -316,6 +316,11 @@ export default async function ReportsPage() {
             ],
             ["Cash-Flow Forecast", "/reports/cash-flow-forecast"],
             ["Net-Worth Forecast", "/reports/net-worth-forecast"],
+            ["Goal Forecast", "/reports/goal-forecast"],
+            [
+              "Budget Intelligence",
+              "/reports/budget-intelligence",
+            ],
             ["Spending by Category", "/reports/spending-by-category"],
             ["Account Balances", "/reports/account-balances"],
             ["Monthly Trends", "/reports/monthly-trends"],
@@ -357,4 +362,3 @@ export default async function ReportsPage() {
     </main>
   );
 }
-
