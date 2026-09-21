@@ -1,300 +1,117 @@
 import Link from "next/link";
-import { getReportsSummary } from "@/lib/finance/get-reports-summary";
-import { getMonthlyNetWorth } from "@/lib/finance/get-monthly-net-worth";
-import MonthlyNetWorthChart from "@/components/reports/monthly-net-worth-chart";
 
-function formatMoney(amount: number, currency: string) {
-  return `${currency} ${amount.toLocaleString("en-BD", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
+import MonthlyNetWorthChart from "@/components/reports/monthly-net-worth-chart";
+import { getMonthlyNetWorth } from "@/lib/finance/get-monthly-net-worth";
+import { getReportsSummary } from "@/lib/finance/get-reports-summary";
 
 export default async function ReportsPage() {
-  const summary = await getReportsSummary();
-
-  const currencies = Array.from(
-    new Set([
-      ...Object.keys(summary.income),
-      ...Object.keys(summary.expenses),
-      ...Object.keys(summary.assets),
-      ...Object.keys(summary.liabilities),
-    ]),
-  );
-
-  const monthlyNetWorthByCurrency = await Promise.all(
-    currencies.map(async (currency) => ({
-      currency,
-      data: await getMonthlyNetWorth(currency),
-    })),
-  );
+  const [summary, monthlyNetWorth] =
+    await Promise.all([
+      getReportsSummary(),
+      getMonthlyNetWorth(),
+    ]);
 
   return (
     <main
       style={{
-        maxWidth: "1200px",
+        maxWidth: "1100px",
         margin: "0 auto",
         padding: "24px 16px 48px",
       }}
     >
       <div
         style={{
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: "16px",
-          marginBottom: "28px",
+          marginBottom: "24px",
         }}
       >
-        <div>
-          <Link
-            href="/dashboard"
-            style={{
-              display: "inline-block",
-              marginBottom: "10px",
-              textDecoration: "none",
-            }}
-          >
-            ← Back to Dashboard
-          </Link>
-
-          <h1 style={{ margin: 0 }}>Reports & Analytics</h1>
-
-          <p
-            style={{
-              margin: "8px 0 0",
-              opacity: 0.7,
-            }}
-          >
-            Track your financial position, income, expenses, and progress.
-          </p>
-        </div>
+        <Link href="/">
+          ← Back to Dashboard
+        </Link>
       </div>
 
-      {currencies.length === 0 && (
-        <section
+      <header
+        style={{
+          marginBottom: "32px",
+        }}
+      >
+        <h1>Reports</h1>
+
+        <p
           style={{
-            border: "1px solid #ddd",
-            borderRadius: "12px",
-            padding: "32px 20px",
-            textAlign: "center",
-            marginBottom: "32px",
+            opacity: 0.75,
           }}
         >
-          <h2 style={{ marginTop: 0 }}>No financial data yet</h2>
+          Review your financial activity, trends,
+          forecasts, and financial intelligence.
+        </p>
+      </header>
 
-          <p style={{ opacity: 0.7 }}>
-            Start adding accounts and transactions to see your financial
-            reports here.
+      <section
+        style={{
+          marginBottom: "32px",
+        }}
+      >
+        <h2>Financial Overview</h2>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(220px, 1fr))",
+            gap: "16px",
+            marginTop: "16px",
+          }}
+        >
+          {summary.map((item) => (
+            <div
+              key={item.currency}
+              style={{
+                border: "1px solid #ddd",
+                borderRadius: "12px",
+                padding: "18px",
+              }}
+            >
+              <h3>{item.currency}</h3>
+
+              <p>
+                Income: {item.totalIncome}
+              </p>
+
+              <p>
+                Expenses: {item.totalExpenses}
+              </p>
+
+              <p>
+                Net: {item.net}
+              </p>
+
+              <p>
+                Transactions: {item.transactionCount}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <h2>Monthly Net Worth</h2>
+
+        {monthlyNetWorth.length === 0 ? (
+          <p
+            style={{
+              opacity: 0.75,
+            }}
+          >
+            No monthly net-worth data is available yet.
           </p>
-
-          <Link
-            href="/transactions/new"
-            style={{
-              display: "inline-block",
-              marginTop: "12px",
-              textDecoration: "none",
-            }}
-          >
-            Add a Transaction →
-          </Link>
-        </section>
-      )}
-
-      {currencies.map((currency) => {
-        const income = summary.income[currency] ?? 0;
-        const expenses = summary.expenses[currency] ?? 0;
-        const assets = summary.assets[currency] ?? 0;
-        const liabilities = summary.liabilities[currency] ?? 0;
-
-        const netResult = income - expenses;
-        const netWorth = assets - liabilities;
-
-        const monthlyNetWorth =
-          monthlyNetWorthByCurrency.find(
-            (item) => item.currency === currency,
-          )?.data ?? [];
-
-        return (
-          <section
-            key={currency}
-            style={{
-              marginBottom: "40px",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "10px",
-                marginBottom: "16px",
-              }}
-            >
-              <h2 style={{ margin: 0 }}>{currency}</h2>
-
-              <span
-                style={{
-                  fontSize: "13px",
-                  padding: "4px 8px",
-                  borderRadius: "999px",
-                  border: "1px solid #ddd",
-                  opacity: 0.75,
-                }}
-              >
-                Currency
-              </span>
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(180px, 1fr))",
-                gap: "14px",
-              }}
-            >
-              <div
-                style={{
-                  border: "1px solid #ddd",
-                  borderRadius: "12px",
-                  padding: "18px",
-                }}
-              >
-                <h3 style={{ margin: "0 0 8px", fontSize: "15px" }}>
-                  Total Income
-                </h3>
-
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "22px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {formatMoney(income, currency)}
-                </p>
-              </div>
-
-              <div
-                style={{
-                  border: "1px solid #ddd",
-                  borderRadius: "12px",
-                  padding: "18px",
-                }}
-              >
-                <h3 style={{ margin: "0 0 8px", fontSize: "15px" }}>
-                  Total Expenses
-                </h3>
-
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "22px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {formatMoney(expenses, currency)}
-                </p>
-              </div>
-
-              <div
-                style={{
-                  border: "1px solid #ddd",
-                  borderRadius: "12px",
-                  padding: "18px",
-                }}
-              >
-                <h3 style={{ margin: "0 0 8px", fontSize: "15px" }}>
-                  Net Result
-                </h3>
-
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "22px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {formatMoney(netResult, currency)}
-                </p>
-              </div>
-
-              <div
-                style={{
-                  border: "1px solid #ddd",
-                  borderRadius: "12px",
-                  padding: "18px",
-                }}
-              >
-                <h3 style={{ margin: "0 0 8px", fontSize: "15px" }}>
-                  Total Assets
-                </h3>
-
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "22px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {formatMoney(assets, currency)}
-                </p>
-              </div>
-
-              <div
-                style={{
-                  border: "1px solid #ddd",
-                  borderRadius: "12px",
-                  padding: "18px",
-                }}
-              >
-                <h3 style={{ margin: "0 0 8px", fontSize: "15px" }}>
-                  Total Liabilities
-                </h3>
-
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "22px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {formatMoney(liabilities, currency)}
-                </p>
-              </div>
-
-              <div
-                style={{
-                  border: "1px solid #ddd",
-                  borderRadius: "12px",
-                  padding: "18px",
-                }}
-              >
-                <h3 style={{ margin: "0 0 8px", fontSize: "15px" }}>
-                  Net Worth
-                </h3>
-
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: "22px",
-                    fontWeight: 700,
-                  }}
-                >
-                  {formatMoney(netWorth, currency)}
-                </p>
-              </div>
-            </div>
-
-            {monthlyNetWorth.length > 0 && (
-              <div style={{ marginTop: "24px" }}>
-                <MonthlyNetWorthChart data={monthlyNetWorth} />
-              </div>
-            )}
-          </section>
-        );
-      })}
+        ) : (
+          <div style={{ marginTop: "24px" }}>
+            <MonthlyNetWorthChart
+              data={monthlyNetWorth}
+            />
+          </div>
+        )}
+      </section>
 
       <section>
         <h2>Detailed Reports</h2>
@@ -325,6 +142,7 @@ export default async function ReportsPage() {
               "Liquidity & Risk Warnings",
               "/reports/liquidity-risk",
             ],
+            ["What-if Simulation", "/reports/what-if"],
             ["Spending by Category", "/reports/spending-by-category"],
             ["Account Balances", "/reports/account-balances"],
             ["Monthly Trends", "/reports/monthly-trends"],
