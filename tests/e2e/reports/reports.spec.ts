@@ -7,7 +7,12 @@ function reportLink(
   return page
     .locator('a[href^="/reports/"]')
     .filter({
-      hasText: name,
+      hasText: new RegExp(
+        `^${name.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          "\\$&",
+        )}$`,
+      ),
     })
     .first();
 }
