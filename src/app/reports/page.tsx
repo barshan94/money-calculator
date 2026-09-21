@@ -321,6 +321,10 @@ export default async function ReportsPage() {
               "Budget Intelligence",
               "/reports/budget-intelligence",
             ],
+            [
+              "Liquidity & Risk Warnings",
+              "/reports/liquidity-risk",
+            ],
             ["Spending by Category", "/reports/spending-by-category"],
             ["Account Balances", "/reports/account-balances"],
             ["Monthly Trends", "/reports/monthly-trends"],
