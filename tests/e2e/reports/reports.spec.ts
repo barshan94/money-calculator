@@ -5,7 +5,14 @@ const reportRoutes: Record<string, string> = {
   "Income & Expense Trends": "/reports/income-expense-trends",
   "Cash-Flow Forecast": "/reports/cash-flow-forecast",
   "Net-Worth Forecast": "/reports/net-worth-forecast",
-  "Spending by Category": "/reports/spending-by-category",
+  "Goal Forecast": "/reports/goal-forecast",
+  "Budget Intelligence": "/reports/budget-intelligence",
+  "Liquidity & Risk Warnings":
+    "/reports/liquidity-risk",
+  "What-if Simulation": "/reports/what-if",
+  "Financial Insights": "/reports/financial-insights",
+  "Spending by Category":
+    "/reports/spending-by-category",
   "Account Balances": "/reports/account-balances",
   "Monthly Trends": "/reports/monthly-trends",
   Investments: "/reports/investments",
@@ -38,16 +45,16 @@ test("reports page loads", async ({ page }) => {
 
   await expect(
     page.getByRole("heading", {
-      name: "Reports & Analytics",
+      name: "Reports",
       exact: true,
     }),
   ).toBeVisible();
 
   await expect(
-    page.getByText(
-      "Track your financial position, income, expenses, and progress.",
-      { exact: true },
-    ),
+    page.getByRole("heading", {
+      name: "Detailed Reports",
+      exact: true,
+    }),
   ).toBeVisible();
 });
 
@@ -56,20 +63,35 @@ test("reports page shows financial summary", async ({
 }) => {
   await page.goto("/reports");
 
-  for (const label of [
-    "Total Income",
-    "Total Expenses",
-    "Net Result",
-    "Total Assets",
-    "Total Liabilities",
-    "Net Worth",
-  ]) {
-    await expect(
-      page.getByText(label, {
-        exact: true,
-      }).first(),
-    ).toBeVisible();
-  }
+  await expect(
+    page.getByText("Income:", {
+      exact: true,
+    }).first(),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("Expenses:", {
+      exact: true,
+    }).first(),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("Net:", {
+      exact: true,
+    }).first(),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("Assets:", {
+      exact: true,
+    }).first(),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("Liabilities:", {
+      exact: true,
+    }).first(),
+  ).toBeVisible();
 });
 
 test("reports page shows detailed report links", async ({
@@ -77,23 +99,9 @@ test("reports page shows detailed report links", async ({
 }) => {
   await page.goto("/reports");
 
-  const reports = [
-    "Income vs Expenses",
-    "Income & Expense Trends",
-    "Cash-Flow Forecast",
-    "Net-Worth Forecast",
-    "Spending by Category",
-    "Account Balances",
-    "Monthly Trends",
-    "Investments",
-    "Loans",
-    "Deposits",
-    "Goals",
-    "Liquidity",
-    "Financial Health",
-  ];
-
-  for (const report of reports) {
+  for (const report of Object.keys(
+    reportRoutes,
+  )) {
     await expect(
       reportLink(page, report),
     ).toBeVisible();
@@ -157,6 +165,81 @@ test("net-worth forecast report navigation works", async ({
 
   await expect(page).toHaveURL(
     /\/reports\/net-worth-forecast$/,
+  );
+});
+
+test("goal forecast report navigation works", async ({
+  page,
+}) => {
+  await page.goto("/reports");
+
+  await reportLink(
+    page,
+    "Goal Forecast",
+  ).click();
+
+  await expect(page).toHaveURL(
+    /\/reports\/goal-forecast$/,
+  );
+});
+
+test("budget intelligence report navigation works", async ({
+  page,
+}) => {
+  await page.goto("/reports");
+
+  await reportLink(
+    page,
+    "Budget Intelligence",
+  ).click();
+
+  await expect(page).toHaveURL(
+    /\/reports\/budget-intelligence$/,
+  );
+});
+
+test("liquidity and risk report navigation works", async ({
+  page,
+}) => {
+  await page.goto("/reports");
+
+  await reportLink(
+    page,
+    "Liquidity & Risk Warnings",
+  ).click();
+
+  await expect(page).toHaveURL(
+    /\/reports\/liquidity-risk$/,
+  );
+});
+
+test("what-if simulation report navigation works", async ({
+  page,
+}) => {
+  await page.goto("/reports");
+
+  await reportLink(
+    page,
+    "What-if Simulation",
+  ).click();
+
+  await expect(page).toHaveURL(
+    /\/reports\/what-if$/,
+  );
+});
+
+test("financial insights report navigation works", async ({
+  page,
+}) => {
+  await page.goto("/reports");
+
+  await reportLink(
+    page,
+    "Financial Insights",
+  ).click();
+
+  await expect(page).toHaveURL(
+    /\/reports\/financial-insights$/,
   );
 });
 
@@ -294,5 +377,4 @@ test("financial health report navigation works", async ({
     /\/reports\/financial-health$/,
   );
 });
-
 
