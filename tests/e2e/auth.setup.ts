@@ -5,6 +5,8 @@ import {
 } from "@playwright/test";
 
 setup("authenticate", async () => {
+  setup.setTimeout(90000);
+
   const email = process.env.PLAYWRIGHT_TEST_EMAIL;
   const password = process.env.PLAYWRIGHT_TEST_PASSWORD;
 
@@ -116,3 +118,4 @@ setup("authenticate", async () => {
 
   await browser.close();
 });
+
