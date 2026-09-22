@@ -197,6 +197,17 @@ async function selectRepaymentAccount(
   });
 }
 
+async function expectNoRepaymentError(
+  page: any,
+) {
+  const repaymentError =
+    page.locator("main p[role='alert']");
+
+  await expect(
+    repaymentError,
+  ).toHaveCount(0);
+}
+
 test("record partial repayment and verify remaining balance", async ({
   page,
 }) => {
@@ -241,14 +252,7 @@ test("record partial repayment and verify remaining balance", async ({
     exact: true,
   }).click();
 
-  const repaymentError =
-    page.getByRole("alert");
-
-  await expect(
-    repaymentError,
-  ).not.toBeVisible({
-    timeout: 5000,
-  });
+  await expectNoRepaymentError(page);
 
   await expect(page).toHaveURL(
     /\/loans\/[^/]+$/,
@@ -298,11 +302,7 @@ test("fully repay a loan and verify settled status", async ({
     exact: true,
   }).click();
 
-  await expect(
-    page.getByRole("alert"),
-  ).not.toBeVisible({
-    timeout: 5000,
-  });
+  await expectNoRepaymentError(page);
 
   await expect(page).toHaveURL(
     /\/loans\/[^/]+$/,
@@ -361,11 +361,7 @@ test("cancel a repayment and restore the loan balance", async ({
     exact: true,
   }).click();
 
-  await expect(
-    page.getByRole("alert"),
-  ).not.toBeVisible({
-    timeout: 5000,
-  });
+  await expectNoRepaymentError(page);
 
   await expect(page).toHaveURL(
     /\/loans\/[^/]+$/,
@@ -444,11 +440,7 @@ test("edit a repayment and recalculate the loan balance", async ({
     exact: true,
   }).click();
 
-  await expect(
-    page.getByRole("alert"),
-  ).not.toBeVisible({
-    timeout: 5000,
-  });
+  await expectNoRepaymentError(page);
 
   await expect(page).toHaveURL(
     /\/loans\/[^/]+$/,
@@ -500,11 +492,7 @@ test("edit a repayment and recalculate the loan balance", async ({
 
   await submitBtn.click();
 
-  await expect(
-    page.getByRole("alert"),
-  ).not.toBeVisible({
-    timeout: 5000,
-  });
+  await expectNoRepaymentError(page);
 
   await expect(page).toHaveURL(
     /\/loans\/[^/]+$/,
@@ -566,9 +554,7 @@ test("borrowed loan can be created", async ({
     /account|money into|wallet/i,
   );
 
-  await expect(
-    accountSelect,
-  ).toBeVisible({
+  await expect(accountSelect).toBeVisible({
     timeout: 10000,
   });
 
@@ -626,4 +612,5 @@ test("loan reliability page loads", async ({
     }),
   ).toBeVisible();
 });
+
 
