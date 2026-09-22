@@ -103,11 +103,91 @@ async function selectE2EExpenseCategory(page: any) {
   );
 }
 
+async function getBudgetIds(
+  admin: ReturnType<typeof createAdminClient>,
+  amount: string,
+  startDate: string,
+) {
+  const {
+    data,
+    error,
+  } = await admin
+    .from("budgets")
+    .select("id")
+    .eq("amount", Number(amount))
+    .eq("currency", "BDT")
+    .eq("start_date", startDate);
+
+  if (error) {
+    throw new Error(
+      `Unable to inspect budgets: ${error.message}`,
+    );
+  }
+
+  return new Set(
+    (data ?? []).map(
+      (row) => row.id as string,
+    ),
+  );
+}
+
+async function findNewBudgetId(
+  admin: ReturnType<typeof createAdminClient>,
+  amount: string,
+  startDate: string,
+  existingIds: Set<string>,
+) {
+  const {
+    data,
+    error,
+  } = await admin
+    .from("budgets")
+    .select(
+      "id, amount, currency, start_date, end_date, is_active",
+    )
+    .eq("amount", Number(amount))
+    .eq("currency", "BDT")
+    .eq("start_date", startDate);
+
+  if (error) {
+    throw new Error(
+      `Unable to find newly created budget: ${error.message}`,
+    );
+  }
+
+  const newBudgets = (data ?? []).filter(
+    (row) =>
+      typeof row.id === "string" &&
+      !existingIds.has(row.id),
+  );
+
+  if (newBudgets.length !== 1) {
+    throw new Error(
+      [
+        "Could not identify exactly one newly created budget.",
+        `Existing IDs: ${JSON.stringify([...existingIds])}`,
+        `Matching rows: ${JSON.stringify(data ?? [])}`,
+        `New rows: ${JSON.stringify(newBudgets)}`,
+      ].join("\n"),
+    );
+  }
+
+  return newBudgets[0].id as string;
+}
+
 async function createBudget(
   page: any,
   amount: string,
   startDate: string,
 ) {
+  const admin = createAdminClient();
+
+  const existingIds = await getBudgetIds(
+    admin,
+    amount,
+    startDate,
+  );
+
   await page.goto("/budgets/new");
 
   await expect(
@@ -156,6 +236,13 @@ async function createBudget(
     },
   );
 
+  const budgetId = await findNewBudgetId(
+    admin,
+    amount,
+    startDate,
+    existingIds,
+  );
+
   await page.reload();
 
   await expect(
@@ -167,7 +254,10 @@ async function createBudget(
     timeout: 15000,
   });
 
-  return categoryName;
+  return {
+    categoryName,
+    budgetId,
+  };
 }
 
 async function archiveBudget(
@@ -234,12 +324,13 @@ test.describe("Budgets", () => {
   test("creates a budget", async ({ page }) => {
     const amount = "10000";
 
-    const categoryName =
-      await createBudget(
-        page,
-        amount,
-        "2026-01-01",
-      );
+    const {
+      categoryName,
+    } = await createBudget(
+      page,
+      amount,
+      "2026-01-01",
+    );
 
     await expect(
       budgetCard(
@@ -264,12 +355,13 @@ test.describe("Budgets", () => {
     const originalAmount = "11000";
     const updatedAmount = "15000";
 
-    const categoryName =
-      await createBudget(
-        page,
-        originalAmount,
-        "2026-02-01",
-      );
+    const {
+      categoryName,
+    } = await createBudget(
+      page,
+      originalAmount,
+      "2026-02-01",
+    );
 
     const card = budgetCard(
       page,
@@ -396,12 +488,13 @@ test.describe("Budgets", () => {
   }) => {
     const amount = "13000";
 
-    const categoryName =
-      await createBudget(
-        page,
-        amount,
-        "2026-03-01",
-      );
+    const {
+      categoryName,
+    } = await createBudget(
+      page,
+      amount,
+      "2026-03-01",
+    );
 
     await archiveBudget(
       page,
@@ -423,12 +516,14 @@ test.describe("Budgets", () => {
   }) => {
     const amount = "14000";
 
-    const categoryName =
-      await createBudget(
-        page,
-        amount,
-        "2026-04-01",
-      );
+    const {
+      categoryName,
+      budgetId,
+    } = await createBudget(
+      page,
+      amount,
+      "2026-04-01",
+    );
 
     await archiveBudget(
       page,
@@ -502,47 +597,38 @@ test.describe("Budgets", () => {
     /*
      * Temporary diagnostic:
      *
-     * The E2E browser session may remain on /budgets
-     * whether the delete RPC succeeds or fails.
-     *
-     * Query the database directly with the existing
-     * service-role client so we can distinguish:
-     *
-     * 1. RPC/database deletion failure
-     * 2. Successful deletion but stale/wrong UI locator
+     * Verify the exact budget created by this test.
+     * This avoids matching old E2E budgets left in the
+     * shared Supabase test database.
      */
     const admin = createAdminClient();
 
     const {
-      data: remainingBudgets,
-      error: remainingBudgetsError,
+      data: remainingBudget,
+      error: remainingBudgetError,
     } = await admin
       .from("budgets")
       .select(
         "id, amount, currency, start_date, end_date, is_active",
       )
-      .eq("amount", Number(amount))
-      .eq("currency", "BDT")
-      .eq("start_date", "2026-04-01")
-      .eq("is_active", false);
+      .eq("id", budgetId)
+      .maybeSingle();
 
-    if (remainingBudgetsError) {
+    if (remainingBudgetError) {
       throw new Error(
-        `Admin budget verification failed: ${remainingBudgetsError.message}`,
+        `Admin budget verification failed: ${remainingBudgetError.message}`,
       );
     }
 
-    if (
-      remainingBudgets &&
-      remainingBudgets.length > 0
-    ) {
+    if (remainingBudget) {
       const bodyText =
         await page.locator("body").innerText();
 
       throw new Error(
         [
-          "Budget deletion did not remove the archived budget row from the database.",
-          `Matching database rows: ${JSON.stringify(remainingBudgets)}`,
+          "The exact budget created by this test still exists after delete_budget.",
+          `Budget row: ${JSON.stringify(remainingBudget)}`,
+          `Budget ID: ${budgetId}`,
           "Page text after delete:",
           bodyText,
         ].join("\n"),
