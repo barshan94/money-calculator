@@ -1,329 +1,204 @@
-import { test, expect } from "@playwright/test";
+import Link from "next/link";
 
-test.describe("Individual Reports E2E", () => {
-  test("income vs expenses report loads", async ({
-    page,
-  }) => {
-    await page.goto("/reports/income-expense");
+import { getInvestmentAnalytics } from "@/lib/intelligence/get-investment-analytics";
+import { formatMoney } from "@/lib/finance/format-money";
 
-    await expect(
-      page.getByRole("heading", {
-        name: "Income vs Expenses",
-        exact: true,
-        level: 1,
-      }),
-    ).toBeVisible({ timeout: 15000 });
+function MetricCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-lg border bg-white p-4 shadow-sm">
+      <p className="text-sm text-gray-500">{label}</p>
+      <p className="mt-1 text-xl font-semibold text-gray-900">
+        {value}
+      </p>
+    </div>
+  );
+}
 
-    await expect(
-      page.getByText("Overall Summary", {
-        exact: true,
-      }),
-    ).toBeVisible();
+export default async function InvestmentAnalyticsPage() {
+  const analyticsByCurrency = await getInvestmentAnalytics();
 
-    await expect(
-      page.getByText("Total Income", {
-        exact: true,
-      }).first(),
-    ).toBeVisible();
+  const currencies = Object.keys(analyticsByCurrency);
 
-    await expect(
-      page.getByText("Total Expenses", {
-        exact: true,
-      }).first(),
-    ).toBeVisible();
-  });
+  return (
+    <main className="mx-auto max-w-7xl space-y-8 p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Investment Analytics
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Descriptive analytics calculated from your existing investment
+            records.
+          </p>
+        </div>
 
-  test("spending by category report loads", async ({
-    page,
-  }) => {
-    await page.goto("/reports/spending-by-category");
+        <Link
+          href="/investments"
+          className="inline-flex w-fit items-center rounded-md border px-4 py-2 text-sm font-medium hover:bg-gray-50"
+        >
+          View Investments
+        </Link>
+      </div>
 
-    await expect(
-      page.getByRole("heading", {
-        name: "Spending by Category",
-        exact: true,
-        level: 1,
-      }),
-    ).toBeVisible({ timeout: 15000 });
+      {currencies.length === 0 ? (
+        <section className="rounded-lg border bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold">No investment data yet</h2>
+          <p className="mt-2 text-sm text-gray-600">
+            Add an investment to begin viewing investment analytics.
+          </p>
+        </section>
+      ) : (
+        currencies.map((currency) => {
+          const analytics = analyticsByCurrency[currency];
 
-    await expect(
-      page.getByText("Total Expenses", {
-        exact: true,
-      }).first(),
-    ).toBeVisible();
+          return (
+            <section
+              key={currency}
+              className="space-y-6 rounded-xl border bg-gray-50 p-5"
+            >
+              <div>
+                <h2 className="text-2xl font-semibold">
+                  {currency} Investments
+                </h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Portfolio and profit/loss analytics for this currency.
+                </p>
+              </div>
 
-    await expect(
-      page.getByText("Spending Distribution", {
-        exact: true,
-      }),
-    ).toBeVisible();
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <MetricCard
+                  label="Total Invested"
+                  value={formatMoney(
+                    analytics.totalInvested,
+                    currency,
+                  )}
+                />
 
-    await expect(
-      page.getByText("Category Breakdown", {
-        exact: true,
-      }),
-    ).toBeVisible();
-  });
+                <MetricCard
+                  label="Current Portfolio Value"
+                  value={formatMoney(
+                    analytics.currentPortfolioValue,
+                    currency,
+                  )}
+                />
 
-  test("account balances report loads", async ({
-    page,
-  }) => {
-    await page.goto("/reports/account-balances");
+                <MetricCard
+                  label="Total Profit / Loss"
+                  value={formatMoney(
+                    analytics.totalProfitLoss,
+                    currency,
+                  )}
+                />
 
-    await expect(
-      page.getByRole("heading", {
-        name: "Account Balances",
-        exact: true,
-        level: 1,
-      }),
-    ).toBeVisible({ timeout: 15000 });
+                <MetricCard
+                  label="Overall Return"
+                  value={`${analytics.overallReturnPercentage.toFixed(2)}%`}
+                />
 
-    await expect(
-      page.getByText("Balance Overview", {
-        exact: true,
-      }),
-    ).toBeVisible();
+                <MetricCard
+                  label="Realized Profit / Loss"
+                  value={formatMoney(
+                    analytics.realizedProfitLoss,
+                    currency,
+                  )}
+                />
 
-    await expect(
-      page.getByText("Accounts", {
-        exact: true,
-      }).first(),
-    ).toBeVisible();
-  });
+                <MetricCard
+                  label="Unrealized Profit / Loss"
+                  value={formatMoney(
+                    analytics.unrealizedProfitLoss,
+                    currency,
+                  )}
+                />
 
-  test("monthly trends report loads", async ({
-    page,
-  }) => {
-    await page.goto("/reports/monthly-trends");
+                <MetricCard
+                  label="Active Investments"
+                  value={analytics.activeInvestmentCount.toString()}
+                />
 
-    await expect(
-      page.getByRole("heading", {
-        name: "Monthly Trends",
-        exact: true,
-        level: 1,
-      }),
-    ).toBeVisible({ timeout: 15000 });
-  });
+                <MetricCard
+                  label="Largest Investment"
+                  value={
+                    analytics.largestInvestment
+                      ? analytics.largestInvestment.name
+                      : "None"
+                  }
+                />
 
-  test("investment report loads", async ({
-    page,
-  }) => {
-    await page.goto("/reports/investments");
+                <MetricCard
+                  label="Largest Concentration"
+                  value={`${analytics.largestInvestmentConcentrationPercentage.toFixed(2)}%`}
+                />
+              </div>
 
-    await expect(
-      page.getByRole("heading", {
-        name: "Investments Report",
-        exact: true,
-        level: 1,
-      }),
-    ).toBeVisible({ timeout: 15000 });
-  });
+              <div className="rounded-lg border bg-white p-5 shadow-sm">
+                <h3 className="text-lg font-semibold">
+                  Allocation by Investment Type
+                </h3>
 
-  test("investment analytics report loads", async ({
-    page,
-  }) => {
-    await page.goto(
-      "/reports/investment-analytics",
-    );
+                {analytics.allocationByType.length === 0 ? (
+                  <p className="mt-3 text-sm text-gray-600">
+                    No active investment allocation data is available.
+                  </p>
+                ) : (
+                  <div className="mt-4 space-y-3">
+                    {analytics.allocationByType.map((allocation) => (
+                      <div
+                        key={allocation.investmentType}
+                        className="flex items-center justify-between gap-4 border-b pb-3 last:border-b-0 last:pb-0"
+                      >
+                        <span className="font-medium">
+                          {allocation.investmentType}
+                        </span>
 
-    await expect(
-      page.getByRole("heading", {
-        name: "Investment Analytics",
-        exact: true,
-        level: 1,
-      }),
-    ).toBeVisible({ timeout: 15000 });
+                        <span className="text-sm text-gray-600">
+                          {formatMoney(
+                            allocation.currentValue,
+                            currency,
+                          )}{" "}
+                          ·{" "}
+                          {allocation.percentage.toFixed(2)}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-    await expect(
-      page.getByText("Total Invested", {
-        exact: true,
-      }).first(),
-    ).toBeVisible();
+              <div className="rounded-lg border bg-white p-5 shadow-sm">
+                <h3 className="text-lg font-semibold">Methodology</h3>
 
-    await expect(
-      page.getByText("Current Portfolio Value", {
-        exact: true,
-      }).first(),
-    ).toBeVisible();
-
-    await expect(
-      page.getByText("Total Profit / Loss", {
-        exact: true,
-      }).first(),
-    ).toBeVisible();
-
-    await expect(
-      page.getByText("Allocation by Investment Type", {
-        exact: true,
-      }),
-    ).toBeVisible();
-
-    await expect(
-      page.getByText("Methodology", {
-        exact: true,
-      }),
-    ).toBeVisible();
-  });
-
-  test("loan report loads", async ({
-    page,
-  }) => {
-    await page.goto("/reports/loans");
-
-    await expect(
-      page.getByRole("heading", {
-        name: "Loans Report",
-        exact: true,
-        level: 1,
-      }),
-    ).toBeVisible({ timeout: 15000 });
-  });
-
-  test("deposit report loads", async ({
-    page,
-  }) => {
-    await page.goto("/reports/deposits");
-
-    await expect(
-      page.getByRole("heading", {
-        name: /Deposits Report/,
-        level: 1,
-      }),
-    ).toBeVisible({ timeout: 15000 });
-  });
-
-  test("goal report loads", async ({
-    page,
-  }) => {
-    await page.goto("/reports/goals");
-
-    await expect(
-      page.getByRole("heading", {
-        name: "Goals Report",
-        exact: true,
-        level: 1,
-      }),
-    ).toBeVisible({ timeout: 15000 });
-  });
-
-  test("liquidity report loads", async ({
-    page,
-  }) => {
-    await page.goto("/reports/liquidity");
-
-    await expect(
-      page.getByRole("heading", {
-        name: "Liquidity",
-        exact: true,
-        level: 1,
-      }),
-    ).toBeVisible({ timeout: 15000 });
-
-    await expect(
-      page.getByText(
-        /Liquidity Interpretation|No liquidity data yet|Unable to load liquidity/,
-      ).first(),
-    ).toBeVisible();
-  });
-
-  test("net-worth forecast report loads", async ({
-    page,
-  }) => {
-    await page.goto(
-      "/reports/net-worth-forecast",
-    );
-
-    await expect(
-      page.getByRole("heading", {
-        name: "Net-Worth Forecast",
-        exact: true,
-        level: 1,
-      }),
-    ).toBeVisible({ timeout: 15000 });
-
-    await expect(
-      page.getByRole("heading", {
-        name: "Forecast settings",
-        exact: true,
-        level: 2,
-      }),
-    ).toBeVisible();
-
-    await expect(
-      page.getByLabel("Historical lookback"),
-    ).toBeVisible();
-
-    await expect(
-      page.getByLabel("Forecast horizon"),
-    ).toBeVisible();
-  });
-
-  test("net-worth forecast settings stay on the forecast page", async ({
-    page,
-  }) => {
-    await page.goto(
-      "/reports/net-worth-forecast?lookback=6&horizon=6",
-    );
-
-    await expect(
-      page.getByRole("heading", {
-        name: "Net-Worth Forecast",
-        exact: true,
-        level: 1,
-      }),
-    ).toBeVisible({ timeout: 15000 });
-
-    await page
-      .getByLabel("Historical lookback")
-      .selectOption("3");
-
-    await expect(page).toHaveURL(
-      /\/reports\/net-worth-forecast\?lookback=3&horizon=6$/,
-    );
-
-    await expect(
-      page.getByRole("heading", {
-        name: "Net-Worth Forecast",
-        exact: true,
-        level: 1,
-      }),
-    ).toBeVisible({ timeout: 15000 });
-
-    await page
-      .getByLabel("Forecast horizon")
-      .selectOption("12");
-
-    await expect(page).toHaveURL(
-      /\/reports\/net-worth-forecast\?lookback=3&horizon=12$/,
-    );
-  });
-
-  test("all reports provide a back navigation", async ({
-    page,
-  }) => {
-    const reportUrls = [
-      "/reports/income-expense",
-      "/reports/spending-by-category",
-      "/reports/account-balances",
-      "/reports/monthly-trends",
-      "/reports/investments",
-      "/reports/investment-analytics",
-      "/reports/loans",
-      "/reports/deposits",
-      "/reports/goals",
-      "/reports/liquidity",
-      "/reports/net-worth-forecast",
-    ];
-
-    for (const url of reportUrls) {
-      await page.goto(url);
-
-      await expect(
-        page.getByRole("link", {
-          name: /Reports/,
-        }).first(),
-      ).toBeVisible();
-    }
-  });
-});
+                <div className="mt-3 space-y-2 text-sm text-gray-600">
+                  <p>
+                    Total invested and profit/loss values are calculated from
+                    the existing investment performance records.
+                  </p>
+                  <p>
+                    Current portfolio value, allocation, active investment
+                    count, and concentration use active, non-archived
+                    investments.
+                  </p>
+                  <p>
+                    Investment types are grouped separately for allocation
+                    analysis.
+                  </p>
+                  <p>
+                    These metrics describe recorded financial data and do not
+                    provide investment recommendations or predictions.
+                  </p>
+                </div>
+              </div>
+            </section>
+          );
+        })
+      )}
+    </main>
+  );
+}
 
