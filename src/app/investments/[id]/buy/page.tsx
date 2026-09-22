@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Investment = {
@@ -28,7 +28,6 @@ type Account = {
 
 export default function BuyMoreInvestmentPage() {
   const supabase = useMemo(() => createClient(), []);
-  const router = useRouter();
   const params = useParams();
 
   const investmentId = params.id as string;
@@ -44,13 +43,11 @@ export default function BuyMoreInvestmentPage() {
   const [purchasePrice, setPurchasePrice] =
     useState("");
 
-  const [purchaseDate, setPurchaseDate] =
-    useState(
-      new Date().toISOString().slice(0, 10),
-    );
+  const [purchaseDate, setPurchaseDate] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
 
-  const [accountId, setAccountId] =
-    useState("");
+  const [accountId, setAccountId] = useState("");
 
   const [description, setDescription] =
     useState("");
@@ -213,11 +210,8 @@ export default function BuyMoreInvestmentPage() {
       return;
     }
 
-    router.push(
-      `/investments/${investmentId}`,
-    );
-
-    router.refresh();
+    window.location.href =
+      `/investments/${investmentId}`;
   }
 
   if (loading) {
