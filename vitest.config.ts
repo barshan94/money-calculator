@@ -19,6 +19,15 @@ export default defineConfig(({ mode }) => ({
     fileParallelism: false,
     testTimeout: 15000,
     hookTimeout: 15000,
+
+    // Playwright owns the E2E suite.
+    // Vitest should execute only unit/integration tests.
+    exclude: [
+      "node_modules/**",
+      "dist/**",
+      "tests/e2e/**",
+      "tests/smoke.spec.ts",
+    ],
   },
 }));
 
