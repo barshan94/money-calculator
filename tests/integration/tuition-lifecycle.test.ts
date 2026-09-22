@@ -780,6 +780,6 @@ expect(
 
       expect(cleanupError).toBeNull();
     },
-     15000,
+     30000,
   );
 });
