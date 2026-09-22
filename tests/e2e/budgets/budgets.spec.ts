@@ -1,5 +1,4 @@
 import { test, expect } from "@playwright/test";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 function escapeRegex(value: string) {
   return value.replace(
@@ -363,9 +362,7 @@ test.describe("Budgets", () => {
     await page
       .locator("#end-date")
       .evaluate(
-        (
-          element: HTMLInputElement,
-        ) => {
+        (element: HTMLInputElement) => {
           element.removeAttribute("min");
         },
       );
@@ -499,56 +496,6 @@ test.describe("Budgets", () => {
       },
     );
 
-    /*
-     * Temporary diagnostic:
-     *
-     * The E2E browser session may remain on /budgets
-     * whether the delete RPC succeeds or fails.
-     *
-     * Query the database directly with the existing
-     * service-role client so we can distinguish:
-     *
-     * 1. RPC/database deletion failure
-     * 2. Successful deletion but stale/wrong UI locator
-     */
-    const admin = createAdminClient();
-
-    const {
-      data: remainingBudgets,
-      error: remainingBudgetsError,
-    } = await admin
-      .from("budgets")
-      .select(
-        "id, amount, currency, start_date, end_date, is_active",
-      )
-      .eq("amount", Number(amount))
-      .eq("currency", "BDT")
-      .eq("start_date", "2026-04-01")
-      .eq("is_active", false);
-
-    if (remainingBudgetsError) {
-      throw new Error(
-        `Admin budget verification failed: ${remainingBudgetsError.message}`,
-      );
-    }
-
-    if (
-      remainingBudgets &&
-      remainingBudgets.length > 0
-    ) {
-      const bodyText =
-        await page.locator("body").innerText();
-
-      throw new Error(
-        [
-          "Budget deletion did not remove the archived budget row from the database.",
-          `Matching database rows: ${JSON.stringify(remainingBudgets)}`,
-          "Page text after delete:",
-          bodyText,
-        ].join("\n"),
-      );
-    }
-
     await page.reload();
 
     const deletedCard =
@@ -579,4 +526,5 @@ test.describe("Budgets", () => {
     });
   });
 });
+
 
