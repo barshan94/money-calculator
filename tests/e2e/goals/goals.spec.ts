@@ -59,7 +59,9 @@ async function openGoalDetail(
 
   await expect(goalHeading).toBeVisible();
 
-  const goalLink = goalHeading.locator("..");
+  const goalLink = goalHeading
+    .locator("xpath=..")
+    .locator("..");
 
   await goalLink.click();
 
