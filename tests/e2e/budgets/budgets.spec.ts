@@ -1,7 +1,10 @@
 import { test, expect } from "@playwright/test";
 
 function escapeRegex(value: string) {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return value.replace(
+    /[.*+?^${}()|[\]\\]/g,
+    "\\$&",
+  );
 }
 
 function moneyAmount(amount: string) {
@@ -22,11 +25,14 @@ function budgetCard(
   categoryName: string,
   amount: string,
 ) {
-  const categoryHeading = page.getByRole("heading", {
-    name: categoryName,
-    level: 3,
-    exact: true,
-  });
+  const categoryHeading = page.getByRole(
+    "heading",
+    {
+      name: categoryName,
+      level: 3,
+      exact: true,
+    },
+  );
 
   return categoryHeading
     .locator("xpath=ancestor::section[1]")
@@ -45,54 +51,54 @@ function budgetCard(
     });
 }
 
-function archivedBudgetCard(
-  page: any,
-  categoryName: string,
-  amount: string,
-) {
-  const categoryHeading = page.getByRole("heading", {
-    name: categoryName,
-    level: 3,
-    exact: true,
-  });
-
-  return categoryHeading
-    .locator("xpath=ancestor::section[1]")
-    .filter({
-      hasText: moneyRegex(amount),
-    })
-    .filter({
-      hasText: "Archived",
-    });
-}
-
 async function selectE2EExpenseCategory(page: any) {
-  const categorySelect = page.getByLabel("Category", {
-    exact: true,
+  const category = page.getByLabel(
+    "Expense Category",
+    { exact: true },
+  );
+
+  await expect(category).toBeVisible({
+    timeout: 15000,
   });
 
-  const options = await categorySelect.locator("option").all();
+  await expect(
+    category
+      .locator(
+        'option[value]:not([value=""])',
+      )
+      .first(),
+  ).toBeAttached({
+    timeout: 15000,
+  });
 
-  for (let index = options.length - 1; index >= 0; index--) {
-    const text = await options[index].textContent();
+  const options = category.locator(
+    'option[value]:not([value=""])',
+  );
 
-    if (text?.trim().startsWith("E2E Expense ")) {
-      const value = await options[index].getAttribute("value");
+  const count = await options.count();
 
-      if (!value) {
-        throw new Error(
-          "Selected E2E Expense category has no value.",
-        );
-      }
+  for (let i = count - 1; i >= 0; i--) {
+    const option = options.nth(i);
 
-      await categorySelect.selectOption(value);
+    const text = (
+      await option.textContent()
+    )?.trim();
 
-      return text.trim();
+    if (text?.startsWith("E2E Expense ")) {
+      await category.selectOption({
+        label: text,
+      });
+
+      await expect(category).toHaveValue(
+        await option.getAttribute("value"),
+      );
+
+      return text;
     }
   }
 
   throw new Error(
-    "No E2E Expense category was found.",
+    "E2E Expense category was not found",
   );
 }
 
@@ -234,17 +240,13 @@ test.describe("Budgets", () => {
         "2026-01-01",
       );
 
-    const card = budgetCard(
-      page,
-      categoryName,
-      amount,
-    );
-
-    await expect(card).toHaveCount(1, {
-      timeout: 15000,
-    });
-
-    await expect(card).toBeVisible({
+    await expect(
+      budgetCard(
+        page,
+        categoryName,
+        amount,
+      ),
+    ).toBeVisible({
       timeout: 15000,
     });
 
@@ -258,37 +260,41 @@ test.describe("Budgets", () => {
   test("edits an existing budget", async ({
     page,
   }) => {
-    const amount = "11000";
+    const originalAmount = "11000";
     const updatedAmount = "15000";
 
     const categoryName =
       await createBudget(
         page,
-        amount,
+        originalAmount,
         "2026-02-01",
       );
 
     const card = budgetCard(
       page,
       categoryName,
-      amount,
+      originalAmount,
     );
 
-    await expect(card).toHaveCount(1, {
+    await expect(card).toBeVisible({
       timeout: 15000,
     });
 
-    await card.getByRole("link", {
-      name: "Edit",
-      exact: true,
-    }).click();
+    await card
+      .getByRole("link", {
+        name: "Edit",
+        exact: true,
+      })
+      .click();
 
-    await expect(page).toHaveURL(
-      /\/budgets\/[^/]+\/edit$/,
-      {
-        timeout: 15000,
-      },
-    );
+    await expect(
+      page.getByRole("heading", {
+        name: "Edit Budget",
+        exact: true,
+      }),
+    ).toBeVisible({
+      timeout: 15000,
+    });
 
     await page
       .getByLabel("Budget Amount", {
@@ -297,7 +303,7 @@ test.describe("Budgets", () => {
       .fill(updatedAmount);
 
     await page.getByRole("button", {
-      name: "Update Budget",
+      name: "Save Changes",
       exact: true,
     }).click();
 
@@ -316,10 +322,6 @@ test.describe("Budgets", () => {
       updatedAmount,
     );
 
-    await expect(updatedCard).toHaveCount(1, {
-      timeout: 15000,
-    });
-
     await expect(updatedCard).toBeVisible({
       timeout: 15000,
     });
@@ -331,7 +333,64 @@ test.describe("Budgets", () => {
     );
   });
 
-  test("archives a budget", async ({ page }) => {
+  test("rejects an invalid date range", async ({
+    page,
+  }) => {
+    await page.goto("/budgets/new");
+
+    await expect(
+      page.getByRole("heading", {
+        name: "New Budget",
+        exact: true,
+      }),
+    ).toBeVisible({
+      timeout: 15000,
+    });
+
+    await selectE2EExpenseCategory(page);
+
+    await page
+      .getByLabel("Budget Amount", {
+        exact: true,
+      })
+      .fill("12000");
+
+    await page
+      .locator("#start-date")
+      .fill("2092-06-20");
+
+    await page
+      .locator("#end-date")
+      .evaluate(
+        (element: HTMLInputElement) => {
+          element.removeAttribute("min");
+        },
+      );
+
+    await page
+      .locator("#end-date")
+      .fill("2092-06-19");
+
+    await page.getByRole("button", {
+      name: "Create Budget",
+      exact: true,
+    }).click();
+
+    await expect(
+      page.getByText(
+        "End date cannot be before the start date.",
+        {
+          exact: true,
+        },
+      ),
+    ).toBeVisible({
+      timeout: 15000,
+    });
+  });
+
+  test("archives a budget", async ({
+    page,
+  }) => {
     const amount = "13000";
 
     const categoryName =
@@ -375,11 +434,25 @@ test.describe("Budgets", () => {
     );
 
     const archivedCard =
-      archivedBudgetCard(
-        page,
-        categoryName,
-        amount,
-      );
+      page
+        .getByRole("heading", {
+          name: categoryName,
+          level: 3,
+          exact: true,
+        })
+        .locator("xpath=ancestor::section[1]")
+        .filter({
+          has: page
+            .locator("span")
+            .filter({
+              hasText: moneyRegex(amount),
+            }),
+        })
+        .filter({
+          has: page.getByText("Archived", {
+            exact: true,
+          }),
+        });
 
     await expect(
       archivedCard,
@@ -426,11 +499,25 @@ test.describe("Budgets", () => {
     await page.reload();
 
     const deletedCard =
-      archivedBudgetCard(
-        page,
-        categoryName,
-        amount,
-      );
+      page
+        .getByRole("heading", {
+          name: categoryName,
+          level: 3,
+          exact: true,
+        })
+        .locator("xpath=ancestor::section[1]")
+        .filter({
+          has: page
+            .locator("span")
+            .filter({
+              hasText: moneyRegex(amount),
+            }),
+        })
+        .filter({
+          has: page.getByText("Archived", {
+            exact: true,
+          }),
+        });
 
     await expect(
       deletedCard,
