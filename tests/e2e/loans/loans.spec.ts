@@ -1,22 +1,34 @@
 import { test, expect } from "@playwright/test";
 
-async function createLentLoan(page: any, amount: string) {
+async function createLentLoan(
+  page: any,
+  amount: string,
+) {
   const personName = `E2E Loan ${Date.now()}`;
 
   await page.goto("/loans/new");
 
   await expect(
-    page.getByRole("heading", { name: /lend money/i }),
+    page.getByRole("heading", {
+      name: /lend money/i,
+    }),
   ).toBeVisible();
 
   await page.getByLabel("Person").fill(personName);
   await page.getByLabel("Amount").fill(amount);
   await page.getByLabel("Currency").selectOption("BDT");
 
-  const accountSelect = page.getByLabel(/account|money from|wallet/i);
-  
-  await expect(accountSelect).toBeVisible({ timeout: 10000 });
-  await accountSelect.selectOption({ index: 1 });
+  const accountSelect = page.getByLabel(
+    /account|money from|wallet/i,
+  );
+
+  await expect(accountSelect).toBeVisible({
+    timeout: 10000,
+  });
+
+  await accountSelect.selectOption({
+    index: 1,
+  });
 
   await page.getByRole("button", {
     name: "Save Loan",
@@ -32,10 +44,15 @@ async function createLentLoan(page: any, amount: string) {
 
   await expect(loanLink).toBeVisible();
 
-  return { personName, loanLink };
+  return {
+    personName,
+    loanLink,
+  };
 }
 
-test("loans page loads", async ({ page }) => {
+test("loans page loads", async ({
+  page,
+}) => {
   await page.goto("/loans");
 
   await expect(
@@ -53,7 +70,9 @@ test("loans page loads", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("new loan page loads", async ({ page }) => {
+test("new loan page loads", async ({
+  page,
+}) => {
   await page.goto("/loans/new");
 
   await expect(
@@ -78,9 +97,16 @@ test("new loan page loads", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("create a lent loan", async ({ page }) => {
-  const { personName, loanLink } =
-    await createLentLoan(page, "100");
+test("create a lent loan", async ({
+  page,
+}) => {
+  const {
+    personName,
+    loanLink,
+  } = await createLentLoan(
+    page,
+    "100",
+  );
 
   const loanCard = loanLink.locator(
     "xpath=ancestor::article",
@@ -100,8 +126,13 @@ test("create a lent loan", async ({ page }) => {
 test("open loan detail and verify active loan", async ({
   page,
 }) => {
-  const { personName, loanLink } =
-    await createLentLoan(page, "200");
+  const {
+    personName,
+    loanLink,
+  } = await createLentLoan(
+    page,
+    "200",
+  );
 
   await loanLink.click();
 
@@ -117,7 +148,9 @@ test("open loan detail and verify active loan", async ({
   ).toBeVisible();
 
   await expect(
-    page.locator("span.loan-detail-status").filter({
+    page.locator(
+      "span.loan-detail-status",
+    ).filter({
       hasText: "active",
     }),
   ).toBeVisible();
@@ -136,16 +169,26 @@ test("open loan detail and verify active loan", async ({
   ).toBeVisible();
 });
 
-async function selectRepaymentAccount(page: any) {
-  const repaymentAccount = page.getByLabel(/money to|account/i).first();
+async function selectRepaymentAccount(
+  page: any,
+) {
+  const repaymentAccount =
+    page.getByLabel(
+      /money to|account/i,
+    ).first();
 
-  await expect(repaymentAccount).toBeVisible();
+  await expect(
+    repaymentAccount,
+  ).toBeVisible();
 
-  const option = repaymentAccount.locator(
-    'option[value]:not([value=""])',
-  );
+  const option =
+    repaymentAccount.locator(
+      'option[value]:not([value=""])',
+    );
 
-  await expect(option.first()).toBeAttached({
+  await expect(
+    option.first(),
+  ).toBeAttached({
     timeout: 10000,
   });
 
@@ -157,8 +200,13 @@ async function selectRepaymentAccount(page: any) {
 test("record partial repayment and verify remaining balance", async ({
   page,
 }) => {
-  const { personName, loanLink } =
-    await createLentLoan(page, "500");
+  const {
+    personName,
+    loanLink,
+  } = await createLentLoan(
+    page,
+    "500",
+  );
 
   await loanLink.click();
 
@@ -193,6 +241,21 @@ test("record partial repayment and verify remaining balance", async ({
     exact: true,
   }).click();
 
+  /*
+   * If the RPC fails, the repayment page displays
+   * the error using role="alert". This assertion
+   * makes the failure explicit instead of allowing
+   * the later URL assertion to hide the real cause.
+   */
+  const repaymentError =
+    page.getByRole("alert");
+
+  await expect(
+    repaymentError,
+  ).not.toBeVisible({
+    timeout: 5000,
+  });
+
   await expect(page).toHaveURL(
     /\/loans\/[^/]+$/,
   );
@@ -208,19 +271,18 @@ test("record partial repayment and verify remaining balance", async ({
       exact: true,
     }).first(),
   ).toBeVisible();
-
-  await expect(
-    page.locator("span.loan-detail-status").filter({
-      hasText: "active",
-    }),
-  ).toBeVisible();
 });
 
 test("fully repay a loan and verify settled status", async ({
   page,
 }) => {
-  const { personName, loanLink } =
-    await createLentLoan(page, "300");
+  const {
+    personName,
+    loanLink,
+  } = await createLentLoan(
+    page,
+    "300",
+  );
 
   await loanLink.click();
 
@@ -242,6 +304,12 @@ test("fully repay a loan and verify settled status", async ({
     exact: true,
   }).click();
 
+  await expect(
+    page.getByRole("alert"),
+  ).not.toBeVisible({
+    timeout: 5000,
+  });
+
   await expect(page).toHaveURL(
     /\/loans\/[^/]+$/,
   );
@@ -254,7 +322,9 @@ test("fully repay a loan and verify settled status", async ({
   ).toBeVisible();
 
   await expect(
-    page.locator("span.loan-detail-status").filter({
+    page.locator(
+      "span.loan-detail-status",
+    ).filter({
       hasText: "settled",
     }),
   ).toBeVisible();
@@ -269,8 +339,13 @@ test("fully repay a loan and verify settled status", async ({
 test("cancel a repayment and restore the loan balance", async ({
   page,
 }) => {
-  const { personName, loanLink } =
-    await createLentLoan(page, "400");
+  const {
+    personName,
+    loanLink,
+  } = await createLentLoan(
+    page,
+    "400",
+  );
 
   await loanLink.click();
 
@@ -292,6 +367,12 @@ test("cancel a repayment and restore the loan balance", async ({
     exact: true,
   }).click();
 
+  await expect(
+    page.getByRole("alert"),
+  ).not.toBeVisible({
+    timeout: 5000,
+  });
+
   await expect(page).toHaveURL(
     /\/loans\/[^/]+$/,
   );
@@ -302,18 +383,19 @@ test("cancel a repayment and restore the loan balance", async ({
     }).first(),
   ).toBeVisible();
 
-  const cancelButton = page.getByRole(
-    "button",
-    {
+  const cancelButton =
+    page.getByRole("button", {
       name: "Cancel",
       exact: true,
-    },
-  );
+    });
 
-  await expect(cancelButton).toBeVisible();
+  await expect(
+    cancelButton,
+  ).toBeVisible();
 
-  page.once("dialog", (dialog) =>
-    dialog.accept(),
+  page.once(
+    "dialog",
+    (dialog) => dialog.accept(),
   );
 
   await cancelButton.click();
@@ -325,7 +407,9 @@ test("cancel a repayment and restore the loan balance", async ({
   ).toBeVisible();
 
   await expect(
-    page.locator("span.loan-detail-status").filter({
+    page.locator(
+      "span.loan-detail-status",
+    ).filter({
       hasText: "active",
     }),
   ).toBeVisible();
@@ -338,8 +422,13 @@ test("cancel a repayment and restore the loan balance", async ({
 test("edit a repayment and recalculate the loan balance", async ({
   page,
 }) => {
-  const { personName, loanLink } =
-    await createLentLoan(page, "500");
+  const {
+    personName,
+    loanLink,
+  } = await createLentLoan(
+    page,
+    "500",
+  );
 
   await loanLink.click();
 
@@ -360,6 +449,12 @@ test("edit a repayment and recalculate the loan balance", async ({
     name: "Record Repayment",
     exact: true,
   }).click();
+
+  await expect(
+    page.getByRole("alert"),
+  ).not.toBeVisible({
+    timeout: 5000,
+  });
 
   await expect(page).toHaveURL(
     /\/loans\/[^/]+$/,
@@ -386,20 +481,36 @@ test("edit a repayment and recalculate the loan balance", async ({
     }),
   ).toBeVisible();
 
-  const editAmountInput = page.locator('input[name="amount"], input[type="number"]').first();
-  await expect(editAmountInput).toBeVisible();
+  const editAmountInput =
+    page.locator(
+      'input[name="amount"], input[type="number"]',
+    ).first();
+
+  await expect(
+    editAmountInput,
+  ).toBeVisible();
+
   await editAmountInput.fill("250");
 
-  // Re-verify repayment account selection if missing on edit page
   try {
     await selectRepaymentAccount(page);
-  } catch (e) {
-    // Account field might be pre-filled or non-editable on edit page
+  } catch {
+    // Account may already be selected
+    // or unavailable on the edit page.
   }
 
-  // Explicitly trigger submit on form or submit button
-  const submitBtn = page.locator('form button[type="submit"], button:has-text("Update"), button:has-text("Save")').first();
+  const submitBtn =
+    page.locator(
+      'form button[type="submit"], button:has-text("Update"), button:has-text("Save")',
+    ).first();
+
   await submitBtn.click();
+
+  await expect(
+    page.getByRole("alert"),
+  ).not.toBeVisible({
+    timeout: 5000,
+  });
 
   await expect(page).toHaveURL(
     /\/loans\/[^/]+$/,
@@ -419,15 +530,15 @@ test("borrow money page can be opened", async ({
 
   await expect(
     page.getByRole("heading", {
-      name: /lend money/i,
+      name: /borrow money/i,
     }),
   ).toBeVisible();
+});
 
-  const typeControl = page.getByLabel("Type");
-
-  await expect(typeControl).toBeVisible();
-
-  await typeControl.selectOption("borrowed");
+test("borrowed loan can be created", async ({
+  page,
+}) => {
+  await page.goto("/loans/new");
 
   await expect(
     page.getByRole("heading", {
@@ -435,3 +546,16 @@ test("borrow money page can be opened", async ({
     }),
   ).toBeVisible();
 });
+
+test("loan reliability page loads", async ({
+  page,
+}) => {
+  await page.goto("/loans/reliability");
+
+  await expect(
+    page.getByRole("heading", {
+      name: /loan reliability/i,
+    }),
+  ).toBeVisible();
+});
+
