@@ -1,7 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Individual Reports E2E", () => {
-  test("income vs expenses report loads", async ({ page }) => {
+  test("income vs expenses report loads", async ({
+    page,
+  }) => {
     await page.goto("/reports/income-expense");
 
     await expect(
@@ -31,7 +33,9 @@ test.describe("Individual Reports E2E", () => {
     ).toBeVisible();
   });
 
-  test("spending by category report loads", async ({ page }) => {
+  test("spending by category report loads", async ({
+    page,
+  }) => {
     await page.goto("/reports/spending-by-category");
 
     await expect(
@@ -61,7 +65,9 @@ test.describe("Individual Reports E2E", () => {
     ).toBeVisible();
   });
 
-  test("account balances report loads", async ({ page }) => {
+  test("account balances report loads", async ({
+    page,
+  }) => {
     await page.goto("/reports/account-balances");
 
     await expect(
@@ -85,7 +91,9 @@ test.describe("Individual Reports E2E", () => {
     ).toBeVisible();
   });
 
-  test("monthly trends report loads", async ({ page }) => {
+  test("monthly trends report loads", async ({
+    page,
+  }) => {
     await page.goto("/reports/monthly-trends");
 
     await expect(
@@ -97,7 +105,9 @@ test.describe("Individual Reports E2E", () => {
     ).toBeVisible({ timeout: 15000 });
   });
 
-  test("investment report loads", async ({ page }) => {
+  test("investment report loads", async ({
+    page,
+  }) => {
     await page.goto("/reports/investments");
 
     await expect(
@@ -109,8 +119,12 @@ test.describe("Individual Reports E2E", () => {
     ).toBeVisible({ timeout: 15000 });
   });
 
-  test("investment analytics report loads", async ({ page }) => {
-    await page.goto("/reports/investment-analytics");
+  test("investment analytics report loads", async ({
+    page,
+  }) => {
+    await page.goto(
+      "/reports/investment-analytics",
+    );
 
     await expect(
       page.getByRole("heading", {
@@ -151,7 +165,9 @@ test.describe("Individual Reports E2E", () => {
     ).toBeVisible();
   });
 
-  test("loan report loads", async ({ page }) => {
+  test("loan report loads", async ({
+    page,
+  }) => {
     await page.goto("/reports/loans");
 
     await expect(
@@ -163,7 +179,9 @@ test.describe("Individual Reports E2E", () => {
     ).toBeVisible({ timeout: 15000 });
   });
 
-  test("deposit report loads", async ({ page }) => {
+  test("deposit report loads", async ({
+    page,
+  }) => {
     await page.goto("/reports/deposits");
 
     await expect(
@@ -174,7 +192,9 @@ test.describe("Individual Reports E2E", () => {
     ).toBeVisible({ timeout: 15000 });
   });
 
-  test("goal report loads", async ({ page }) => {
+  test("goal report loads", async ({
+    page,
+  }) => {
     await page.goto("/reports/goals");
 
     await expect(
@@ -186,7 +206,9 @@ test.describe("Individual Reports E2E", () => {
     ).toBeVisible({ timeout: 15000 });
   });
 
-  test("liquidity report loads", async ({ page }) => {
+  test("liquidity report loads", async ({
+    page,
+  }) => {
     await page.goto("/reports/liquidity");
 
     await expect(
@@ -207,7 +229,9 @@ test.describe("Individual Reports E2E", () => {
   test("net-worth forecast report loads", async ({
     page,
   }) => {
-    await page.goto("/reports/net-worth-forecast");
+    await page.goto(
+      "/reports/net-worth-forecast",
+    );
 
     await expect(
       page.getByRole("heading", {

@@ -187,6 +187,10 @@ export default async function ReportsPage() {
               "/reports/investments",
             ],
             [
+              "Investment Analytics",
+              "/reports/investment-analytics",
+            ],
+            [
               "Loans",
               "/reports/loans",
             ],
@@ -225,4 +229,3 @@ export default async function ReportsPage() {
       </section>
     </main>
   );
-}
