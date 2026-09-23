@@ -433,37 +433,18 @@ test.describe("Budgets", () => {
       amount,
     );
 
-    const archivedSection =
+    /*
+     * Locate the unique category heading first.
+     * Its nearest section is the actual archived budget card.
+     */
+    const archivedCard =
       page
         .getByRole("heading", {
-          name: "Archived Budgets",
-          exact: true,
-        })
-        .locator("xpath=ancestor::section[1]");
-
-    /*
-     * The archived budget layout is:
-     *
-     * archived section
-     *   -> grid div
-     *      -> budget card section
-     *
-     * Target only those direct card sections instead of every
-     * nested <section> descendant.
-     */
-    const archivedCards =
-      archivedSection.locator(
-        ":scope > div > div > section",
-      );
-
-    const archivedCard =
-      archivedCards.filter({
-        has: page.getByRole("heading", {
           name: categoryName,
           level: 3,
           exact: true,
-        }),
-      });
+        })
+        .locator("xpath=ancestor::section[1]");
 
     await expect(
       archivedCard,
@@ -534,15 +515,13 @@ test.describe("Budgets", () => {
     await page.reload();
 
     const deletedCard =
-      archivedSection.locator(
-        ":scope > div > div > section",
-      ).filter({
-        has: page.getByRole("heading", {
+      page
+        .getByRole("heading", {
           name: categoryName,
           level: 3,
           exact: true,
-        }),
-      });
+        })
+        .locator("xpath=ancestor::section[1]");
 
     await expect(
       deletedCard,
