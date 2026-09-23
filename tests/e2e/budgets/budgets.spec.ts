@@ -442,21 +442,28 @@ test.describe("Budgets", () => {
         .locator("xpath=ancestor::section[1]");
 
     /*
-     * Find the archived card by its unique E2E category name.
-     * We intentionally do not include the money regex in this
-     * card-level filter because the card contains multiple text
-     * nodes and the anchored money regex is better checked
-     * directly against the amount element.
+     * The archived budget layout is:
+     *
+     * archived section
+     *   -> grid div
+     *      -> budget card section
+     *
+     * Target only those direct card sections instead of every
+     * nested <section> descendant.
      */
+    const archivedCards =
+      archivedSection.locator(
+        ":scope > div > div > section",
+      );
+
     const archivedCard =
-      archivedSection
-        .locator("section")
-        .filter({
-          hasText: categoryName,
-        })
-        .filter({
-          hasText: "Archived",
-        });
+      archivedCards.filter({
+        has: page.getByRole("heading", {
+          name: categoryName,
+          level: 3,
+          exact: true,
+        }),
+      });
 
     await expect(
       archivedCard,
@@ -481,6 +488,17 @@ test.describe("Budgets", () => {
       timeout: 15000,
     });
 
+    await expect(
+      archivedCard.getByText(
+        "Archived",
+        {
+          exact: true,
+        },
+      ),
+    ).toBeVisible({
+      timeout: 15000,
+    });
+
     const deleteButton =
       archivedCard.getByRole(
         "button",
@@ -490,7 +508,9 @@ test.describe("Budgets", () => {
         },
       );
 
-    await expect(deleteButton).toHaveCount(1);
+    await expect(
+      deleteButton,
+    ).toHaveCount(1);
 
     page.once("dialog", async (dialog) => {
       expect(dialog.type()).toBe("confirm");
@@ -514,19 +534,15 @@ test.describe("Budgets", () => {
     await page.reload();
 
     const deletedCard =
-      page
-        .getByRole("heading", {
-          name: "Archived Budgets",
+      archivedSection.locator(
+        ":scope > div > div > section",
+      ).filter({
+        has: page.getByRole("heading", {
+          name: categoryName,
+          level: 3,
           exact: true,
-        })
-        .locator("xpath=ancestor::section[1]")
-        .locator("section")
-        .filter({
-          hasText: categoryName,
-        })
-        .filter({
-          hasText: "Archived",
-        });
+        }),
+      });
 
     await expect(
       deletedCard,
@@ -535,5 +551,4 @@ test.describe("Budgets", () => {
     });
   });
 });
-
 
