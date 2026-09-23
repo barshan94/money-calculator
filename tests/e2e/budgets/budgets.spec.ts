@@ -433,55 +433,24 @@ test.describe("Budgets", () => {
       amount,
     );
 
-    /*
-     * The page contains one outer "Archived Budgets"
-     * section and individual budget-card sections inside it.
-     *
-     * Start from the archived-budget heading so the locator
-     * cannot accidentally select the active-budget section.
-     */
-    const archivedBudgetsSection =
-      page
-        .getByRole("heading", {
-          name: "Archived Budgets",
+    const archivedCard = page
+      .locator(
+        `[data-testid^="archived-budget-card-"]`,
+      )
+      .filter({
+        has: page.getByRole("heading", {
+          name: categoryName,
+          level: 3,
           exact: true,
-        })
-        .locator("xpath=ancestor::section[1]");
-
-    await expect(
-      archivedBudgetsSection,
-    ).toHaveCount(1, {
-      timeout: 15000,
-    });
-
-    await expect(
-      archivedBudgetsSection,
-    ).toBeVisible({
-      timeout: 15000,
-    });
-
-    const archivedCard =
-      archivedBudgetsSection
-        .locator("section")
-        .filter({
-          has: page.getByRole("heading", {
-            name: categoryName,
-            level: 3,
-            exact: true,
+        }),
+      })
+      .filter({
+        has: page
+          .locator("span")
+          .filter({
+            hasText: moneyRegex(amount),
           }),
-        })
-        .filter({
-          has: page
-            .locator("span")
-            .filter({
-              hasText: moneyRegex(amount),
-            }),
-        })
-        .filter({
-          has: page.getByText("Archived", {
-            exact: true,
-          }),
-        });
+      });
 
     await expect(
       archivedCard,
@@ -530,7 +499,17 @@ test.describe("Budgets", () => {
     await page.reload();
 
     await expect(
-      archivedBudgetsSection,
+      page
+        .locator(
+          `[data-testid^="archived-budget-card-"]`,
+        )
+        .filter({
+          has: page.getByRole("heading", {
+            name: categoryName,
+            level: 3,
+            exact: true,
+          }),
+        }),
     ).toHaveCount(0, {
       timeout: 15000,
     });
