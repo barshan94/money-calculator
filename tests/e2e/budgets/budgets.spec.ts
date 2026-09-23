@@ -434,17 +434,54 @@ test.describe("Budgets", () => {
     );
 
     /*
-     * Locate the unique category heading first.
-     * Its nearest section is the actual archived budget card.
+     * The page contains one outer "Archived Budgets"
+     * section and individual budget-card sections inside it.
+     *
+     * Start from the archived-budget heading so the locator
+     * cannot accidentally select the active-budget section.
      */
-    const archivedCard =
+    const archivedBudgetsSection =
       page
         .getByRole("heading", {
-          name: categoryName,
-          level: 3,
+          name: "Archived Budgets",
           exact: true,
         })
         .locator("xpath=ancestor::section[1]");
+
+    await expect(
+      archivedBudgetsSection,
+    ).toHaveCount(1, {
+      timeout: 15000,
+    });
+
+    await expect(
+      archivedBudgetsSection,
+    ).toBeVisible({
+      timeout: 15000,
+    });
+
+    const archivedCard =
+      archivedBudgetsSection
+        .locator("section")
+        .filter({
+          has: page.getByRole("heading", {
+            name: categoryName,
+            level: 3,
+            exact: true,
+          }),
+        })
+        .filter({
+          has: page
+            .locator("span")
+            .filter({
+              hasText: moneyRegex(amount),
+            }),
+        })
+        .filter({
+          has: page.getByText("Archived", {
+            exact: true,
+          }),
+        });
 
     await expect(
       archivedCard,
@@ -454,28 +491,6 @@ test.describe("Budgets", () => {
 
     await expect(
       archivedCard,
-    ).toBeVisible({
-      timeout: 15000,
-    });
-
-    await expect(
-      archivedCard.getByText(
-        moneyRegex(amount),
-        {
-          exact: true,
-        },
-      ),
-    ).toBeVisible({
-      timeout: 15000,
-    });
-
-    await expect(
-      archivedCard.getByText(
-        "Archived",
-        {
-          exact: true,
-        },
-      ),
     ).toBeVisible({
       timeout: 15000,
     });
@@ -514,20 +529,10 @@ test.describe("Budgets", () => {
 
     await page.reload();
 
-    const deletedCard =
-      page
-        .getByRole("heading", {
-          name: categoryName,
-          level: 3,
-          exact: true,
-        })
-        .locator("xpath=ancestor::section[1]");
-
     await expect(
-      deletedCard,
+      archivedBudgetsSection,
     ).toHaveCount(0, {
       timeout: 15000,
     });
   });
 });
-
