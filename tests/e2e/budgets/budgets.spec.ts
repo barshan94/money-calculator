@@ -441,31 +441,21 @@ test.describe("Budgets", () => {
         })
         .locator("xpath=ancestor::section[1]");
 
+    /*
+     * Find the archived card by its unique E2E category name.
+     * We intentionally do not include the money regex in this
+     * card-level filter because the card contains multiple text
+     * nodes and the anchored money regex is better checked
+     * directly against the amount element.
+     */
     const archivedCard =
       archivedSection
         .locator("section")
         .filter({
-          has: page.getByRole("heading", {
-            name: categoryName,
-            level: 3,
-            exact: true,
-          }),
+          hasText: categoryName,
         })
         .filter({
-          has: page.getByText(
-            moneyRegex(amount),
-            {
-              exact: true,
-            },
-          ),
-        })
-        .filter({
-          has: page.getByText(
-            "Archived",
-            {
-              exact: true,
-            },
-          ),
+          hasText: "Archived",
         });
 
     await expect(
@@ -476,6 +466,17 @@ test.describe("Budgets", () => {
 
     await expect(
       archivedCard,
+    ).toBeVisible({
+      timeout: 15000,
+    });
+
+    await expect(
+      archivedCard.getByText(
+        moneyRegex(amount),
+        {
+          exact: true,
+        },
+      ),
     ).toBeVisible({
       timeout: 15000,
     });
@@ -521,27 +522,10 @@ test.describe("Budgets", () => {
         .locator("xpath=ancestor::section[1]")
         .locator("section")
         .filter({
-          has: page.getByRole("heading", {
-            name: categoryName,
-            level: 3,
-            exact: true,
-          }),
+          hasText: categoryName,
         })
         .filter({
-          has: page.getByText(
-            moneyRegex(amount),
-            {
-              exact: true,
-            },
-          ),
-        })
-        .filter({
-          has: page.getByText(
-            "Archived",
-            {
-              exact: true,
-            },
-          ),
+          hasText: "Archived",
         });
 
     await expect(
