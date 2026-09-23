@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Investment = {
@@ -23,7 +23,6 @@ type Account = {
 
 export default function SellInvestmentPage() {
   const params = useParams();
-  const router = useRouter();
   const supabase = createClient();
 
   const investmentId = params.id as string;
@@ -135,14 +134,14 @@ export default function SellInvestmentPage() {
     }
 
     if (
-  !Number.isFinite(sellQuantity) ||
-  sellQuantity <= 0
-) {
-  setError(
-    "Enter a valid quantity to sell.",
-  );
-  return;
-}
+      !Number.isFinite(sellQuantity) ||
+      sellQuantity <= 0
+    ) {
+      setError(
+        "Enter a valid quantity to sell.",
+      );
+      return;
+    }
 
     if (sellQuantity > heldQuantity) {
       setError(
@@ -154,14 +153,14 @@ export default function SellInvestmentPage() {
     }
 
     if (
-  !Number.isFinite(price) ||
-  price <= 0
-) {
-  setError(
-    "Enter a valid sale price.",
-  );
-  return;
-}
+      !Number.isFinite(price) ||
+      price <= 0
+    ) {
+      setError(
+        "Enter a valid sale price.",
+      );
+      return;
+    }
 
     if (!accountId) {
       setError(
@@ -198,10 +197,8 @@ export default function SellInvestmentPage() {
       return;
     }
 
-    router.push(
-      `/investments/${investment.id}`,
-    );
-    router.refresh();
+    window.location.href =
+      `/investments/${investment.id}`;
   }
 
   if (loading) {

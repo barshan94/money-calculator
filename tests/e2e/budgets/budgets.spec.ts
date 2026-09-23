@@ -442,10 +442,20 @@ test.describe("Budgets", () => {
         })
         .locator("xpath=ancestor::section[1]")
         .filter({
-          hasText: moneyRegex(amount),
+          has: page.getByText(
+            moneyRegex(amount),
+            {
+              exact: true,
+            },
+          ),
         })
         .filter({
-          hasText: "Archived",
+          has: page.getByText(
+            "Archived",
+            {
+              exact: true,
+            },
+          ),
         });
 
     await expect(
@@ -501,10 +511,20 @@ test.describe("Budgets", () => {
         })
         .locator("xpath=ancestor::section[1]")
         .filter({
-          hasText: moneyRegex(amount),
+          has: page.getByText(
+            moneyRegex(amount),
+            {
+              exact: true,
+            },
+          ),
         })
         .filter({
-          hasText: "Archived",
+          has: page.getByText(
+            "Archived",
+            {
+              exact: true,
+            },
+          ),
         });
 
     await expect(
