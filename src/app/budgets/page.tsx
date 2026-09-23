@@ -1,4 +1,3 @@
-
 import Link from "next/link";
 import { getBudgetProgress } from "@/lib/finance/get-budget-progress";
 import { formatMoney } from "@/lib/finance/format-money";
@@ -250,6 +249,7 @@ export default async function BudgetsPage() {
             {archivedBudgets.map((budget) => (
               <section
                 key={budget.id}
+                data-testid={`archived-budget-card-${budget.id}`}
                 className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 opacity-80 shadow-[var(--shadow-sm)]"
               >
                 <div className="mb-4 flex items-start justify-between gap-3">
