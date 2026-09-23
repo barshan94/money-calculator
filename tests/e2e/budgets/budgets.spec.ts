@@ -433,14 +433,24 @@ test.describe("Budgets", () => {
       amount,
     );
 
-    const archivedCard =
+    const archivedSection =
       page
         .getByRole("heading", {
-          name: categoryName,
-          level: 3,
+          name: "Archived Budgets",
           exact: true,
         })
-        .locator("xpath=ancestor::section[1]")
+        .locator("xpath=ancestor::section[1]");
+
+    const archivedCard =
+      archivedSection
+        .locator("section")
+        .filter({
+          has: page.getByRole("heading", {
+            name: categoryName,
+            level: 3,
+            exact: true,
+          }),
+        })
         .filter({
           has: page.getByText(
             moneyRegex(amount),
@@ -505,11 +515,18 @@ test.describe("Budgets", () => {
     const deletedCard =
       page
         .getByRole("heading", {
-          name: categoryName,
-          level: 3,
+          name: "Archived Budgets",
           exact: true,
         })
         .locator("xpath=ancestor::section[1]")
+        .locator("section")
+        .filter({
+          has: page.getByRole("heading", {
+            name: categoryName,
+            level: 3,
+            exact: true,
+          }),
+        })
         .filter({
           has: page.getByText(
             moneyRegex(amount),
