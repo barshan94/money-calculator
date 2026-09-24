@@ -111,7 +111,21 @@ setup("authenticate", async ({ baseURL }) => {
       },
     );
 
-    console.log("E2E ACCOUNT:", accountName);
+    // Diagnostic verification:
+    // confirm that the account created during setup is
+    // actually visible before storageState is saved.
+    await expect(
+      page.getByText(accountName, {
+        exact: true,
+      }),
+    ).toBeVisible({
+      timeout: 30000,
+    });
+
+    console.log(
+      "E2E ACCOUNT VERIFIED:",
+      accountName,
+    );
 
     const categoryName = `E2E Expense ${Date.now()}`;
 
