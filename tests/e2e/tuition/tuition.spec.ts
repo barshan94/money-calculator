@@ -1,11 +1,6 @@
 import { test, expect } from "@playwright/test";
 
 async function openAddStudentForm(page: any) {
-  page.on("dialog", async (dialog) => {
-    console.log("ALERT:", dialog.message());
-    await dialog.dismiss();
-  });
-
   await page.goto("/tuition");
 
   await expect(
