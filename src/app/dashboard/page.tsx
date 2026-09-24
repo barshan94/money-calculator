@@ -6,6 +6,7 @@ import { getFinancialSummary } from "@/lib/finance/get-financial-summary";
 import { formatMoney } from "@/lib/finance/format-money";
 import { getMonthlyNetWorth } from "@/lib/finance/get-monthly-net-worth";
 import { getLoanBalances } from "@/lib/finance/get-loan-balances";
+import { getRecentTransactions } from "@/lib/finance/get-recent-transactions";
 import { getTuitionMonthlyStatus } from "@/lib/finance/get-tuition-monthly-status";
 import { getCashFlowForecast } from "@/lib/intelligence/get-cash-flow-forecast";
 import { getFinancialInsights } from "@/lib/intelligence/get-financial-insights";
@@ -91,6 +92,7 @@ export default async function DashboardPage() {
     cashFlowForecast,
     loanBalances,
     tuitionStatuses,
+    recentTransactions,
   ] = await Promise.all([
     getAccountBalances(),
     getFinancialSummary(),
@@ -102,6 +104,7 @@ export default async function DashboardPage() {
     }),
     getLoanBalances(),
     getTuitionMonthlyStatus(currentMonth),
+    getRecentTransactions(8),
   ]);
 
   const netWorthCurrencies = [
@@ -995,6 +998,106 @@ export default async function DashboardPage() {
         <section className="dashboard-section">
           <div className="dashboard-section-header">
             <div>
+              <h2>Recent Activity</h2>
+
+              <p>
+                Your latest recorded financial activity.
+              </p>
+            </div>
+
+            <Link href="/transactions">
+              View all transactions →
+            </Link>
+          </div>
+
+          {recentTransactions.length === 0 ? (
+            <p className="dashboard-empty">
+              No transactions recorded yet.
+            </p>
+          ) : (
+            <div className="dashboard-recent-activity-list">
+              {recentTransactions.map((transaction) => {
+                const amountColor =
+                  transaction.direction === "income"
+                    ? "var(--success)"
+                    : transaction.direction === "expense"
+                      ? "var(--danger)"
+                      : "var(--foreground)";
+
+                const prefix =
+                  transaction.direction === "income"
+                    ? "+"
+                    : transaction.direction === "expense"
+                      ? "−"
+                      : "";
+
+                return (
+                  <Link
+                    key={transaction.id}
+                    href={`/transactions/${transaction.id}`}
+                    className="dashboard-recent-activity-row"
+                  >
+                    <div className="dashboard-recent-activity-main">
+                      <div className="dashboard-recent-activity-title">
+                        <strong>{transaction.label}</strong>
+
+                        {transaction.transaction_type ===
+                          "opening_balance" && (
+                          <span className="dashboard-recent-activity-badge">
+                            Opening balance
+                          </span>
+                        )}
+
+                        {transaction.isReversed && (
+                          <span className="dashboard-recent-activity-badge">
+                            ↩ Reversed
+                          </span>
+                        )}
+                      </div>
+
+                      <span className="dashboard-recent-activity-meta">
+                        {new Date(
+                          transaction.transaction_date,
+                        ).toLocaleDateString("en-BD", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+
+                        {transaction.description
+                          ? ` · ${transaction.description}`
+                          : ""}
+                      </span>
+                    </div>
+
+                    <strong
+                      className="dashboard-recent-activity-amount"
+                      style={{
+                        color: transaction.isReversed
+                          ? "var(--muted)"
+                          : amountColor,
+                        textDecoration:
+                          transaction.isReversed
+                            ? "line-through"
+                            : "none",
+                      }}
+                    >
+                      {prefix}
+                      {formatMoney(
+                        transaction.amount,
+                        transaction.currency,
+                      )}
+                    </strong>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
+        <section className="dashboard-section">
+          <div className="dashboard-section-header">
+            <div>
               <h2>Accounts</h2>
 
               <p>
@@ -1558,6 +1661,77 @@ export default async function DashboardPage() {
           font-size: 21px;
         }
 
+        .dashboard-recent-activity-list {
+          display: flex;
+          flex-direction: column;
+        }
+
+        .dashboard-recent-activity-row {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          padding: 14px 0;
+          border-bottom: 1px solid
+            rgba(127, 127, 127, 0.15);
+          text-decoration: none;
+        }
+
+        .dashboard-recent-activity-row:first-child {
+          padding-top: 0;
+        }
+
+        .dashboard-recent-activity-row:last-child {
+          padding-bottom: 0;
+          border-bottom: 0;
+        }
+
+        .dashboard-recent-activity-main {
+          min-width: 0;
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+        }
+
+        .dashboard-recent-activity-title {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .dashboard-recent-activity-title strong {
+          font-size: 15px;
+        }
+
+        .dashboard-recent-activity-badge {
+          padding: 3px 7px;
+          border: 1px solid rgba(
+            127,
+            127,
+            127,
+            0.18
+          );
+          border-radius: 999px;
+          font-size: 10px;
+          font-weight: 600;
+          opacity: 0.7;
+        }
+
+        .dashboard-recent-activity-meta {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          font-size: 12px;
+          opacity: 0.6;
+        }
+
+        .dashboard-recent-activity-amount {
+          flex-shrink: 0;
+          font-size: 15px;
+          text-align: right;
+        }
+
         .dashboard-accounts-list {
           display: flex;
           flex-direction: column;
@@ -1667,6 +1841,14 @@ export default async function DashboardPage() {
           .dashboard-cash-flow-summary,
           .dashboard-net-worth-grid {
             grid-template-columns: 1fr;
+          }
+
+          .dashboard-recent-activity-row {
+            align-items: flex-start;
+          }
+
+          .dashboard-recent-activity-amount {
+            text-align: right;
           }
 
           .dashboard-account-row {
