@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("dashboard shows financial position, insights, and cash flow forecast", async ({
+test("dashboard shows financial position, insights, cash flow forecast, and planning overview", async ({
   page,
 }) => {
   await page.goto("/dashboard");
@@ -86,5 +86,44 @@ test("dashboard shows financial position, insights, and cash flow forecast", asy
   ).toHaveAttribute(
     "href",
     "/reports/cash-flow-forecast",
+  );
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Goals & Budgets Overview",
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("Goals", {
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("link", {
+      name: "View goals →",
+      exact: true,
+    }),
+  ).toHaveAttribute(
+    "href",
+    "/goals",
+  );
+
+  await expect(
+    page.getByText("Budgets", {
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("link", {
+      name: "View budgets →",
+      exact: true,
+    }),
+  ).toHaveAttribute(
+    "href",
+    "/budgets",
   );
 });
