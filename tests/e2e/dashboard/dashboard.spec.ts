@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("dashboard shows financial position", async ({
+test("dashboard shows financial position and insights", async ({
   page,
 }) => {
   await page.goto("/dashboard");
@@ -53,4 +53,21 @@ test("dashboard shows financial position", async ({
       .locator("a.dashboard-metric-card")
       .filter({ hasText: /^Recurring/ }),
   ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Financial Insights",
+      exact: true,
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("link", {
+      name: "View insights →",
+      exact: true,
+    }),
+  ).toHaveAttribute(
+    "href",
+    "/reports/financial-insights",
+  );
 });
