@@ -1,100 +1,211 @@
 import Link from "next/link";
-import MonthlyIncomeExpenseChart from "@/components/reports/monthly-income-expense-chart";
 import { getMonthlyIncomeExpense } from "@/lib/finance/get-monthly-income-expense";
+import MonthlyIncomeExpenseChart from "@/components/reports/monthly-income-expense-chart";
 
-function formatAmount(amount: number) {
-  return `BDT ${Number(amount).toLocaleString("en-BD", {
+function formatMoney(amount: number) {
+  return `BDT ${amount.toLocaleString("en-BD", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 }
 
 export default async function MonthlyTrendsPage() {
-  const report = await getMonthlyIncomeExpense("BDT");
+  const data = await getMonthlyIncomeExpense("BDT");
+
+  const totalIncome = data.reduce(
+    (sum, month) => sum + Number(month.income),
+    0,
+  );
+
+  const totalExpenses = data.reduce(
+    (sum, month) => sum + Number(month.expenses),
+    0,
+  );
+
+  const totalNet = totalIncome - totalExpenses;
 
   return (
     <main
       style={{
-        maxWidth: 1200,
+        maxWidth: "1100px",
         margin: "0 auto",
         padding: "24px 16px 48px",
       }}
     >
       <header
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start",
-          gap: 20,
-          marginBottom: 32,
-          flexWrap: "wrap",
+          marginBottom: "28px",
         }}
       >
-        <div>
-          <h1 style={{ marginBottom: 8 }}>Monthly Trends</h1>
+        <Link
+          href="/reports"
+          style={{
+            display: "inline-block",
+            marginBottom: "12px",
+            textDecoration: "none",
+            fontSize: "14px",
+          }}
+        >
+          ← Back to Reports
+        </Link>
+
+        <h1
+          style={{
+            margin: 0,
+            fontSize: "clamp(28px, 5vw, 36px)",
+            lineHeight: 1.15,
+          }}
+        >
+          Monthly Trends
+        </h1>
+
+        <p
+          style={{
+            margin: "10px 0 0",
+            maxWidth: "720px",
+            color: "var(--muted-foreground, #666)",
+            lineHeight: 1.6,
+          }}
+        >
+          Review monthly income, expenses, and net cash flow
+          trends over time.
+        </p>
+      </header>
+
+      {data.length === 0 ? (
+        <section
+          className="card"
+          style={{
+            padding: "36px 20px",
+            textAlign: "center",
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>
+            No monthly data available
+          </h2>
 
           <p
             style={{
-              margin: 0,
-              maxWidth: 720,
+              margin: "8px auto 0",
+              maxWidth: "560px",
               color: "var(--muted-foreground, #666)",
+              lineHeight: 1.6,
             }}
           >
-            Track how your income, expenses, and monthly net
-            position change over time.
-          </p>
-        </div>
-
-        <Link href="/reports">← Reports</Link>
-      </header>
-
-      {report.length === 0 ? (
-        <section className="card">
-          <h2>No financial data available yet</h2>
-
-          <p>
-            Add income and expense transactions to start building
-            your monthly trend.
+            Monthly trends will appear here after you have
+            recorded income or expenses.
           </p>
 
-          <Link href="/transactions/new">
-            Add a transaction →
+          <Link
+            href="/transactions"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "44px",
+              marginTop: "16px",
+              padding: "0 16px",
+              borderRadius: "8px",
+              border: "1px solid var(--border, #ddd)",
+              textDecoration: "none",
+            }}
+          >
+            View Transactions →
           </Link>
         </section>
       ) : (
-        <div style={{ display: "grid", gap: 32 }}>
-          <section className="card">
-            <h2 style={{ marginBottom: 4 }}>
-              Income & Expense Trend
-            </h2>
+        <>
+          <section
+            style={{
+              display: "grid",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: "14px",
+              marginBottom: "28px",
+            }}
+          >
+            <MetricCard
+              label="Total Income"
+              value={formatMoney(totalIncome)}
+            />
 
-            <p
+            <MetricCard
+              label="Total Expenses"
+              value={formatMoney(totalExpenses)}
+            />
+
+            <MetricCard
+              label="Net Cash Flow"
+              value={formatMoney(totalNet)}
+            />
+          </section>
+
+          <section
+            className="card"
+            style={{
+              padding: "20px",
+              marginBottom: "28px",
+            }}
+          >
+            <div style={{ marginBottom: "16px" }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "21px",
+                }}
+              >
+                Income & Expense Trend
+              </h2>
+
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  fontSize: "14px",
+                  color:
+                    "var(--muted-foreground, #666)",
+                }}
+              >
+                Monthly comparison of income and expenses.
+              </p>
+            </div>
+
+            <div
               style={{
-                marginTop: 0,
-                color: "var(--muted-foreground, #666)",
+                width: "100%",
+                overflowX: "auto",
+                WebkitOverflowScrolling: "touch",
               }}
             >
-              Monthly financial activity in BDT.
-            </p>
-
-            <div style={{ marginTop: 24 }}>
-              <MonthlyIncomeExpenseChart data={report} />
+              <div
+                style={{
+                  minWidth: "520px",
+                }}
+              >
+                <MonthlyIncomeExpenseChart data={data} />
+              </div>
             </div>
           </section>
 
           <section>
-            <div style={{ marginBottom: 16 }}>
-              <h2 style={{ marginBottom: 4 }}>
+            <div style={{ marginBottom: "16px" }}>
+              <h2
+                style={{
+                  margin: 0,
+                  fontSize: "21px",
+                }}
+              >
                 Monthly Breakdown
               </h2>
 
               <p
                 style={{
-                  margin: 0,
-                  color: "var(--muted-foreground, #666)",
+                  margin: "6px 0 0",
+                  fontSize: "14px",
+                  color:
+                    "var(--muted-foreground, #666)",
                 }}
               >
-                Detailed income, expenses, and net amount for
+                Detailed income, expenses, and net cash flow for
                 each month.
               </p>
             </div>
@@ -104,97 +215,179 @@ export default async function MonthlyTrendsPage() {
                 display: "grid",
                 gridTemplateColumns:
                   "repeat(auto-fit, minmax(260px, 1fr))",
-                gap: 16,
+                gap: "14px",
               }}
             >
-              {report.map((item) => {
-                const isPositive = item.net >= 0;
+              {data.map((month) => {
+                const income = Number(month.income);
+                const expenses = Number(month.expenses);
+                const net = income - expenses;
 
                 return (
                   <article
+                    key={month.month}
                     className="card"
-                    key={item.month}
+                    style={{
+                      minWidth: 0,
+                      padding: "18px",
+                    }}
                   >
                     <h3
                       style={{
-                        marginTop: 0,
-                        marginBottom: 20,
+                        margin: 0,
+                        fontSize: "17px",
                       }}
                     >
-                      {item.month}
+                      {month.month}
                     </h3>
 
                     <div
                       style={{
                         display: "grid",
-                        gap: 12,
+                        gap: "12px",
+                        marginTop: "16px",
                       }}
                     >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          gap: 12,
-                        }}
-                      >
-                        <span>Income</span>
+                      <MetricRow
+                        label="Income"
+                        value={formatMoney(income)}
+                      />
 
-                        <strong>
-                          {formatAmount(item.income)}
-                        </strong>
-                      </div>
+                      <MetricRow
+                        label="Expenses"
+                        value={formatMoney(expenses)}
+                      />
 
                       <div
                         style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          gap: 12,
+                          paddingTop: "12px",
+                          borderTop:
+                            "1px solid var(--border, #ddd)",
                         }}
                       >
-                        <span>Expenses</span>
-
-                        <strong>
-                          {formatAmount(item.expenses)}
-                        </strong>
+                        <MetricRow
+                          label="Net"
+                          value={formatMoney(net)}
+                          strong
+                        />
                       </div>
-
-                      <hr />
-
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          gap: 12,
-                        }}
-                      >
-                        <strong>Net</strong>
-
-                        <strong>
-                          {formatAmount(item.net)}
-                        </strong>
-                      </div>
-
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: 13,
-                          color:
-                            "var(--muted-foreground, #666)",
-                        }}
-                      >
-                        {isPositive
-                          ? "Income exceeded expenses."
-                          : "Expenses exceeded income."}
-                      </p>
                     </div>
                   </article>
                 );
               })}
             </div>
           </section>
-        </div>
+        </>
       )}
+
+      <style>{`
+        a:focus-visible {
+          outline: 2px solid currentColor;
+          outline-offset: 3px;
+        }
+
+        @media (max-width: 600px) {
+          main {
+            padding: 18px 12px 36px !important;
+          }
+
+          .card {
+            padding: 16px !important;
+          }
+
+          a {
+            -webkit-tap-highlight-color: transparent;
+          }
+        }
+
+        @media (max-width: 420px) {
+          main {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+          }
+        }
+      `}</style>
     </main>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div
+      className="card"
+      style={{
+        minWidth: 0,
+        padding: "18px",
+      }}
+    >
+      <h3
+        style={{
+          margin: "0 0 8px",
+          fontSize: "15px",
+        }}
+      >
+        {label}
+      </h3>
+
+      <p
+        style={{
+          margin: 0,
+          fontSize: "22px",
+          fontWeight: 700,
+          lineHeight: 1.3,
+          overflowWrap: "anywhere",
+        }}
+      >
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function MetricRow({
+  label,
+  value,
+  strong = false,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "baseline",
+        gap: "12px",
+        flexWrap: "wrap",
+      }}
+    >
+      <span
+        style={{
+          fontSize: "13px",
+          color: "var(--muted-foreground, #666)",
+        }}
+      >
+        {label}
+      </span>
+
+      <span
+        style={{
+          fontSize: strong ? "17px" : "15px",
+          fontWeight: strong ? 700 : 600,
+          overflowWrap: "anywhere",
+        }}
+      >
+        {value}
+      </span>
+    </div>
   );
 }
 

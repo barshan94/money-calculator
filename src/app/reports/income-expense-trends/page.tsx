@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { getIncomeExpenseTrends } from "@/lib/intelligence/get-income-expense-trends";
 
+type Direction =
+  | "up"
+  | "down"
+  | "stable"
+  | "insufficient-data";
+
 function formatMoney(
   value: number | null,
   currency: string,
@@ -25,13 +31,7 @@ function formatPercentage(
   return `${value >= 0 ? "+" : ""}${value.toFixed(1)}%`;
 }
 
-function directionLabel(
-  direction:
-    | "up"
-    | "down"
-    | "stable"
-    | "insufficient-data",
-): string {
+function directionLabel(direction: Direction): string {
   switch (direction) {
     case "up":
       return "↑ Up";
@@ -44,30 +44,27 @@ function directionLabel(
   }
 }
 
-function directionStyle(
-  direction:
-    | "up"
-    | "down"
-    | "stable"
-    | "insufficient-data",
-) {
+function directionStyle(direction: Direction) {
   if (direction === "up") {
     return {
-      color: "#15803d",
-      background: "#dcfce7",
+      color: "var(--success-foreground, #15803d)",
+      background:
+        "var(--success-muted, #dcfce7)",
     };
   }
 
   if (direction === "down") {
     return {
-      color: "#b91c1c",
-      background: "#fee2e2",
+      color: "var(--destructive-foreground, #b91c1c)",
+      background:
+        "var(--destructive-muted, #fee2e2)",
     };
   }
 
   return {
     color: "inherit",
-    background: "var(--surface-muted, #f3f4f6)",
+    background:
+      "var(--surface-muted, #f3f4f6)",
   };
 }
 
@@ -82,18 +79,17 @@ function MetricCard({
 }) {
   return (
     <div
+      className="card"
       style={{
-        border: "1px solid var(--border-color, #e5e7eb)",
-        borderRadius: 12,
-        padding: 16,
         minWidth: 0,
+        padding: "16px",
       }}
     >
       <div
         style={{
-          fontSize: 13,
-          opacity: 0.7,
-          marginBottom: 8,
+          fontSize: "13px",
+          color: "var(--muted-foreground, #666)",
+          marginBottom: "8px",
         }}
       >
         {label}
@@ -101,8 +97,9 @@ function MetricCard({
 
       <div
         style={{
-          fontSize: 20,
+          fontSize: "20px",
           fontWeight: 700,
+          lineHeight: 1.3,
           overflowWrap: "anywhere",
         }}
       >
@@ -111,9 +108,9 @@ function MetricCard({
 
       <div
         style={{
-          marginTop: 8,
-          fontSize: 12,
-          opacity: 0.65,
+          marginTop: "8px",
+          fontSize: "12px",
+          color: "var(--muted-foreground, #666)",
           lineHeight: 1.5,
         }}
       >
@@ -129,18 +126,29 @@ export default async function IncomeExpenseTrendsPage() {
   return (
     <main
       style={{
-        maxWidth: 1200,
+        maxWidth: "1100px",
         margin: "0 auto",
         padding: "24px 16px 48px",
       }}
     >
-      <div style={{ marginBottom: 24 }}>
-        <Link href="/reports">← Back to Reports</Link>
+      <header style={{ marginBottom: "28px" }}>
+        <Link
+          href="/reports"
+          style={{
+            display: "inline-block",
+            marginBottom: "12px",
+            textDecoration: "none",
+            fontSize: "14px",
+          }}
+        >
+          ← Back to Reports
+        </Link>
 
         <h1
           style={{
-            marginTop: 16,
-            marginBottom: 8,
+            margin: 0,
+            fontSize: "clamp(28px, 5vw, 36px)",
+            lineHeight: 1.15,
           }}
         >
           Income & Expense Trends
@@ -148,49 +156,72 @@ export default async function IncomeExpenseTrendsPage() {
 
         <p
           style={{
-            margin: 0,
-            maxWidth: 760,
-            opacity: 0.75,
+            margin: "10px 0 0",
+            maxWidth: "760px",
+            color: "var(--muted-foreground, #666)",
             lineHeight: 1.6,
           }}
         >
           See how your income, expenses, and monthly net result
           are changing based on your recorded financial history.
         </p>
-      </div>
+      </header>
 
       {results.length === 0 ? (
         <section
+          className="card"
           style={{
-            border: "1px solid var(--border-color, #e5e7eb)",
-            borderRadius: 12,
-            padding: 24,
+            padding: "36px 20px",
+            textAlign: "center",
           }}
         >
           <h2 style={{ marginTop: 0 }}>
             Not enough data
           </h2>
 
-          <p style={{ marginBottom: 0 }}>
+          <p
+            style={{
+              margin: "8px auto 0",
+              maxWidth: "560px",
+              color: "var(--muted-foreground, #666)",
+              lineHeight: 1.6,
+            }}
+          >
             There is not enough historical income and expense
             data to calculate a trend yet.
           </p>
+
+          <Link
+            href="/transactions/new"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "44px",
+              marginTop: "16px",
+              padding: "0 16px",
+              borderRadius: "8px",
+              border: "1px solid var(--border, #ddd)",
+              textDecoration: "none",
+            }}
+          >
+            Add Transaction →
+          </Link>
         </section>
       ) : (
         <div
           style={{
             display: "grid",
-            gap: 32,
+            gap: "28px",
           }}
         >
           {results.map(({ currency, trends }) => (
             <section
               key={currency}
+              className="card"
               style={{
-                border: "1px solid var(--border-color, #e5e7eb)",
-                borderRadius: 16,
-                padding: 20,
                 minWidth: 0,
+                padding: "20px",
               }}
             >
               <div
@@ -198,16 +229,16 @@ export default async function IncomeExpenseTrendsPage() {
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "baseline",
-                  gap: 12,
+                  gap: "12px",
                   flexWrap: "wrap",
-                  marginBottom: 20,
+                  marginBottom: "20px",
                 }}
               >
                 <div>
                   <h2
                     style={{
                       margin: 0,
-                      fontSize: 22,
+                      fontSize: "22px",
                     }}
                   >
                     {currency}
@@ -216,8 +247,9 @@ export default async function IncomeExpenseTrendsPage() {
                   <p
                     style={{
                       margin: "6px 0 0",
-                      opacity: 0.7,
-                      fontSize: 13,
+                      fontSize: "13px",
+                      color:
+                        "var(--muted-foreground, #666)",
                     }}
                   >
                     {trends.monthsAnalyzed} month
@@ -234,8 +266,8 @@ export default async function IncomeExpenseTrendsPage() {
                   display: "grid",
                   gridTemplateColumns:
                     "repeat(auto-fit, minmax(190px, 1fr))",
-                  gap: 12,
-                  marginBottom: 24,
+                  gap: "12px",
+                  marginBottom: "24px",
                 }}
               >
                 <MetricCard
@@ -295,8 +327,8 @@ export default async function IncomeExpenseTrendsPage() {
 
               <h3
                 style={{
-                  marginTop: 0,
-                  marginBottom: 12,
+                  margin: "0 0 12px",
+                  fontSize: "18px",
                 }}
               >
                 Month-to-month movement
@@ -307,19 +339,21 @@ export default async function IncomeExpenseTrendsPage() {
                   display: "grid",
                   gridTemplateColumns:
                     "repeat(auto-fit, minmax(190px, 1fr))",
-                  gap: 12,
+                  gap: "12px",
                 }}
               >
                 {[
                   {
                     label: "Income",
                     change: trends.incomeChange,
-                    direction: trends.incomeDirection,
+                    direction:
+                      trends.incomeDirection,
                   },
                   {
                     label: "Expenses",
                     change: trends.expenseChange,
-                    direction: trends.expenseDirection,
+                    direction:
+                      trends.expenseDirection,
                   },
                   {
                     label: "Net",
@@ -330,16 +364,19 @@ export default async function IncomeExpenseTrendsPage() {
                   <div
                     key={item.label}
                     style={{
-                      border: "1px solid var(--border-color, #e5e7eb)",
-                      borderRadius: 12,
-                      padding: 16,
+                      border:
+                        "1px solid var(--border, #ddd)",
+                      borderRadius: "12px",
+                      padding: "16px",
+                      minWidth: 0,
                     }}
                   >
                     <div
                       style={{
-                        fontSize: 13,
-                        opacity: 0.7,
-                        marginBottom: 8,
+                        fontSize: "13px",
+                        color:
+                          "var(--muted-foreground, #666)",
+                        marginBottom: "8px",
                       }}
                     >
                       {item.label}
@@ -349,7 +386,7 @@ export default async function IncomeExpenseTrendsPage() {
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: 8,
+                        gap: "8px",
                         flexWrap: "wrap",
                       }}
                     >
@@ -362,9 +399,9 @@ export default async function IncomeExpenseTrendsPage() {
                           ...directionStyle(
                             item.direction,
                           ),
-                          borderRadius: 999,
+                          borderRadius: "999px",
                           padding: "4px 8px",
-                          fontSize: 12,
+                          fontSize: "12px",
                           fontWeight: 600,
                         }}
                       >
@@ -377,13 +414,14 @@ export default async function IncomeExpenseTrendsPage() {
                     <p
                       style={{
                         margin: "8px 0 0",
-                        fontSize: 12,
-                        opacity: 0.65,
+                        fontSize: "12px",
+                        color:
+                          "var(--muted-foreground, #666)",
                         lineHeight: 1.5,
                       }}
                     >
-                      Compared with the previous
-                      analyzed month.
+                      Compared with the previous analyzed
+                      month.
                     </p>
                   </div>
                 ))}
@@ -395,12 +433,12 @@ export default async function IncomeExpenseTrendsPage() {
 
       <section
         style={{
-          marginTop: 24,
-          padding: 16,
-          borderRadius: 12,
+          marginTop: "24px",
+          padding: "16px",
+          borderRadius: "12px",
           background:
             "var(--surface-muted, #f3f4f6)",
-          fontSize: 13,
+          fontSize: "13px",
           lineHeight: 1.6,
         }}
       >
@@ -409,6 +447,34 @@ export default async function IncomeExpenseTrendsPage() {
         history. They are descriptive indicators, not
         predictions of future income or expenses.
       </section>
+
+      <style>{`
+        a:focus-visible {
+          outline: 2px solid currentColor;
+          outline-offset: 3px;
+        }
+
+        @media (max-width: 600px) {
+          main {
+            padding: 18px 12px 36px !important;
+          }
+
+          .card {
+            padding: 16px !important;
+          }
+
+          a {
+            -webkit-tap-highlight-color: transparent;
+          }
+        }
+
+        @media (max-width: 420px) {
+          main {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+          }
+        }
+      `}</style>
     </main>
   );
 }

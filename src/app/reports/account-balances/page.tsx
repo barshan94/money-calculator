@@ -13,8 +13,8 @@ export default async function AccountBalancesPage() {
   const balances = await getAccountBalances();
 
   const visibleBalances = balances.filter(
-  (account) => !account.is_archived,
-);
+    (account) => !account.is_archived,
+  );
 
   const chartData = visibleBalances.map((account) => ({
     name: account.name,
@@ -29,51 +29,83 @@ export default async function AccountBalancesPage() {
         padding: "24px 16px 48px",
       }}
     >
-      <Link
-        href="/reports"
+      <header
         style={{
-          display: "inline-block",
-          marginBottom: "12px",
-          textDecoration: "none",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "20px",
+          marginBottom: "28px",
+          flexWrap: "wrap",
         }}
       >
-        ← Back to Reports
-      </Link>
+        <div style={{ minWidth: 0, flex: "1 1 500px" }}>
+          <Link
+            href="/reports"
+            style={{
+              display: "inline-block",
+              marginBottom: "12px",
+              textDecoration: "none",
+              fontSize: "14px",
+            }}
+          >
+            ← Back to Reports
+          </Link>
 
-      <div style={{ marginBottom: "28px" }}>
-        <h1 style={{ margin: 0 }}>Account Balances</h1>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "clamp(28px, 5vw, 36px)",
+              lineHeight: 1.15,
+            }}
+          >
+            Account Balances
+          </h1>
 
-        <p
-          style={{
-            margin: "8px 0 0",
-            opacity: 0.7,
-          }}
-        >
-          Overview of your current active account balances.
-        </p>
-      </div>
+          <p
+            style={{
+              margin: "10px 0 0",
+              maxWidth: "680px",
+              color: "var(--muted-foreground, #666)",
+              lineHeight: 1.6,
+            }}
+          >
+            Overview of your current active account balances.
+          </p>
+        </div>
+      </header>
 
       {visibleBalances.length === 0 ? (
         <section
+          className="card"
           style={{
-            border: "1px solid #ddd",
-            borderRadius: "12px",
-            padding: "32px 20px",
+            padding: "36px 20px",
             textAlign: "center",
           }}
         >
           <h2 style={{ marginTop: 0 }}>No accounts available</h2>
 
-          <p style={{ opacity: 0.7 }}>
+          <p
+            style={{
+              color: "var(--muted-foreground, #666)",
+              lineHeight: 1.6,
+            }}
+          >
             Create an active account to see its balance here.
           </p>
 
           <Link
             href="/accounts/new"
             style={{
-              display: "inline-block",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "44px",
               marginTop: "12px",
+              padding: "0 16px",
+              borderRadius: "8px",
               textDecoration: "none",
+              border: "1px solid var(--border, #ddd)",
             }}
           >
             Create Account →
@@ -82,21 +114,53 @@ export default async function AccountBalancesPage() {
       ) : (
         <>
           <section
+            className="card"
             style={{
-              border: "1px solid #ddd",
-              borderRadius: "12px",
-              padding: "20px",
               marginBottom: "28px",
+              padding: "20px",
               overflow: "hidden",
             }}
           >
-            <h2 style={{ marginTop: 0 }}>Balance Overview</h2>
+            <div style={{ marginBottom: "18px" }}>
+              <h2 style={{ margin: 0 }}>Balance Overview</h2>
 
-            <AccountBalancesChart data={chartData} />
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  color: "var(--muted-foreground, #666)",
+                  fontSize: "14px",
+                  lineHeight: 1.5,
+                }}
+              >
+                Current balances across your active accounts.
+              </p>
+            </div>
+
+            <div
+              style={{
+                width: "100%",
+                overflowX: "auto",
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
+              <AccountBalancesChart data={chartData} />
+            </div>
           </section>
 
           <section>
-            <h2>Accounts</h2>
+            <div style={{ marginBottom: "16px" }}>
+              <h2 style={{ margin: 0 }}>Accounts</h2>
+
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  color: "var(--muted-foreground, #666)",
+                  fontSize: "14px",
+                }}
+              >
+                Select an account to view its details and transactions.
+              </p>
+            </div>
 
             <div
               style={{
@@ -104,7 +168,6 @@ export default async function AccountBalancesPage() {
                 gridTemplateColumns:
                   "repeat(auto-fit, minmax(220px, 1fr))",
                 gap: "14px",
-                marginTop: "16px",
               }}
             >
               {visibleBalances.map((account) => (
@@ -113,10 +176,13 @@ export default async function AccountBalancesPage() {
                   key={account.id}
                   style={{
                     display: "block",
-                    border: "1px solid #ddd",
-                    borderRadius: "12px",
+                    minWidth: 0,
                     padding: "18px",
+                    border: "1px solid var(--border, #ddd)",
+                    borderRadius: "12px",
                     textDecoration: "none",
+                    transition:
+                      "border-color 0.15s ease, transform 0.15s ease",
                   }}
                 >
                   <div
@@ -131,6 +197,8 @@ export default async function AccountBalancesPage() {
                       style={{
                         margin: 0,
                         fontSize: "17px",
+                        lineHeight: 1.35,
+                        overflowWrap: "anywhere",
                       }}
                     >
                       {account.name}
@@ -138,12 +206,14 @@ export default async function AccountBalancesPage() {
 
                     <span
                       style={{
+                        flexShrink: 0,
                         fontSize: "12px",
                         padding: "4px 8px",
-                        border: "1px solid #ddd",
+                        border: "1px solid var(--border, #ddd)",
                         borderRadius: "999px",
                         whiteSpace: "nowrap",
-                        opacity: 0.75,
+                        color:
+                          "var(--muted-foreground, #666)",
                       }}
                     >
                       {account.currency}
@@ -154,7 +224,8 @@ export default async function AccountBalancesPage() {
                     style={{
                       margin: "12px 0 4px",
                       fontSize: "13px",
-                      opacity: 0.65,
+                      color:
+                        "var(--muted-foreground, #666)",
                     }}
                   >
                     {account.account_type}
@@ -165,16 +236,22 @@ export default async function AccountBalancesPage() {
                       margin: 0,
                       fontSize: "23px",
                       fontWeight: 700,
+                      lineHeight: 1.25,
+                      overflowWrap: "anywhere",
                     }}
                   >
-                    {formatMoney(account.balance, account.currency)}
+                    {formatMoney(
+                      account.balance,
+                      account.currency,
+                    )}
                   </p>
 
                   <p
                     style={{
                       margin: "12px 0 0",
                       fontSize: "13px",
-                      opacity: 0.6,
+                      color:
+                        "var(--muted-foreground, #666)",
                     }}
                   >
                     View account →
@@ -185,6 +262,43 @@ export default async function AccountBalancesPage() {
           </section>
         </>
       )}
+
+      <style>{`
+        a:focus-visible {
+          outline: 2px solid currentColor;
+          outline-offset: 3px;
+        }
+
+        @media (max-width: 600px) {
+          main {
+            padding: 18px 12px 36px !important;
+          }
+
+          section.card {
+            padding: 16px !important;
+          }
+
+          h2 {
+            font-size: 21px;
+          }
+
+          article,
+          a {
+            -webkit-tap-highlight-color: transparent;
+          }
+        }
+
+        @media (max-width: 420px) {
+          main {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+          }
+
+          section.card {
+            padding: 14px !important;
+          }
+        }
+      `}</style>
     </main>
   );
 }

@@ -1,5 +1,20 @@
 # Money Calculator — Roadmap
 
+## Project Status
+
+Current milestone: **V1 Release Candidate**
+
+Overall V1 completion: **~99%**
+
+The core financial system, financial modules, reports, security hardening,
+UX/mobile pass, automated unit testing, integration testing, and production
+build verification are implemented.
+
+The remaining V1 verification work is browser-level Playwright testing
+through GitHub Actions.
+
+---
+
 ## Phase 1 — Foundation & Architecture
 
 Status: COMPLETE
@@ -9,7 +24,9 @@ Status: COMPLETE
 - Authentication
 - PostgreSQL
 - Core application structure
-- Financial architecture
+- Financial data architecture
+- Server/client architecture
+- Responsive application shell
 
 ---
 
@@ -22,8 +39,11 @@ Status: COMPLETE
 - Income
 - Expenses
 - Transfers
-- Void/reversal
+- Opening balances
+- Void/reversal system
 - Ledger integrity
+- Transaction balance validation
+- Financial transaction history
 
 ---
 
@@ -31,11 +51,55 @@ Status: COMPLETE
 
 Status: COMPLETE
 
-- Loans
-- Tuition
-- Deposits
-- Investments
-- Long-term assets
+### Loans
+- Lent money
+- Borrowed money
+- Loan lifecycle
+- Repayments
+- Partial repayments
+- Full settlement
+- Repayment editing
+- Repayment cancellation
+- Reversal audit trail
+- Loan reliability
+
+### Tuition
+- Student management
+- Monthly tuition status
+- Paid/partial/unpaid states
+- Payment history
+- Payment accumulation
+- Payment cancellation
+- Payment editing
+- Reliability
+- Reminder information
+
+### Deposits
+- Deposit creation
+- Deposit editing
+- Deposit withdrawal
+- Maturity tracking
+- Expected interest
+- Multi-currency summaries
+
+### Investments
+- Investment creation
+- Investment activity
+- Investment performance
+- Profit/loss
+- Return calculations
+- Investment analytics
+- Close/archive lifecycle
+
+### Long-Term Assets
+- Asset creation
+- Asset editing
+- Asset value updates
+- Asset cancellation
+- Asset sale
+- Cost-basis removal
+- Gain/loss calculation
+- Asset lifecycle integrity
 
 ---
 
@@ -44,28 +108,51 @@ Status: COMPLETE
 Status: COMPLETE
 
 - Goals
+- Goal progress
+- Goal forecasting
 - Budgets
-- Recurring transactions
+- Budget intelligence
 - Categories
+- Category management
+- Recurring transactions
+- Recurring transaction processing
+- Due recurring transactions
+- Recurring transaction archiving
 
 ---
 
-## Phase 5 — Dashboard & Reports
+## Phase 5 — Dashboard & Financial Reports
 
 Status: COMPLETE
 
-- Dashboard
+### Dashboard
+- Financial overview
+- Account summaries
 - Recent activity
-- Account reports
-- Income/expense reports
-- Loan reports
-- Deposit reports
-- Investment reports
-- Goal reports
+- Income/expense indicators
+- Opening-balance indicators
+- Reversal indicators
+- Transaction navigation
+
+### Reports
+- Account balances
+- Income and expenses
+- Income/expense trends
+- Monthly trends
+- Spending by category
+- Loans
+- Deposits
+- Investments
+- Goals
 - Liquidity
+- Financial health
+- Liquidity risk
+- Cash-flow forecast
+- Net-worth forecast
+- Goal forecast
+- Investment analytics
 - Financial insights
-- Forecasting reports
-- What-if analysis
+- What-if simulation
 
 ---
 
@@ -73,28 +160,48 @@ Status: COMPLETE
 
 Status: COMPLETE
 
-- Unit testing
-- Integration testing
-- Cross-module financial integrity testing
-- Financial edge-case testing
-- Authorization-boundary testing
-- Transaction protection testing
+### Unit Testing
+- 25 test files
+- 134/134 unit tests passing
+
+### Integration Testing
+- 32 test files
+- 185/185 integration tests passing
+
+### Financial Integrity
+- Cross-module financial integrity
+- Financial edge cases
+- Transaction protection
 - Loan lifecycle testing
 - Tuition lifecycle testing
 - Deposit testing
 - Investment testing
 - Long-term asset testing
 - Recurring transaction testing
-- Production build verification
+- Category testing
+- Budget testing
+- Goal testing
 
-### Current verification
+### Authorization
+- Authorization-boundary testing
+- Cross-user access testing
+- Ownership protection testing
 
-- 25 unit test files
-- 134/134 unit tests passing
-- 32 integration test files
-- 185/185 integration tests passing
-- Production build passing
-- Playwright/E2E testing deferred until laptop/Codespace is available
+### Production Build
+- Production build verified
+- Next.js webpack build verified
+- Static page generation verified
+
+### Browser Testing
+Status: IN PROGRESS
+
+- Playwright configuration
+- Authentication setup
+- E2E loan tests
+- Global E2E cleanup
+- GitHub Actions browser environment
+- Full Playwright suite execution
+- Browser-level regression verification
 
 ---
 
@@ -105,7 +212,7 @@ Status: COMPLETE
 - RLS audit
 - RPC ownership audit
 - SECURITY DEFINER audit
-- Cross-user access testing
+- Cross-user access protection
 - System account protection
 - Input validation audit
 - Authorization audit
@@ -117,22 +224,23 @@ Status: COMPLETE
 - Legacy loan RPC access revoked
 - Integration-test database access hardened
 - Security boundary tests verified
+- Protected financial mutations routed through RPCs
 - Production build verified
 
-### Security verification
+### Security Verification
 
 - Authenticated financial INSERT/UPDATE/DELETE privileges revoked
 - Anonymous financial INSERT/UPDATE/DELETE privileges revoked
 - Internal financial RPCs restricted
 - Ownership checks verified
-- Protected financial mutations routed through RPCs
+- Financial mutation boundaries verified
 - 185/185 integration tests passing
 
 ---
 
 ## Phase 8 — UX & Mobile Experience
 
-Status: NEXT
+Status: COMPLETE
 
 - Responsive polish
 - Loading states
@@ -141,51 +249,137 @@ Status: NEXT
 - Form UX
 - Navigation
 - Search/filter/sort
-- Accessibility
+- Accessibility improvements
 - Mobile usability
-- Performance optimization
+- Touch-target improvements
 - Consistent UI patterns
 - Dashboard UX refinement
+- Reports UX refinement
+- Module consistency pass
+- User-menu accessibility
+- Responsive navigation
+- Mobile financial workflows
 
 ---
 
-## Phase 9 — Financial Intelligence
+## Phase 9 — Advanced Financial Intelligence
 
-Planned:
+Status: PARTIALLY COMPLETE
+
+### Implemented
 
 - Cash-flow forecasting
 - Spending analysis
-- Savings analysis
 - Goal forecasting
 - Net-worth forecasting
 - Investment analytics
-- Debt analysis
+- Liquidity analysis
+- Financial health analysis
+- Financial insights
 - What-if simulations
+- Budget intelligence
+
+### Planned
+
+- Savings-rate intelligence
+- Debt burden analysis
+- Income stability analysis
+- Advanced anomaly detection
+- Advanced spending pattern detection
 - AI financial assistant
-- Anomaly detection
-- Financial recommendations and insights
+- Natural-language financial queries
+- Personalized financial explanations
+- Advanced scenario modeling
 
 ---
 
-## Phase 10 — Production & Advanced Platform
+## Phase 10 — Production Platform
 
-Planned:
+Status: PLANNED
 
 - Production deployment
 - Custom domain
+- Production environment configuration
 - Monitoring
-- Backups
-- Performance optimization
+- Error tracking
+- Automated backups
+- Database migration strategy
+- Performance monitoring
 - Data export/import
+- CSV export
+- Excel export
+- PDF financial statements
 - Notifications
+- Financial reminders
 - PWA/offline capabilities
+
+---
+
+## Phase 11 — Platform Expansion
+
+Status: FUTURE
+
+- Installable PWA
+- Offline-first financial entry
 - Advanced analytics
-- Future Android application
+- Multi-currency improvements
+- Household/family finance
+- Shared financial accounts
+- Android application
+- Mobile-specific financial workflows
+
+---
+
+## Current Verification Checklist
+
+### Completed
+
+- [x] Unit tests
+- [x] Integration tests
+- [x] Security audit
+- [x] Authorization testing
+- [x] Financial integrity testing
+- [x] Production build
+- [x] UX audit
+- [x] Mobile UX audit
+
+### In Progress
+
+- [ ] GitHub Actions Playwright setup
+- [ ] Playwright authentication verification
+- [ ] Full Playwright E2E suite
+- [ ] Browser-level regression verification
+
+### After Playwright
+
+- [ ] Final Git status review
+- [ ] Final commit
+- [ ] Push to GitHub
+- [ ] V1 release candidate declared
+
+---
+
+## V1 Completion Definition
+
+V1 is considered complete when:
+
+1. Core financial functionality is implemented.
+2. Financial integrity tests pass.
+3. Security boundaries are verified.
+4. Production build passes.
+5. UX/mobile audit is complete.
+6. Playwright browser tests pass.
+7. The repository is clean and synchronized with GitHub.
 
 ---
 
 ## Completion Philosophy
 
-"Complete" means a usable and verified milestone.
+"Complete" means a usable, tested, and verified milestone.
 
-The project may continue with new phases after Phase 10 as the product evolves.
+Money Calculator is an evolving product. Reaching V1 does not mean
+development permanently ends.
+
+Future phases may add intelligence, automation, integrations, mobile
+applications, and new financial capabilities as the product evolves.
+

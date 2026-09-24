@@ -6,6 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
@@ -16,6 +17,15 @@ type Category = {
 
 type BudgetPeriod = "weekly" | "monthly" | "yearly";
 
+function getLocalToday() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset();
+
+  return new Date(now.getTime() - offset * 60_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
 export default function EditBudgetPage() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
@@ -23,7 +33,9 @@ export default function EditBudgetPage() {
 
   const budgetId = params.id as string;
 
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>(
+    [],
+  );
   const [categoryId, setCategoryId] = useState("");
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("BDT");
@@ -68,7 +80,11 @@ export default function EditBudgetPage() {
         !budgetResult.data ||
         categoriesResult.error
       ) {
-        setMessage("Unable to load budget.");
+        setMessage(
+          budgetResult.error?.message ||
+            categoriesResult.error?.message ||
+            "Unable to load budget.",
+        );
         setLoading(false);
         return;
       }
@@ -93,7 +109,7 @@ export default function EditBudgetPage() {
       setLoading(false);
     }
 
-    load();
+    void load();
 
     return () => {
       cancelled = true;
@@ -120,7 +136,7 @@ export default function EditBudgetPage() {
       !Number.isFinite(numericAmount) ||
       numericAmount <= 0
     ) {
-      setMessage("Enter a valid budget amount.");
+      setMessage("Enter a valid budget amount greater than 0.");
       return;
     }
 
@@ -130,9 +146,7 @@ export default function EditBudgetPage() {
     }
 
     if (endDate && endDate < startDate) {
-      setMessage(
-        "End date cannot be before the start date.",
-      );
+      setMessage("End date cannot be before the start date.");
       return;
     }
 
@@ -161,230 +175,309 @@ export default function EditBudgetPage() {
     router.refresh();
   }
 
+  const selectedCategory = categories.find(
+    (category) => category.id === categoryId,
+  );
+
   if (loading) {
     return (
-      <main className="mx-auto max-w-2xl px-4 py-8">
-        <div className="rounded-2xl border bg-white p-6 shadow-sm">
-          <p className="text-sm text-gray-500">
-            Loading budget...
-          </p>
-        </div>
+      <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
+        <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-[var(--shadow-sm)] sm:p-7">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 w-28 rounded bg-[var(--border)]" />
+            <div className="h-8 w-48 rounded bg-[var(--border)]" />
+            <div className="h-4 w-72 max-w-full rounded bg-[var(--border)]" />
+            <div className="mt-8 h-12 w-full rounded-lg bg-[var(--border)]" />
+            <div className="h-12 w-full rounded-lg bg-[var(--border)]" />
+            <div className="h-12 w-full rounded-lg bg-[var(--border)]" />
+          </div>
+        </section>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-6 sm:px-6 lg:py-10">
-      <div className="mb-6">
-        <button
-          type="button"
-          onClick={() => router.push("/budgets")}
-          disabled={saving}
-          className="mb-4 text-sm font-medium text-gray-600 hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-50"
+    <main className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mb-5">
+        <Link
+          href="/budgets"
+          className="inline-flex min-h-10 items-center text-sm font-medium text-[var(--primary)] hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
         >
           ← Back to Budgets
-        </button>
-
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
-          Edit Budget
-        </h1>
-
-        <p className="mt-1 text-sm text-gray-500">
-          Update the budget amount, period, category, or dates.
-        </p>
+        </Link>
       </div>
 
-      {message && (
-        <div
-          role="alert"
-          className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+      <section className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] shadow-[var(--shadow-sm)]">
+        <div className="border-b border-[var(--border)] px-5 py-5 sm:px-7">
+          <p className="mb-1 text-sm font-medium text-[var(--primary)]">
+            Financial planning
+          </p>
+
+          <h1 className="text-2xl font-bold tracking-tight text-[var(--foreground)]">
+            Edit Budget
+          </h1>
+
+          <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
+            Update the category, spending limit, period, or
+            schedule for this budget.
+          </p>
+        </div>
+
+        {message && (
+          <div
+            role="alert"
+            aria-live="polite"
+            className="mx-5 mt-5 rounded-lg border border-[var(--danger)] bg-[var(--danger-soft)] px-4 py-3 text-sm leading-5 text-[var(--danger)] sm:mx-7"
+          >
+            {message}
+          </div>
+        )}
+
+        <form
+          onSubmit={handleSubmit}
+          className="grid gap-6 p-5 sm:p-7"
         >
-          {message}
-        </div>
-      )}
+          <section className="grid gap-5">
+            <div>
+              <h2 className="text-base font-semibold text-[var(--foreground)]">
+                Budget Details
+              </h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                Choose the expense category this budget tracks.
+              </p>
+            </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-5 rounded-2xl border bg-white p-5 shadow-sm sm:p-6"
-      >
-        <div>
-          <label
-            htmlFor="category"
-            className="mb-2 block text-sm font-medium text-gray-700"
-          >
-            Expense Category
-          </label>
-
-          <select
-            id="category"
-            value={categoryId}
-            onChange={(event) =>
-              setCategoryId(event.target.value)
-            }
-            required
-            disabled={saving}
-            className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100"
-          >
-            <option value="">Select category</option>
-
-            {categories.map((category) => (
-              <option
-                key={category.id}
-                value={category.id}
+            <div>
+              <label
+                htmlFor="category"
+                className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
               >
-                {category.name}
-              </option>
-            ))}
-          </select>
+                Expense Category
+              </label>
 
-          {categories.length === 0 && (
-            <p className="mt-2 text-xs text-gray-500">
-              No active expense categories are available.
-            </p>
-          )}
-        </div>
+              <select
+                id="category"
+                value={categoryId}
+                onChange={(event) =>
+                  setCategoryId(event.target.value)
+                }
+                required
+                disabled={saving}
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <option value="">Select category</option>
 
-        <div>
-          <label
-            htmlFor="amount"
-            className="mb-2 block text-sm font-medium text-gray-700"
-          >
-            Budget Amount
-          </label>
+                {selectedCategory &&
+                  !categories.some(
+                    (category) =>
+                      category.id === selectedCategory.id,
+                  ) && (
+                    <option value={selectedCategory.id}>
+                      {selectedCategory.name}
+                    </option>
+                  )}
 
-          <input
-            id="amount"
-            type="number"
-            min="0.01"
-            step="0.01"
-            inputMode="decimal"
-            value={amount}
-            onChange={(event) =>
-              setAmount(event.target.value)
-            }
-            required
-            disabled={saving}
-            className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100"
-          />
-        </div>
+                {categories.map((category) => (
+                  <option
+                    key={category.id}
+                    value={category.id}
+                  >
+                    {category.name}
+                  </option>
+                ))}
+              </select>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div>
-            <label
-              htmlFor="currency"
-              className="mb-2 block text-sm font-medium text-gray-700"
+              {categories.length === 0 && (
+                <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
+                  No active expense categories are available.
+                </p>
+              )}
+
+              {selectedCategory && (
+                <p className="mt-2 text-xs text-[var(--muted)]">
+                  Current category:{" "}
+                  <span className="font-medium text-[var(--foreground)]">
+                    {selectedCategory.name}
+                  </span>
+                  .
+                </p>
+              )}
+            </div>
+          </section>
+
+          <section className="grid gap-5 border-t border-[var(--border)] pt-6">
+            <div>
+              <h2 className="text-base font-semibold text-[var(--foreground)]">
+                Budget Limit
+              </h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                Adjust the spending limit and its recurring
+                period.
+              </p>
+            </div>
+
+            <div>
+              <label
+                htmlFor="amount"
+                className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
+              >
+                Budget Amount
+              </label>
+
+              <input
+                id="amount"
+                type="number"
+                min="0.01"
+                step="0.01"
+                inputMode="decimal"
+                value={amount}
+                onChange={(event) =>
+                  setAmount(event.target.value)
+                }
+                required
+                disabled={saving}
+                placeholder="0.00"
+                className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 disabled:cursor-not-allowed disabled:opacity-60"
+              />
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="currency"
+                  className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
+                >
+                  Currency
+                </label>
+
+                <select
+                  id="currency"
+                  value={currency}
+                  onChange={(event) =>
+                    setCurrency(event.target.value)
+                  }
+                  disabled={saving}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <option value="BDT">BDT</option>
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="period"
+                  className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
+                >
+                  Budget Period
+                </label>
+
+                <select
+                  id="period"
+                  value={period}
+                  onChange={(event) =>
+                    setPeriod(
+                      event.target.value as BudgetPeriod,
+                    )
+                  }
+                  disabled={saving}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                  <option value="yearly">Yearly</option>
+                </select>
+              </div>
+            </div>
+          </section>
+
+          <section className="grid gap-5 border-t border-[var(--border)] pt-6">
+            <div>
+              <h2 className="text-base font-semibold text-[var(--foreground)]">
+                Schedule
+              </h2>
+              <p className="mt-1 text-sm text-[var(--muted)]">
+                Define when this budget applies.
+              </p>
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="start-date"
+                  className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
+                >
+                  Start Date
+                </label>
+
+                <input
+                  id="start-date"
+                  type="date"
+                  value={startDate}
+                  onChange={(event) =>
+                    setStartDate(event.target.value)
+                  }
+                  required
+                  disabled={saving}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="end-date"
+                  className="mb-1.5 block text-sm font-medium text-[var(--foreground)]"
+                >
+                  End Date{" "}
+                  <span className="font-normal text-[var(--muted)]">
+                    (optional)
+                  </span>
+                </label>
+
+                <input
+                  id="end-date"
+                  type="date"
+                  min={startDate || undefined}
+                  value={endDate}
+                  onChange={(event) =>
+                    setEndDate(event.target.value)
+                  }
+                  disabled={saving}
+                  className="w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 py-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 disabled:cursor-not-allowed disabled:opacity-60"
+                />
+
+                <p className="mt-2 text-xs leading-5 text-[var(--muted)]">
+                  Leave empty if there is no fixed end date.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <div className="flex flex-col-reverse gap-3 border-t border-[var(--border)] pt-6 sm:flex-row sm:justify-end">
+            <Link
+              href="/budgets"
+              className="inline-flex min-h-11 items-center justify-center rounded-lg border border-[var(--border)] px-5 py-2.5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--background)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
             >
-              Currency
-            </label>
+              Cancel
+            </Link>
 
-            <select
-              id="currency"
-              value={currency}
-              onChange={(event) =>
-                setCurrency(event.target.value)
-              }
-              disabled={saving}
-              className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100"
+            <button
+              type="submit"
+              disabled={saving || categories.length === 0}
+              aria-busy={saving}
+              className="inline-flex min-h-11 items-center justify-center rounded-lg px-5 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              style={{
+                backgroundColor: "var(--primary)",
+              }}
             >
-              <option value="BDT">BDT</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-              <option value="GBP">GBP</option>
-            </select>
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
           </div>
-
-          <div>
-            <label
-              htmlFor="period"
-              className="mb-2 block text-sm font-medium text-gray-700"
-            >
-              Period
-            </label>
-
-            <select
-              id="period"
-              value={period}
-              onChange={(event) =>
-                setPeriod(
-                  event.target.value as BudgetPeriod,
-                )
-              }
-              disabled={saving}
-              className="w-full rounded-xl border border-gray-300 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100"
-            >
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div>
-            <label
-              htmlFor="start-date"
-              className="mb-2 block text-sm font-medium text-gray-700"
-            >
-              Start Date
-            </label>
-
-            <input
-              id="start-date"
-              type="date"
-              value={startDate}
-              onChange={(event) =>
-                setStartDate(event.target.value)
-              }
-              required
-              disabled={saving}
-              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="end-date"
-              className="mb-2 block text-sm font-medium text-gray-700"
-            >
-              End Date
-              <span className="ml-1 font-normal text-gray-400">
-                (optional)
-              </span>
-            </label>
-
-            <input
-              id="end-date"
-              type="date"
-              min={startDate || undefined}
-              value={endDate}
-              onChange={(event) =>
-                setEndDate(event.target.value)
-              }
-              disabled={saving}
-              className="w-full rounded-xl border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-500 focus:ring-2 focus:ring-gray-200 disabled:cursor-not-allowed disabled:bg-gray-100"
-            />
-          </div>
-        </div>
-
-        <div className="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={() => router.push("/budgets")}
-            disabled={saving}
-            className="rounded-xl border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Cancel
-          </button>
-
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-xl bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {saving ? "Saving..." : "Save Changes"}
-          </button>
-        </div>
-      </form>
+        </form>
+      </section>
     </main>
   );
 }
+

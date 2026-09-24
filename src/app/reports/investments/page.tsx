@@ -62,51 +62,91 @@ export default async function InvestmentReportPage() {
         padding: "24px 16px 48px",
       }}
     >
-      <Link
-        href="/reports"
+      <header
         style={{
-          display: "inline-block",
-          marginBottom: "12px",
-          textDecoration: "none",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "20px",
+          marginBottom: "28px",
+          flexWrap: "wrap",
         }}
       >
-        ← Back to Reports
-      </Link>
-
-      <div style={{ marginBottom: "28px" }}>
-        <h1 style={{ margin: 0 }}>Investments Report</h1>
-
-        <p
+        <div
           style={{
-            margin: "8px 0 0",
-            opacity: 0.7,
+            minWidth: 0,
+            flex: "1 1 500px",
           }}
         >
-          Track invested capital, current values, and unrealized gain or
-          loss.
-        </p>
-      </div>
+          <Link
+            href="/reports"
+            style={{
+              display: "inline-block",
+              marginBottom: "12px",
+              textDecoration: "none",
+              fontSize: "14px",
+            }}
+          >
+            ← Back to Reports
+          </Link>
+
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "clamp(28px, 5vw, 36px)",
+              lineHeight: 1.15,
+            }}
+          >
+            Investments Report
+          </h1>
+
+          <p
+            style={{
+              margin: "10px 0 0",
+              maxWidth: "720px",
+              color: "var(--muted-foreground, #666)",
+              lineHeight: 1.6,
+            }}
+          >
+            Track invested capital, current values, and unrealized
+            gain or loss.
+          </p>
+        </div>
+      </header>
 
       {!hasInvestments ? (
         <section
+          className="card"
           style={{
-            border: "1px solid #ddd",
-            borderRadius: "12px",
-            padding: "32px 20px",
+            padding: "36px 20px",
             textAlign: "center",
           }}
         >
-          <h2 style={{ marginTop: 0 }}>No investments available</h2>
+          <h2 style={{ marginTop: 0 }}>
+            No investments available
+          </h2>
 
-          <p style={{ opacity: 0.7 }}>
-            Create an investment to start tracking its performance.
+          <p
+            style={{
+              color: "var(--muted-foreground, #666)",
+              lineHeight: 1.6,
+            }}
+          >
+            Create an investment to start tracking its
+            performance.
           </p>
 
           <Link
             href="/investments/new"
             style={{
-              display: "inline-block",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "44px",
               marginTop: "12px",
+              padding: "0 16px",
+              borderRadius: "8px",
+              border: "1px solid var(--border, #ddd)",
               textDecoration: "none",
             }}
           >
@@ -136,17 +176,19 @@ export default async function InvestmentReportPage() {
                     alignItems: "center",
                     gap: "10px",
                     marginBottom: "16px",
+                    flexWrap: "wrap",
                   }}
                 >
                   <h2 style={{ margin: 0 }}>{currency}</h2>
 
                   <span
                     style={{
-                      fontSize: "13px",
+                      fontSize: "12px",
                       padding: "4px 8px",
-                      border: "1px solid #ddd",
+                      border: "1px solid var(--border, #ddd)",
                       borderRadius: "999px",
-                      opacity: 0.75,
+                      color:
+                        "var(--muted-foreground, #666)",
                     }}
                   >
                     Currency
@@ -161,103 +203,53 @@ export default async function InvestmentReportPage() {
                     gap: "14px",
                   }}
                 >
-                  <div
-                    style={{
-                      border: "1px solid #ddd",
-                      borderRadius: "12px",
-                      padding: "18px",
-                    }}
-                  >
-                    <h3
-                      style={{
-                        margin: "0 0 8px",
-                        fontSize: "15px",
-                      }}
-                    >
-                      Total Invested
-                    </h3>
+                  <MetricCard
+                    label="Total Invested"
+                    value={formatMoney(
+                      total.invested,
+                      currency,
+                    )}
+                  />
 
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "22px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {formatMoney(total.invested, currency)}
-                    </p>
-                  </div>
+                  <MetricCard
+                    label="Current Value"
+                    value={formatMoney(
+                      total.current,
+                      currency,
+                    )}
+                  />
 
-                  <div
-                    style={{
-                      border: "1px solid #ddd",
-                      borderRadius: "12px",
-                      padding: "18px",
-                    }}
-                  >
-                    <h3
-                      style={{
-                        margin: "0 0 8px",
-                        fontSize: "15px",
-                      }}
-                    >
-                      Current Value
-                    </h3>
-
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "22px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {formatMoney(total.current, currency)}
-                    </p>
-                  </div>
-
-                  <div
-                    style={{
-                      border: "1px solid #ddd",
-                      borderRadius: "12px",
-                      padding: "18px",
-                    }}
-                  >
-                    <h3
-                      style={{
-                        margin: "0 0 8px",
-                        fontSize: "15px",
-                      }}
-                    >
-                      Gain / Loss
-                    </h3>
-
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "22px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {formatMoney(gainLoss, currency)}
-                    </p>
-
-                    <p
-                      style={{
-                        margin: "6px 0 0",
-                        fontSize: "13px",
-                        opacity: 0.7,
-                      }}
-                    >
-                      {returnPercentage.toFixed(2)}% return
-                    </p>
-                  </div>
+                  <MetricCard
+                    label="Gain / Loss"
+                    value={formatMoney(
+                      gainLoss,
+                      currency,
+                    )}
+                    secondary={`${returnPercentage.toFixed(
+                      2,
+                    )}% return`}
+                  />
                 </div>
               </section>
             );
           })}
 
           <section>
-            <h2>Investments</h2>
+            <div style={{ marginBottom: "16px" }}>
+              <h2 style={{ margin: 0 }}>Investments</h2>
+
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  fontSize: "14px",
+                  color:
+                    "var(--muted-foreground, #666)",
+                }}
+              >
+                Select an investment to view its full details and
+                performance.
+              </p>
+            </div>
 
             <div
               style={{
@@ -265,7 +257,6 @@ export default async function InvestmentReportPage() {
                 gridTemplateColumns:
                   "repeat(auto-fit, minmax(280px, 1fr))",
                 gap: "14px",
-                marginTop: "16px",
               }}
             >
               {(investments ?? []).map((investment) => {
@@ -290,9 +281,11 @@ export default async function InvestmentReportPage() {
                     key={investment.id}
                     style={{
                       display: "block",
-                      border: "1px solid #ddd",
-                      borderRadius: "12px",
+                      minWidth: 0,
                       padding: "18px",
+                      border:
+                        "1px solid var(--border, #ddd)",
+                      borderRadius: "12px",
                       textDecoration: "none",
                     }}
                   >
@@ -308,6 +301,8 @@ export default async function InvestmentReportPage() {
                         style={{
                           margin: 0,
                           fontSize: "17px",
+                          lineHeight: 1.35,
+                          overflowWrap: "anywhere",
                         }}
                       >
                         {investment.name}
@@ -315,12 +310,15 @@ export default async function InvestmentReportPage() {
 
                       <span
                         style={{
+                          flexShrink: 0,
                           fontSize: "12px",
                           padding: "4px 8px",
-                          border: "1px solid #ddd",
+                          border:
+                            "1px solid var(--border, #ddd)",
                           borderRadius: "999px",
                           whiteSpace: "nowrap",
-                          opacity: 0.75,
+                          color:
+                            "var(--muted-foreground, #666)",
                         }}
                       >
                         {investment.currency}
@@ -331,73 +329,89 @@ export default async function InvestmentReportPage() {
                       style={{
                         margin: "12px 0 4px",
                         fontSize: "13px",
-                        opacity: 0.65,
+                        color:
+                          "var(--muted-foreground, #666)",
                       }}
                     >
-                      {investment.investment_type} · {investment.status}
+                      {investment.investment_type} ·{" "}
+                      {investment.status}
                     </p>
 
-                    <div style={{ marginTop: "16px" }}>
-                      <p
-                        style={{
-                          margin: "0 0 4px",
-                          fontSize: "13px",
-                          opacity: 0.65,
-                        }}
-                      >
-                        Invested
-                      </p>
+                    <div
+                      style={{
+                        display: "grid",
+                        gap: "14px",
+                        marginTop: "16px",
+                      }}
+                    >
+                      <div>
+                        <p
+                          style={{
+                            margin: "0 0 4px",
+                            fontSize: "13px",
+                            color:
+                              "var(--muted-foreground, #666)",
+                          }}
+                        >
+                          Invested
+                        </p>
 
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: "19px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {formatMoney(
-                          invested,
-                          investment.currency,
-                        )}
-                      </p>
-                    </div>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: "19px",
+                            fontWeight: 600,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {formatMoney(
+                            invested,
+                            investment.currency,
+                          )}
+                        </p>
+                      </div>
 
-                    <div style={{ marginTop: "14px" }}>
-                      <p
-                        style={{
-                          margin: "0 0 4px",
-                          fontSize: "13px",
-                          opacity: 0.65,
-                        }}
-                      >
-                        Current Value
-                      </p>
+                      <div>
+                        <p
+                          style={{
+                            margin: "0 0 4px",
+                            fontSize: "13px",
+                            color:
+                              "var(--muted-foreground, #666)",
+                          }}
+                        >
+                          Current Value
+                        </p>
 
-                      <p
-                        style={{
-                          margin: 0,
-                          fontSize: "21px",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {formatMoney(
-                          current,
-                          investment.currency,
-                        )}
-                      </p>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: "21px",
+                            fontWeight: 700,
+                            overflowWrap: "anywhere",
+                          }}
+                        >
+                          {formatMoney(
+                            current,
+                            investment.currency,
+                          )}
+                        </p>
+                      </div>
                     </div>
 
                     <div
                       style={{
-                        borderTop: "1px solid #ddd",
-                        marginTop: "14px",
-                        paddingTop: "12px",
+                        marginTop: "16px",
+                        paddingTop: "14px",
+                        borderTop:
+                          "1px solid var(--border, #ddd)",
                       }}
                     >
                       <p
                         style={{
                           margin: 0,
                           fontSize: "14px",
+                          overflowWrap: "anywhere",
                         }}
                       >
                         Gain / Loss:{" "}
@@ -413,7 +427,8 @@ export default async function InvestmentReportPage() {
                         style={{
                           margin: "5px 0 0",
                           fontSize: "13px",
-                          opacity: 0.7,
+                          color:
+                            "var(--muted-foreground, #666)",
                         }}
                       >
                         {returnPercentage.toFixed(2)}% return
@@ -424,7 +439,8 @@ export default async function InvestmentReportPage() {
                       style={{
                         margin: "14px 0 0",
                         fontSize: "13px",
-                        opacity: 0.6,
+                        color:
+                          "var(--muted-foreground, #666)",
                       }}
                     >
                       View investment →
@@ -436,6 +452,93 @@ export default async function InvestmentReportPage() {
           </section>
         </>
       )}
+
+      <style>{`
+        a:focus-visible {
+          outline: 2px solid currentColor;
+          outline-offset: 3px;
+        }
+
+        @media (max-width: 600px) {
+          main {
+            padding: 18px 12px 36px !important;
+          }
+
+          .card {
+            padding: 16px !important;
+          }
+
+          h2 {
+            font-size: 21px;
+          }
+
+          a {
+            -webkit-tap-highlight-color: transparent;
+          }
+        }
+
+        @media (max-width: 420px) {
+          main {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+          }
+        }
+      `}</style>
     </main>
   );
 }
+
+function MetricCard({
+  label,
+  value,
+  secondary,
+}: {
+  label: string;
+  value: string;
+  secondary?: string;
+}) {
+  return (
+    <div
+      className="card"
+      style={{
+        minWidth: 0,
+        padding: "18px",
+      }}
+    >
+      <h3
+        style={{
+          margin: "0 0 8px",
+          fontSize: "15px",
+          lineHeight: 1.4,
+        }}
+      >
+        {label}
+      </h3>
+
+      <p
+        style={{
+          margin: 0,
+          fontSize: "22px",
+          fontWeight: 700,
+          lineHeight: 1.3,
+          overflowWrap: "anywhere",
+        }}
+      >
+        {value}
+      </p>
+
+      {secondary && (
+        <p
+          style={{
+            margin: "6px 0 0",
+            fontSize: "13px",
+            color: "var(--muted-foreground, #666)",
+          }}
+        >
+          {secondary}
+        </p>
+      )}
+    </div>
+  );
+}
+

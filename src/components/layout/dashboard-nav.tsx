@@ -11,7 +11,11 @@ const navigation = [
   { href: "/categories", label: "Categories", icon: "▦" },
   { href: "/budgets", label: "Budgets", icon: "◉" },
   { href: "/investments", label: "Investments", icon: "↗" },
-  { href: "/long-term-assets", label: "Long-Term Assets", icon: "⌂" },
+  {
+    href: "/long-term-assets",
+    label: "Long-Term Assets",
+    icon: "⌂",
+  },
   { href: "/deposits", label: "Deposits", icon: "▣" },
   { href: "/recurring", label: "Recurring", icon: "↻" },
   { href: "/goals", label: "Goals", icon: "◎" },
@@ -19,38 +23,43 @@ const navigation = [
   { href: "/tuition", label: "Tuition", icon: "🎓" },
 ];
 
-
-
 export function DashboardNav() {
   const pathname = usePathname();
 
   return (
     <nav aria-label="Main navigation">
-      {navigation.map((item) => {
-        const isActive =
-          pathname === item.href ||
-          pathname.startsWith(`${item.href}/`);
+      <ul
+        style={{
+          listStyle: "none",
+          margin: 0,
+          padding: 0,
+          display: "contents",
+        }}
+      >
+        {navigation.map((item) => {
+          const isActive =
+            pathname === item.href ||
+            pathname.startsWith(`${item.href}/`);
 
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            aria-current={isActive ? "page" : undefined}
-            style={{
-              background: isActive
-                ? "#1e293b"
-                : undefined,
-              color: isActive ? "#fff" : undefined,
-              fontWeight: isActive ? 600 : undefined,
-            }}
-          >
-            <span aria-hidden="true">
-              {item.icon}
-            </span>
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
+          return (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                aria-current={
+                  isActive ? "page" : undefined
+                }
+              >
+                <span aria-hidden="true">
+                  {item.icon}
+                </span>
+
+                <span>{item.label}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </nav>
   );
 }
+

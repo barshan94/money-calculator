@@ -72,50 +72,89 @@ export default async function DepositReportPage() {
         padding: "24px 16px 48px",
       }}
     >
-      <Link
-        href="/reports"
+      <header
         style={{
-          display: "inline-block",
-          marginBottom: "12px",
-          textDecoration: "none",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "20px",
+          marginBottom: "28px",
+          flexWrap: "wrap",
         }}
       >
-        ← Back to Reports
-      </Link>
-
-      <div style={{ marginBottom: "28px" }}>
-        <h1 style={{ margin: 0 }}>Deposits Report</h1>
-
-        <p
+        <div
           style={{
-            margin: "8px 0 0",
-            opacity: 0.7,
+            minWidth: 0,
+            flex: "1 1 500px",
           }}
         >
-          Overview of your active deposits and expected maturity values.
-        </p>
-      </div>
+          <Link
+            href="/reports"
+            style={{
+              display: "inline-block",
+              marginBottom: "12px",
+              textDecoration: "none",
+              fontSize: "14px",
+            }}
+          >
+            ← Back to Reports
+          </Link>
+
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "clamp(28px, 5vw, 36px)",
+              lineHeight: 1.15,
+            }}
+          >
+            Deposits Report
+          </h1>
+
+          <p
+            style={{
+              margin: "10px 0 0",
+              maxWidth: "700px",
+              color: "var(--muted-foreground, #666)",
+              lineHeight: 1.6,
+            }}
+          >
+            Overview of your active deposits and expected maturity
+            values.
+          </p>
+        </div>
+      </header>
 
       {!hasDeposits ? (
         <section
+          className="card"
           style={{
-            border: "1px solid #ddd",
-            borderRadius: "12px",
-            padding: "32px 20px",
+            padding: "36px 20px",
             textAlign: "center",
           }}
         >
           <h2 style={{ marginTop: 0 }}>No deposits available</h2>
 
-          <p style={{ opacity: 0.7 }}>
-            Create a deposit to see its details and expected returns here.
+          <p
+            style={{
+              color: "var(--muted-foreground, #666)",
+              lineHeight: 1.6,
+            }}
+          >
+            Create a deposit to see its details and expected
+            returns here.
           </p>
 
           <Link
             href="/deposits/new"
             style={{
-              display: "inline-block",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "44px",
               marginTop: "12px",
+              padding: "0 16px",
+              borderRadius: "8px",
+              border: "1px solid var(--border, #ddd)",
               textDecoration: "none",
             }}
           >
@@ -141,17 +180,19 @@ export default async function DepositReportPage() {
                     alignItems: "center",
                     gap: "10px",
                     marginBottom: "16px",
+                    flexWrap: "wrap",
                   }}
                 >
                   <h2 style={{ margin: 0 }}>{currency}</h2>
 
                   <span
                     style={{
-                      fontSize: "13px",
+                      fontSize: "12px",
                       padding: "4px 8px",
-                      border: "1px solid #ddd",
+                      border: "1px solid var(--border, #ddd)",
                       borderRadius: "999px",
-                      opacity: 0.75,
+                      color:
+                        "var(--muted-foreground, #666)",
                     }}
                   >
                     Currency
@@ -166,93 +207,49 @@ export default async function DepositReportPage() {
                     gap: "14px",
                   }}
                 >
-                  <div
-                    style={{
-                      border: "1px solid #ddd",
-                      borderRadius: "12px",
-                      padding: "18px",
-                    }}
-                  >
-                    <h3
-                      style={{
-                        margin: "0 0 8px",
-                        fontSize: "15px",
-                      }}
-                    >
-                      Total Principal
-                    </h3>
+                  <MetricCard
+                    label="Total Principal"
+                    value={formatMoney(
+                      total.principal,
+                      currency,
+                    )}
+                  />
 
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "22px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {formatMoney(total.principal, currency)}
-                    </p>
-                  </div>
+                  <MetricCard
+                    label="Expected Maturity"
+                    value={formatMoney(
+                      total.maturity,
+                      currency,
+                    )}
+                  />
 
-                  <div
-                    style={{
-                      border: "1px solid #ddd",
-                      borderRadius: "12px",
-                      padding: "18px",
-                    }}
-                  >
-                    <h3
-                      style={{
-                        margin: "0 0 8px",
-                        fontSize: "15px",
-                      }}
-                    >
-                      Expected Maturity
-                    </h3>
-
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "22px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {formatMoney(total.maturity, currency)}
-                    </p>
-                  </div>
-
-                  <div
-                    style={{
-                      border: "1px solid #ddd",
-                      borderRadius: "12px",
-                      padding: "18px",
-                    }}
-                  >
-                    <h3
-                      style={{
-                        margin: "0 0 8px",
-                        fontSize: "15px",
-                      }}
-                    >
-                      Expected Interest
-                    </h3>
-
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "22px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {formatMoney(expectedInterest, currency)}
-                    </p>
-                  </div>
+                  <MetricCard
+                    label="Expected Interest"
+                    value={formatMoney(
+                      expectedInterest,
+                      currency,
+                    )}
+                  />
                 </div>
               </section>
             );
           })}
 
           <section>
-            <h2>Deposit Details</h2>
+            <div style={{ marginBottom: "16px" }}>
+              <h2 style={{ margin: 0 }}>Deposit Details</h2>
+
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  color:
+                    "var(--muted-foreground, #666)",
+                  fontSize: "14px",
+                }}
+              >
+                Select a deposit to view its full details.
+              </p>
+            </div>
 
             <div
               style={{
@@ -260,7 +257,6 @@ export default async function DepositReportPage() {
                 gridTemplateColumns:
                   "repeat(auto-fit, minmax(280px, 1fr))",
                 gap: "14px",
-                marginTop: "16px",
               }}
             >
               {(deposits ?? []).map((deposit) => {
@@ -269,15 +265,24 @@ export default async function DepositReportPage() {
                     deposit.principal_amount,
                 );
 
+                const principal = Number(
+                  deposit.principal_amount,
+                );
+
+                const expectedInterest =
+                  maturityAmount - principal;
+
                 return (
                   <Link
                     href={`/deposits/${deposit.id}`}
                     key={deposit.id}
                     style={{
                       display: "block",
-                      border: "1px solid #ddd",
-                      borderRadius: "12px",
+                      minWidth: 0,
                       padding: "18px",
+                      border:
+                        "1px solid var(--border, #ddd)",
+                      borderRadius: "12px",
                       textDecoration: "none",
                     }}
                   >
@@ -293,6 +298,8 @@ export default async function DepositReportPage() {
                         style={{
                           margin: 0,
                           fontSize: "17px",
+                          lineHeight: 1.35,
+                          overflowWrap: "anywhere",
                         }}
                       >
                         {deposit.name}
@@ -300,12 +307,15 @@ export default async function DepositReportPage() {
 
                       <span
                         style={{
+                          flexShrink: 0,
                           fontSize: "12px",
                           padding: "4px 8px",
-                          border: "1px solid #ddd",
+                          border:
+                            "1px solid var(--border, #ddd)",
                           borderRadius: "999px",
                           whiteSpace: "nowrap",
-                          opacity: 0.75,
+                          color:
+                            "var(--muted-foreground, #666)",
                         }}
                       >
                         {deposit.currency}
@@ -316,18 +326,21 @@ export default async function DepositReportPage() {
                       style={{
                         margin: "12px 0 4px",
                         fontSize: "13px",
-                        opacity: 0.65,
+                        color:
+                          "var(--muted-foreground, #666)",
                       }}
                     >
-                      {deposit.deposit_type} · {deposit.status}
+                      {deposit.deposit_type} ·{" "}
+                      {deposit.status}
                     </p>
 
-                    <div style={{ marginTop: "14px" }}>
+                    <div style={{ marginTop: "16px" }}>
                       <p
                         style={{
                           margin: "0 0 6px",
                           fontSize: "13px",
-                          opacity: 0.65,
+                          color:
+                            "var(--muted-foreground, #666)",
                         }}
                       >
                         Principal
@@ -338,10 +351,11 @@ export default async function DepositReportPage() {
                           margin: 0,
                           fontSize: "20px",
                           fontWeight: 700,
+                          overflowWrap: "anywhere",
                         }}
                       >
                         {formatMoney(
-                          Number(deposit.principal_amount),
+                          principal,
                           deposit.currency,
                         )}
                       </p>
@@ -352,7 +366,8 @@ export default async function DepositReportPage() {
                         style={{
                           margin: "0 0 6px",
                           fontSize: "13px",
-                          opacity: 0.65,
+                          color:
+                            "var(--muted-foreground, #666)",
                         }}
                       >
                         Expected Maturity
@@ -363,6 +378,7 @@ export default async function DepositReportPage() {
                           margin: 0,
                           fontSize: "18px",
                           fontWeight: 600,
+                          overflowWrap: "anywhere",
                         }}
                       >
                         {formatMoney(
@@ -374,33 +390,51 @@ export default async function DepositReportPage() {
 
                     <div
                       style={{
-                        display: "flex",
-                        flexWrap: "wrap",
-                        gap: "14px",
+                        display: "grid",
+                        gap: "6px",
                         marginTop: "16px",
+                        paddingTop: "14px",
+                        borderTop:
+                          "1px solid var(--border, #ddd)",
                         fontSize: "13px",
-                        opacity: 0.7,
+                        color:
+                          "var(--muted-foreground, #666)",
                       }}
                     >
                       {deposit.interest_rate !== null && (
                         <span>
                           Rate:{" "}
-                          {Number(deposit.interest_rate).toFixed(2)}%
+                          {Number(
+                            deposit.interest_rate,
+                          ).toFixed(2)}
+                          %
                         </span>
                       )}
 
                       {deposit.maturity_date && (
                         <span>
-                          Matures: {formatDate(deposit.maturity_date)}
+                          Matures:{" "}
+                          {formatDate(
+                            deposit.maturity_date,
+                          )}
                         </span>
                       )}
+
+                      <span>
+                        Expected interest:{" "}
+                        {formatMoney(
+                          expectedInterest,
+                          deposit.currency,
+                        )}
+                      </span>
                     </div>
 
                     <p
                       style={{
                         margin: "16px 0 0",
                         fontSize: "13px",
-                        opacity: 0.6,
+                        color:
+                          "var(--muted-foreground, #666)",
                       }}
                     >
                       View deposit →
@@ -412,7 +446,79 @@ export default async function DepositReportPage() {
           </section>
         </>
       )}
+
+      <style>{`
+        a:focus-visible {
+          outline: 2px solid currentColor;
+          outline-offset: 3px;
+        }
+
+        @media (max-width: 600px) {
+          main {
+            padding: 18px 12px 36px !important;
+          }
+
+          .card {
+            padding: 16px !important;
+          }
+
+          h2 {
+            font-size: 21px;
+          }
+
+          a {
+            -webkit-tap-highlight-color: transparent;
+          }
+        }
+
+        @media (max-width: 420px) {
+          main {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+          }
+        }
+      `}</style>
     </main>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div
+      className="card"
+      style={{
+        minWidth: 0,
+        padding: "18px",
+      }}
+    >
+      <h3
+        style={{
+          margin: "0 0 8px",
+          fontSize: "15px",
+          lineHeight: 1.4,
+        }}
+      >
+        {label}
+      </h3>
+
+      <p
+        style={{
+          margin: 0,
+          fontSize: "22px",
+          fontWeight: 700,
+          lineHeight: 1.3,
+          overflowWrap: "anywhere",
+        }}
+      >
+        {value}
+      </p>
+    </div>
   );
 }
 

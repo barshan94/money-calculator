@@ -217,524 +217,716 @@ export default function NewRecurringTransactionPage() {
 
   if (loading) {
     return (
-      <main
-        style={{
-          maxWidth: 760,
-          margin: "0 auto",
-          padding: "24px 16px 48px",
-        }}
-      >
-        <h1
-          style={{
-            margin: "0 0 8px",
-            fontSize: "clamp(24px, 5vw, 32px)",
-          }}
-        >
-          New Recurring Transaction
-        </h1>
+      <main className="recurring-form-page">
+        <style>{`
+          .recurring-form-page {
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 24px 16px 48px;
+          }
 
-        <p style={{ color: "#666" }}>Loading form...</p>
+          .recurring-loading-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #fff;
+            padding: 24px;
+          }
+
+          .recurring-loading-card h1 {
+            margin: 0 0 8px;
+            color: #0f172a;
+            font-size: clamp(25px, 5vw, 32px);
+          }
+
+          .recurring-loading-card p {
+            margin: 0;
+            color: #64748b;
+            font-size: 14px;
+          }
+        `}</style>
+
+        <div className="recurring-loading-card">
+          <h1>New Recurring Transaction</h1>
+          <p>Loading form...</p>
+        </div>
       </main>
     );
   }
 
   return (
-    <main
-      style={{
-        maxWidth: 760,
-        margin: "0 auto",
-        padding: "24px 16px 48px",
-      }}
-    >
-      <div style={{ marginBottom: 24 }}>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "clamp(24px, 5vw, 32px)",
-            lineHeight: 1.2,
-          }}
-        >
-          New Recurring Transaction
-        </h1>
+    <main className="recurring-form-page">
+      <style>{`
+        .recurring-form-page {
+          max-width: 780px;
+          margin: 0 auto;
+          padding: 24px 16px 48px;
+        }
 
-        <p
-          style={{
-            margin: "8px 0 0",
-            color: "#666",
-            fontSize: 14,
-          }}
-        >
-          Schedule an automatic income, expense, or transfer.
+        .recurring-form-header {
+          margin-bottom: 20px;
+        }
+
+        .recurring-form-header h1 {
+          margin: 0;
+          color: #0f172a;
+          font-size: clamp(26px, 5vw, 34px);
+          line-height: 1.2;
+        }
+
+        .recurring-form-header p {
+          margin: 8px 0 0;
+          color: #64748b;
+          font-size: 14px;
+          line-height: 1.5;
+        }
+
+        .recurring-alert {
+          margin-bottom: 18px;
+          padding: 12px 13px;
+          border: 1px solid #fecaca;
+          border-radius: 9px;
+          background: #fef2f2;
+          color: #991b1b;
+          font-size: 14px;
+          line-height: 1.45;
+        }
+
+        .recurring-form {
+          display: grid;
+          gap: 16px;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          background: #fff;
+          padding: 20px;
+        }
+
+        .recurring-section {
+          display: grid;
+          gap: 14px;
+          border: 1px solid #e2e8f0;
+          border-radius: 10px;
+          background: #fff;
+          padding: 16px;
+        }
+
+        .recurring-section-header {
+          margin-bottom: 1px;
+        }
+
+        .recurring-section-header h2 {
+          margin: 0;
+          color: #0f172a;
+          font-size: 16px;
+        }
+
+        .recurring-section-header p {
+          margin: 4px 0 0;
+          color: #64748b;
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .recurring-field {
+          min-width: 0;
+        }
+
+        .recurring-label {
+          display: block;
+          margin-bottom: 7px;
+          color: #334155;
+          font-size: 13px;
+          font-weight: 600;
+        }
+
+        .recurring-input,
+        .recurring-select,
+        .recurring-textarea {
+          width: 100%;
+          box-sizing: border-box;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: #fff;
+          color: #0f172a;
+          font: inherit;
+          font-size: 14px;
+          outline: none;
+        }
+
+        .recurring-input,
+        .recurring-select {
+          min-height: 44px;
+          padding: 10px 11px;
+        }
+
+        .recurring-textarea {
+          min-height: 100px;
+          padding: 10px 11px;
+          resize: vertical;
+        }
+
+        .recurring-input:focus,
+        .recurring-select:focus,
+        .recurring-textarea:focus {
+          border-color: #64748b;
+          box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.12);
+        }
+
+        .recurring-input:disabled,
+        .recurring-select:disabled,
+        .recurring-textarea:disabled {
+          background: #f8fafc;
+          cursor: not-allowed;
+        }
+
+        .recurring-grid-two {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
+        }
+
+        .recurring-type-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 9px;
+        }
+
+        .recurring-type-option {
+          position: relative;
+          min-width: 0;
+        }
+
+        .recurring-type-option input {
+          position: absolute;
+          opacity: 0;
+          pointer-events: none;
+        }
+
+        .recurring-type-button {
+          display: flex;
+          min-height: 48px;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #cbd5e1;
+          border-radius: 8px;
+          background: #fff;
+          color: #334155;
+          cursor: pointer;
+          font-size: 13px;
+          font-weight: 600;
+          text-transform: capitalize;
+          transition: border-color 0.15s ease,
+            background 0.15s ease;
+        }
+
+        .recurring-type-button:hover {
+          border-color: #94a3b8;
+        }
+
+        .recurring-type-option input:checked
+          + .recurring-type-button {
+          border-color: #0f172a;
+          background: #0f172a;
+          color: #fff;
+        }
+
+        .recurring-help {
+          margin: 6px 0 0;
+          color: #94a3b8;
+          font-size: 11px;
+          line-height: 1.4;
+        }
+
+        .recurring-warning {
+          margin: 0;
+          padding: 10px 11px;
+          border: 1px solid #fde68a;
+          border-radius: 8px;
+          background: #fffbeb;
+          color: #92400e;
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .recurring-empty-option {
+          margin: 6px 0 0;
+          color: #64748b;
+          font-size: 12px;
+          line-height: 1.45;
+        }
+
+        .recurring-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 9px;
+          padding-top: 4px;
+        }
+
+        .recurring-submit,
+        .recurring-cancel {
+          min-height: 44px;
+          padding: 10px 16px;
+          border-radius: 8px;
+          font: inherit;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+        }
+
+        .recurring-submit {
+          border: 1px solid #0f172a;
+          background: #0f172a;
+          color: #fff;
+        }
+
+        .recurring-submit:hover:not(:disabled) {
+          background: #1e293b;
+        }
+
+        .recurring-cancel {
+          border: 1px solid #cbd5e1;
+          background: #fff;
+          color: #334155;
+        }
+
+        .recurring-cancel:hover:not(:disabled) {
+          background: #f8fafc;
+        }
+
+        .recurring-submit:disabled,
+        .recurring-cancel:disabled {
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        @media (max-width: 600px) {
+          .recurring-form-page {
+            padding: 18px 12px 36px;
+          }
+
+          .recurring-form {
+            padding: 14px;
+          }
+
+          .recurring-section {
+            padding: 14px;
+          }
+
+          .recurring-grid-two {
+            grid-template-columns: 1fr;
+          }
+
+          .recurring-type-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .recurring-type-button {
+            min-height: 44px;
+          }
+
+          .recurring-actions {
+            display: grid;
+            grid-template-columns: 1fr;
+          }
+
+          .recurring-submit,
+          .recurring-cancel {
+            width: 100%;
+          }
+        }
+      `}</style>
+
+      <header className="recurring-form-header">
+        <h1>New Recurring Transaction</h1>
+
+        <p>
+          Schedule an automatic income, expense, or
+          transfer.
         </p>
-      </div>
+      </header>
 
       {message && (
-        <div
-          role="alert"
-          style={{
-            marginBottom: 18,
-            padding: 12,
-            borderRadius: 8,
-            background: "#fff1f1",
-            border: "1px solid #f0caca",
-            color: "#a00000",
-            fontSize: 14,
-          }}
-        >
+        <div className="recurring-alert" role="alert">
           {message}
         </div>
       )}
 
       <form
         onSubmit={handleSubmit}
-        style={{
-          display: "grid",
-          gap: 18,
-          padding: 20,
-          border: "1px solid #e5e5e5",
-          borderRadius: 12,
-          background: "#fff",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-        }}
+        className="recurring-form"
       >
-        <div>
-          <label
-            htmlFor="name"
-            style={{
-              display: "block",
-              marginBottom: 7,
-              fontWeight: 600,
-            }}
-          >
-            Name
-          </label>
+        <section className="recurring-section">
+          <div className="recurring-section-header">
+            <h2>Transaction Details</h2>
+            <p>
+              Define what this recurring transaction
+              represents.
+            </p>
+          </div>
 
-          <input
-            id="name"
-            value={name}
-            onChange={(event) =>
-              setName(event.target.value)
-            }
-            placeholder="e.g. Monthly Salary"
-            required
-            disabled={saving}
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: 11,
-              border: "1px solid #ccc",
-              borderRadius: 7,
-            }}
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="type"
-            style={{
-              display: "block",
-              marginBottom: 7,
-              fontWeight: 600,
-            }}
-          >
-            Type
-          </label>
-
-          <select
-            id="type"
-            value={type}
-            onChange={(event) => {
-              const newType =
-                event.target.value as TransactionType;
-
-              setType(newType);
-              setCategoryId("");
-              setSourceAccountId("");
-              setDestinationAccountId("");
-            }}
-            disabled={saving}
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: 11,
-              border: "1px solid #ccc",
-              borderRadius: 7,
-              background: "#fff",
-            }}
-          >
-            <option value="expense">Expense</option>
-            <option value="income">Income</option>
-            <option value="transfer">Transfer</option>
-          </select>
-        </div>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 16,
-          }}
-        >
-          <div>
+          <div className="recurring-field">
             <label
-              htmlFor="amount"
-              style={{
-                display: "block",
-                marginBottom: 7,
-                fontWeight: 600,
-              }}
+              htmlFor="name"
+              className="recurring-label"
             >
-              Amount
+              Name
             </label>
 
             <input
-              id="amount"
-              type="number"
-              min="0.01"
-              step="0.01"
-              inputMode="decimal"
-              value={amount}
+              id="name"
+              className="recurring-input"
+              value={name}
               onChange={(event) =>
-                setAmount(event.target.value)
+                setName(event.target.value)
               }
+              placeholder="e.g. Monthly Salary"
               required
               disabled={saving}
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: 11,
-                border: "1px solid #ccc",
-                borderRadius: 7,
-              }}
+              autoComplete="off"
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="currency"
-              style={{
-                display: "block",
-                marginBottom: 7,
-                fontWeight: 600,
-              }}
-            >
-              Currency
-            </label>
+          <div className="recurring-field">
+            <span className="recurring-label">
+              Transaction Type
+            </span>
 
-            <select
-              id="currency"
-              value={currency}
-              onChange={(event) =>
-                setCurrency(event.target.value)
-              }
-              disabled={saving}
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: 11,
-                border: "1px solid #ccc",
-                borderRadius: 7,
-                background: "#fff",
-              }}
-            >
-              <option value="BDT">BDT</option>
-              <option value="USD">USD</option>
-              <option value="EUR">EUR</option>
-              <option value="GBP">GBP</option>
-            </select>
+            <div className="recurring-type-grid">
+              {(
+                [
+                  ["expense", "Expense"],
+                  ["income", "Income"],
+                  ["transfer", "Transfer"],
+                ] as const
+              ).map(([value, label]) => (
+                <label
+                  key={value}
+                  className="recurring-type-option"
+                >
+                  <input
+                    type="radio"
+                    name="transactionType"
+                    value={value}
+                    checked={type === value}
+                    onChange={() => {
+                      setType(value);
+                      setCategoryId("");
+                      setSourceAccountId("");
+                      setDestinationAccountId("");
+                    }}
+                    disabled={saving}
+                  />
+
+                  <span className="recurring-type-button">
+                    {label}
+                  </span>
+                </label>
+              ))}
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: 16,
-          }}
-        >
-          <div>
-            <label
-              htmlFor="frequency"
-              style={{
-                display: "block",
-                marginBottom: 7,
-                fontWeight: 600,
-              }}
-            >
-              Frequency
-            </label>
-
-            <select
-              id="frequency"
-              value={frequency}
-              onChange={(event) =>
-                setFrequency(
-                  event.target.value as Frequency,
-                )
-              }
-              disabled={saving}
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: 11,
-                border: "1px solid #ccc",
-                borderRadius: 7,
-                background: "#fff",
-              }}
-            >
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-              <option value="yearly">Yearly</option>
-            </select>
+        <section className="recurring-section">
+          <div className="recurring-section-header">
+            <h2>Schedule & Amount</h2>
+            <p>
+              Set how often it runs and when the next
+              transaction should occur.
+            </p>
           </div>
 
-          <div>
-            <label
-              htmlFor="nextRunDate"
-              style={{
-                display: "block",
-                marginBottom: 7,
-                fontWeight: 600,
-              }}
-            >
-              Next Run Date
-            </label>
+          <div className="recurring-grid-two">
+            <div className="recurring-field">
+              <label
+                htmlFor="amount"
+                className="recurring-label"
+              >
+                Amount
+              </label>
 
-            <input
-              id="nextRunDate"
-              type="date"
-              min={today}
-              value={nextRunDate}
-              onChange={(event) =>
-                setNextRunDate(event.target.value)
-              }
-              required
-              disabled={saving}
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: 11,
-                border: "1px solid #ccc",
-                borderRadius: 7,
-              }}
-            />
+              <input
+                id="amount"
+                className="recurring-input"
+                type="number"
+                min="0.01"
+                step="0.01"
+                inputMode="decimal"
+                value={amount}
+                onChange={(event) =>
+                  setAmount(event.target.value)
+                }
+                placeholder="0.00"
+                required
+                disabled={saving}
+              />
+            </div>
+
+            <div className="recurring-field">
+              <label
+                htmlFor="currency"
+                className="recurring-label"
+              >
+                Currency
+              </label>
+
+              <select
+                id="currency"
+                className="recurring-select"
+                value={currency}
+                onChange={(event) =>
+                  setCurrency(event.target.value)
+                }
+                disabled={saving}
+              >
+                <option value="BDT">BDT</option>
+                <option value="USD">USD</option>
+                <option value="EUR">EUR</option>
+                <option value="GBP">GBP</option>
+              </select>
+            </div>
           </div>
-        </div>
+
+          <div className="recurring-grid-two">
+            <div className="recurring-field">
+              <label
+                htmlFor="frequency"
+                className="recurring-label"
+              >
+                Frequency
+              </label>
+
+              <select
+                id="frequency"
+                className="recurring-select"
+                value={frequency}
+                onChange={(event) =>
+                  setFrequency(
+                    event.target.value as Frequency,
+                  )
+                }
+                disabled={saving}
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+
+            <div className="recurring-field">
+              <label
+                htmlFor="nextRunDate"
+                className="recurring-label"
+              >
+                Next Run Date
+              </label>
+
+              <input
+                id="nextRunDate"
+                className="recurring-input"
+                type="date"
+                min={today}
+                value={nextRunDate}
+                onChange={(event) =>
+                  setNextRunDate(event.target.value)
+                }
+                required
+                disabled={saving}
+              />
+
+              <p className="recurring-help">
+                This is the first scheduled run. Future
+                runs follow the selected frequency.
+              </p>
+            </div>
+          </div>
+        </section>
 
         {type !== "transfer" && (
-          <div>
-            <label
-              htmlFor="category"
-              style={{
-                display: "block",
-                marginBottom: 7,
-                fontWeight: 600,
-              }}
-            >
-              Category
-            </label>
+          <section className="recurring-section">
+            <div className="recurring-section-header">
+              <h2>Category</h2>
+              <p>
+                Categorize this recurring income or expense.
+              </p>
+            </div>
 
-            <select
-              id="category"
-              value={categoryId}
-              onChange={(event) =>
-                setCategoryId(event.target.value)
-              }
-              required
-              disabled={saving}
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: 11,
-                border: "1px solid #ccc",
-                borderRadius: 7,
-                background: "#fff",
-              }}
-            >
-              <option value="">Select category</option>
-
-              {visibleCategories.map((category) => (
-                <option
-                  key={category.id}
-                  value={category.id}
-                >
-                  {category.name}
-                </option>
-              ))}
-            </select>
-
-            {visibleCategories.length === 0 && (
-              <p
-                style={{
-                  margin: "7px 0 0",
-                  color: "#777",
-                  fontSize: 13,
-                }}
+            <div className="recurring-field">
+              <label
+                htmlFor="category"
+                className="recurring-label"
               >
-                No active {type} categories are available.
+                Category
+              </label>
+
+              <select
+                id="category"
+                className="recurring-select"
+                value={categoryId}
+                onChange={(event) =>
+                  setCategoryId(event.target.value)
+                }
+                required
+                disabled={saving}
+              >
+                <option value="">
+                  Select category
+                </option>
+
+                {visibleCategories.map((category) => (
+                  <option
+                    key={category.id}
+                    value={category.id}
+                  >
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+
+              {visibleCategories.length === 0 && (
+                <p className="recurring-empty-option">
+                  No active {type} categories are available.
+                  Create or activate a category before
+                  creating this schedule.
+                </p>
+              )}
+            </div>
+          </section>
+        )}
+
+        <section className="recurring-section">
+          <div className="recurring-section-header">
+            <h2>Accounts</h2>
+            <p>
+              Choose where money comes from and/or where it
+              goes.
+            </p>
+          </div>
+
+          {(type === "expense" || type === "transfer") && (
+            <div className="recurring-field">
+              <label
+                htmlFor="sourceAccount"
+                className="recurring-label"
+              >
+                Source Account
+              </label>
+
+              <select
+                id="sourceAccount"
+                className="recurring-select"
+                value={sourceAccountId}
+                onChange={(event) =>
+                  setSourceAccountId(event.target.value)
+                }
+                required
+                disabled={saving}
+              >
+                <option value="">
+                  Select source account
+                </option>
+
+                {accounts.map((account) => (
+                  <option
+                    key={account.id}
+                    value={account.id}
+                  >
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {(type === "income" || type === "transfer") && (
+            <div className="recurring-field">
+              <label
+                htmlFor="destinationAccount"
+                className="recurring-label"
+              >
+                Destination Account
+              </label>
+
+              <select
+                id="destinationAccount"
+                className="recurring-select"
+                value={destinationAccountId}
+                onChange={(event) =>
+                  setDestinationAccountId(event.target.value)
+                }
+                required
+                disabled={saving}
+              >
+                <option value="">
+                  Select destination account
+                </option>
+
+                {accounts.map((account) => (
+                  <option
+                    key={account.id}
+                    value={account.id}
+                  >
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {accounts.length === 0 && (
+            <p className="recurring-warning">
+              No active non-system accounts are available.
+              You need an account before this recurring
+              transaction can run.
+            </p>
+          )}
+
+          {type === "transfer" &&
+            sourceAccountId &&
+            destinationAccountId &&
+            sourceAccountId === destinationAccountId && (
+              <p className="recurring-warning">
+                Source and destination must be different
+                accounts.
               </p>
             )}
-          </div>
-        )}
+        </section>
 
-        {(type === "expense" || type === "transfer") && (
-          <div>
+        <section className="recurring-section">
+          <div className="recurring-section-header">
+            <h2>Notes</h2>
+            <p>
+              Add optional information to help identify this
+              schedule later.
+            </p>
+          </div>
+
+          <div className="recurring-field">
             <label
-              htmlFor="sourceAccount"
-              style={{
-                display: "block",
-                marginBottom: 7,
-                fontWeight: 600,
-              }}
+              htmlFor="description"
+              className="recurring-label"
             >
-              Source Account
+              Description
             </label>
 
-            <select
-              id="sourceAccount"
-              value={sourceAccountId}
+            <textarea
+              id="description"
+              className="recurring-textarea"
+              value={description}
               onChange={(event) =>
-                setSourceAccountId(event.target.value)
+                setDescription(event.target.value)
               }
-              required
+              rows={4}
               disabled={saving}
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: 11,
-                border: "1px solid #ccc",
-                borderRadius: 7,
-                background: "#fff",
-              }}
-            >
-              <option value="">Select account</option>
-
-              {accounts.map((account) => (
-                <option
-                  key={account.id}
-                  value={account.id}
-                >
-                  {account.name}
-                </option>
-              ))}
-            </select>
+              placeholder="Optional notes..."
+            />
           </div>
-        )}
+        </section>
 
-        {(type === "income" || type === "transfer") && (
-          <div>
-            <label
-              htmlFor="destinationAccount"
-              style={{
-                display: "block",
-                marginBottom: 7,
-                fontWeight: 600,
-              }}
-            >
-              Destination Account
-            </label>
-
-            <select
-              id="destinationAccount"
-              value={destinationAccountId}
-              onChange={(event) =>
-                setDestinationAccountId(event.target.value)
-              }
-              required
-              disabled={saving}
-              style={{
-                width: "100%",
-                boxSizing: "border-box",
-                padding: 11,
-                border: "1px solid #ccc",
-                borderRadius: 7,
-                background: "#fff",
-              }}
-            >
-              <option value="">Select account</option>
-
-              {accounts.map((account) => (
-                <option
-                  key={account.id}
-                  value={account.id}
-                >
-                  {account.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {accounts.length === 0 && (
-          <p
-            style={{
-              margin: "-6px 0 0",
-              color: "#777",
-              fontSize: 13,
-            }}
-          >
-            No active non-system accounts are available.
-          </p>
-        )}
-
-        <div>
-          <label
-            htmlFor="description"
-            style={{
-              display: "block",
-              marginBottom: 7,
-              fontWeight: 600,
-            }}
-          >
-            Description
-          </label>
-
-          <textarea
-            id="description"
-            value={description}
-            onChange={(event) =>
-              setDescription(event.target.value)
-            }
-            rows={4}
-            disabled={saving}
-            placeholder="Optional notes..."
-            style={{
-              width: "100%",
-              boxSizing: "border-box",
-              padding: 11,
-              border: "1px solid #ccc",
-              borderRadius: 7,
-              resize: "vertical",
-            }}
-          />
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 10,
-            paddingTop: 4,
-            borderTop: "1px solid #eee",
-          }}
-        >
+        <div className="recurring-actions">
           <button
             type="submit"
+            className="recurring-submit"
             disabled={saving}
-            style={{
-              minHeight: 42,
-              padding: "10px 16px",
-              border: 0,
-              borderRadius: 8,
-              background: "#111",
-              color: "#fff",
-              fontWeight: 600,
-              cursor: saving ? "not-allowed" : "pointer",
-              opacity: saving ? 0.65 : 1,
-            }}
           >
             {saving
               ? "Creating..."
@@ -743,19 +935,9 @@ export default function NewRecurringTransactionPage() {
 
           <button
             type="button"
+            className="recurring-cancel"
             onClick={() => router.push("/recurring")}
             disabled={saving}
-            style={{
-              minHeight: 42,
-              padding: "10px 16px",
-              border: "1px solid #ccc",
-              borderRadius: 8,
-              background: "#fff",
-              color: "#222",
-              fontWeight: 600,
-              cursor: saving ? "not-allowed" : "pointer",
-              opacity: saving ? 0.65 : 1,
-            }}
           >
             Cancel
           </button>
@@ -764,3 +946,4 @@ export default function NewRecurringTransactionPage() {
     </main>
   );
 }
+

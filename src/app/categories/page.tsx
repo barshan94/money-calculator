@@ -68,6 +68,11 @@ export default function CategoriesPage() {
       return;
     }
 
+    if (trimmedName.length > 100) {
+      setError("Category name cannot exceed 100 characters.");
+      return;
+    }
+
     setCreating(true);
     setError("");
 
@@ -162,51 +167,54 @@ export default function CategoriesPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[var(--background)] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--foreground)]">
-            Categories
-          </h1>
+    <main className="categories-page">
+      <div className="categories-container">
+        <header className="categories-header">
+          <a className="back-link" href="/dashboard">
+            ← Dashboard
+          </a>
 
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            Manage income and expense categories for your transactions.
+          <h1>Categories</h1>
+
+          <p>
+            Manage income and expense categories used by your transactions.
           </p>
-        </div>
+        </header>
 
-        <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
-          <h2 className="text-sm font-semibold text-[var(--foreground)]">
-            Create Category
-          </h2>
-
-          <div className="mt-4 grid gap-3 md:grid-cols-[1fr_180px_auto]">
+        <section className="card section-card" aria-labelledby="create-heading">
+          <div className="section-heading">
             <div>
-              <label
-                htmlFor="category-name"
-                className="sr-only"
-              >
-                Category name
-              </label>
+              <h2 id="create-heading">Create Category</h2>
+              <p>Add a category for future transactions.</p>
+            </div>
+          </div>
+
+          <div className="create-grid">
+            <div>
+              <label htmlFor="category-name">Category name</label>
 
               <input
                 id="category-name"
                 type="text"
                 value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Category name"
+                onChange={(event) => {
+                  setName(event.target.value);
+                  if (error) setError("");
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    void createCategory();
+                  }
+                }}
+                placeholder="e.g. Salary"
                 maxLength={100}
                 disabled={creating}
-                className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)] outline-none transition focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
               />
             </div>
 
             <div>
-              <label
-                htmlFor="category-type"
-                className="sr-only"
-              >
-                Category type
-              </label>
+              <label htmlFor="category-type">Type</label>
 
               <select
                 id="category-type"
@@ -217,7 +225,6 @@ export default function CategoriesPage() {
                   )
                 }
                 disabled={creating}
-                className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <option value="income">Income</option>
                 <option value="expense">Expense</option>
@@ -226,34 +233,32 @@ export default function CategoriesPage() {
 
             <button
               type="button"
-              onClick={createCategory}
+              onClick={() => void createCategory()}
               disabled={creating}
-              className="h-10 rounded-lg px-5 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
-              style={{ backgroundColor: "var(--primary)" }}
+              className="primary-button"
             >
               {creating ? "Creating..." : "Create Category"}
             </button>
           </div>
 
           {error && (
-            <p
-              role="alert"
-              className="mt-3 text-sm text-[var(--danger)]"
-            >
+            <p className="error-message" role="alert" aria-live="polite">
               {error}
             </p>
           )}
         </section>
 
-        <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
-          <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto_auto] md:items-end">
+        <section className="card section-card" aria-labelledby="filter-heading">
+          <div className="section-heading">
             <div>
-              <label
-                htmlFor="category-filter"
-                className="mb-1.5 block text-xs font-medium text-[var(--muted-foreground)]"
-              >
-                Filter
-              </label>
+              <h2 id="filter-heading">Filter & Sort</h2>
+              <p>Choose how active categories should be displayed.</p>
+            </div>
+          </div>
+
+          <div className="filter-grid">
+            <div>
+              <label htmlFor="category-filter">Filter</label>
 
               <select
                 id="category-filter"
@@ -261,7 +266,6 @@ export default function CategoriesPage() {
                 onChange={(event) =>
                   setFilter(event.target.value as Filter)
                 }
-                className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
               >
                 <option value="all">All Categories</option>
                 <option value="income">Income Only</option>
@@ -270,12 +274,7 @@ export default function CategoriesPage() {
             </div>
 
             <div>
-              <label
-                htmlFor="category-sort"
-                className="mb-1.5 block text-xs font-medium text-[var(--muted-foreground)]"
-              >
-                Sort
-              </label>
+              <label htmlFor="category-sort">Sort</label>
 
               <select
                 id="category-sort"
@@ -283,7 +282,6 @@ export default function CategoriesPage() {
                 onChange={(event) =>
                   setSort(event.target.value as Sort)
                 }
-                className="h-10 w-full rounded-lg border border-[var(--border)] bg-[var(--background)] px-3 text-sm text-[var(--foreground)] outline-none focus:border-[var(--primary)]"
               >
                 <option value="newest">Newest First</option>
                 <option value="oldest">Oldest First</option>
@@ -295,8 +293,7 @@ export default function CategoriesPage() {
             <button
               type="button"
               onClick={applyFilters}
-              className="h-10 rounded-lg px-5 text-sm font-semibold text-white transition hover:opacity-90"
-              style={{ backgroundColor: "var(--primary)" }}
+              className="primary-button"
             >
               Apply
             </button>
@@ -304,175 +301,103 @@ export default function CategoriesPage() {
             <button
               type="button"
               onClick={resetFilters}
-              className="h-10 rounded-lg border border-[var(--border)] bg-[var(--background)] px-5 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--muted)]"
+              className="secondary-button"
             >
               Reset
             </button>
           </div>
         </section>
 
-        <div className="text-sm text-[var(--muted-foreground)]">
+        <div className="result-summary">
           Showing{" "}
-          <span className="font-semibold text-[var(--foreground)]">
-            {filteredActiveCategories.length}
-          </span>{" "}
+          <strong>{filteredActiveCategories.length}</strong>{" "}
           active categor
           {filteredActiveCategories.length === 1 ? "y" : "ies"}
         </div>
 
         {loading ? (
-          <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-8 text-center text-sm text-[var(--muted-foreground)]">
+          <section className="card loading-state" aria-live="polite">
             Loading categories...
-          </div>
+          </section>
+        ) : filteredActiveCategories.length === 0 ? (
+          <section className="card empty-state">
+            <div className="empty-icon" aria-hidden="true">
+              🗂️
+            </div>
+
+            <h2>No matching active categories</h2>
+
+            <p>
+              {activeCategories.length === 0
+                ? "Create your first category to organize income and expenses."
+                : "Try changing the filter or sort options."}
+            </p>
+
+            {activeCategories.length === 0 && (
+              <button
+                type="button"
+                onClick={() =>
+                  document
+                    .getElementById("category-name")
+                    ?.focus()
+                }
+                className="secondary-button empty-action"
+              >
+                Create a Category
+              </button>
+            )}
+          </section>
         ) : (
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="category-columns">
             {(appliedFilter === "all" || appliedFilter === "income") && (
-              <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-base font-semibold text-[var(--foreground)]">
-                    Income
-                  </h2>
-
-                  <span className="rounded-full bg-[var(--success-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--success)]">
-                    {incomeCategories.length}
-                  </span>
-                </div>
-
-                {incomeCategories.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-[var(--border)] px-4 py-8 text-center text-sm text-[var(--muted-foreground)]">
-                    No income categories found.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {incomeCategories.map((category) => (
-                      <div
-                        key={category.id}
-                        className="rounded-lg border border-[var(--border)] px-4 py-3"
-                      >
-                        <div className="flex w-full items-center justify-between gap-3">
-                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--foreground)]">
-                            {category.name}
-                          </span>
-
-                          <span className="shrink-0 rounded-full bg-[var(--success-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--success)]">
-                            Income
-                          </span>
-                        </div>
-
-                        <div className="mt-3 grid w-full grid-cols-3 gap-2">
-                          <EditCategoryButton
-                            categoryId={category.id}
-                            initialName={category.name}
-                            initialType={category.category_type}
-                          />
-
-                          <ArchiveCategoryButton
-                            categoryId={category.id}
-                          />
-
-                          <DeleteCategoryButton
-                            categoryId={category.id}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
+              <CategorySection
+                title="Income"
+                count={incomeCategories.length}
+                tone="income"
+                emptyText="No income categories found."
+                categories={incomeCategories}
+              />
             )}
 
             {(appliedFilter === "all" || appliedFilter === "expense") && (
-              <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-base font-semibold text-[var(--foreground)]">
-                    Expenses
-                  </h2>
-
-                  <span className="rounded-full bg-[var(--danger-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--danger)]">
-                    {expenseCategories.length}
-                  </span>
-                </div>
-
-                {expenseCategories.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-[var(--border)] px-4 py-8 text-center text-sm text-[var(--muted-foreground)]">
-                    No expense categories found.
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {expenseCategories.map((category) => (
-                      <div
-                        key={category.id}
-                        className="rounded-lg border border-[var(--border)] px-4 py-3"
-                      >
-                        <div className="flex w-full items-center justify-between gap-3">
-                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--foreground)]">
-                            {category.name}
-                          </span>
-
-                          <span className="shrink-0 rounded-full bg-[var(--danger-soft)] px-2.5 py-1 text-xs font-semibold text-[var(--danger)]">
-                            Expense
-                          </span>
-                        </div>
-
-                        <div className="mt-3 grid w-full grid-cols-3 gap-2">
-                          <EditCategoryButton
-                            categoryId={category.id}
-                            initialName={category.name}
-                            initialType={category.category_type}
-                          />
-
-                          <ArchiveCategoryButton
-                            categoryId={category.id}
-                          />
-
-                          <DeleteCategoryButton
-                            categoryId={category.id}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
+              <CategorySection
+                title="Expenses"
+                count={expenseCategories.length}
+                tone="expense"
+                emptyText="No expense categories found."
+                categories={expenseCategories}
+              />
             )}
           </div>
         )}
 
         {archivedCategories.length > 0 && (
-          <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-5">
-            <div className="mb-4 flex items-center justify-between">
+          <section className="card section-card archived-section">
+            <div className="section-heading">
               <div>
-                <h2 className="text-base font-semibold text-[var(--foreground)]">
-                  Archived
-                </h2>
-
-                <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-                  Archived categories are no longer available for new
-                  transactions.
+                <h2>Archived</h2>
+                <p>
+                  Archived categories remain preserved for existing
+                  transactions but are unavailable for new transactions.
                 </p>
               </div>
 
-              <span className="rounded-full bg-[var(--muted)] px-2.5 py-1 text-xs font-semibold text-[var(--muted-foreground)]">
+              <span className="count-badge neutral">
                 {archivedCategories.length}
               </span>
             </div>
 
-            <div className="space-y-3">
+            <div className="category-list">
               {archivedCategories.map((category) => (
-                <div
-                  key={category.id}
-                  className="rounded-lg border border-[var(--border)] px-4 py-3"
-                >
-                  <div className="flex w-full items-center justify-between gap-3">
-                    <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--foreground)]">
-                      {category.name}
-                    </span>
+                <div key={category.id} className="category-item archived-item">
+                  <div className="category-info">
+                    <span className="category-name">{category.name}</span>
 
                     <span
-                      className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      className={`type-badge ${
                         category.category_type === "income"
-                          ? "bg-[var(--success-soft)] text-[var(--success)]"
-                          : "bg-[var(--danger-soft)] text-[var(--danger)]"
+                          ? "income"
+                          : "expense"
                       }`}
                     >
                       {category.category_type === "income"
@@ -481,7 +406,7 @@ export default function CategoriesPage() {
                     </span>
                   </div>
 
-                  <div className="mt-3 grid w-full grid-cols-1">
+                  <div className="archived-actions">
                     <DeleteCategoryButton categoryId={category.id} />
                   </div>
                 </div>
@@ -490,6 +415,462 @@ export default function CategoriesPage() {
           </section>
         )}
       </div>
+
+      <style>{`
+        .categories-page {
+          min-height: 100vh;
+          background: var(--background);
+          padding: 24px 16px 48px;
+        }
+
+        .categories-container {
+          max-width: 1152px;
+          margin: 0 auto;
+        }
+
+        .categories-header {
+          margin-bottom: 24px;
+        }
+
+        .back-link {
+          display: inline-flex;
+          align-items: center;
+          min-height: 40px;
+          margin-bottom: 8px;
+          color: var(--muted-foreground);
+          text-decoration: none;
+          font-size: 0.9rem;
+          font-weight: 600;
+        }
+
+        .back-link:hover {
+          text-decoration: underline;
+        }
+
+        .categories-header h1 {
+          margin: 0;
+          color: var(--foreground);
+          font-size: clamp(1.8rem, 4vw, 2.25rem);
+          line-height: 1.2;
+        }
+
+        .categories-header p {
+          margin: 6px 0 0;
+          color: var(--muted-foreground);
+          line-height: 1.55;
+        }
+
+        .section-card {
+          padding: 20px;
+          margin-bottom: 18px;
+        }
+
+        .section-heading {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 16px;
+        }
+
+        .section-heading h2 {
+          margin: 0;
+          color: var(--foreground);
+          font-size: 1.05rem;
+        }
+
+        .section-heading p {
+          margin: 4px 0 0;
+          color: var(--muted-foreground);
+          font-size: 0.86rem;
+          line-height: 1.5;
+        }
+
+        .create-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 180px auto;
+          gap: 12px;
+          align-items: end;
+        }
+
+        .filter-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto auto;
+          gap: 12px;
+          align-items: end;
+        }
+
+        label {
+          display: block;
+          margin-bottom: 6px;
+          color: var(--foreground);
+          font-size: 0.8rem;
+          font-weight: 600;
+        }
+
+        input,
+        select {
+          width: 100%;
+          min-height: 44px;
+          box-sizing: border-box;
+          border: 1px solid var(--border);
+          border-radius: 8px;
+          background: var(--background);
+          color: var(--foreground);
+          padding: 9px 12px;
+          font-size: 0.9rem;
+          outline: none;
+        }
+
+        input:focus,
+        select:focus {
+          border-color: var(--primary);
+          box-shadow: 0 0 0 2px color-mix(
+            in srgb,
+            var(--primary) 20%,
+            transparent
+          );
+        }
+
+        input:disabled,
+        select:disabled {
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        button {
+          font: inherit;
+        }
+
+        .primary-button,
+        .secondary-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 44px;
+          border-radius: 8px;
+          padding: 9px 16px;
+          font-size: 0.85rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition:
+            opacity 0.15s ease,
+            background-color 0.15s ease;
+        }
+
+        .primary-button {
+          border: 1px solid var(--primary);
+          background: var(--primary);
+          color: white;
+        }
+
+        .secondary-button {
+          border: 1px solid var(--border);
+          background: var(--background);
+          color: var(--foreground);
+        }
+
+        .primary-button:hover:not(:disabled) {
+          opacity: 0.88;
+        }
+
+        .secondary-button:hover:not(:disabled) {
+          background: var(--muted);
+        }
+
+        button:focus-visible,
+        a:focus-visible {
+          outline: 3px solid var(--primary);
+          outline-offset: 2px;
+        }
+
+        button:disabled {
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        .error-message {
+          margin: 12px 0 0;
+          color: var(--danger);
+          font-size: 0.85rem;
+          line-height: 1.5;
+        }
+
+        .result-summary {
+          margin: 2px 0 12px;
+          color: var(--muted-foreground);
+          font-size: 0.85rem;
+        }
+
+        .result-summary strong {
+          color: var(--foreground);
+        }
+
+        .loading-state,
+        .empty-state {
+          padding: 32px 20px;
+          text-align: center;
+        }
+
+        .loading-state {
+          color: var(--muted-foreground);
+        }
+
+        .empty-icon {
+          margin-bottom: 8px;
+          font-size: 2rem;
+        }
+
+        .empty-state h2 {
+          margin: 0;
+          color: var(--foreground);
+          font-size: 1.1rem;
+        }
+
+        .empty-state p {
+          max-width: 520px;
+          margin: 7px auto 0;
+          color: var(--muted-foreground);
+          line-height: 1.55;
+          font-size: 0.9rem;
+        }
+
+        .empty-action {
+          margin-top: 16px;
+        }
+
+        .category-columns {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 18px;
+        }
+
+        .category-section {
+          padding: 20px;
+        }
+
+        .category-section-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 14px;
+        }
+
+        .category-section-header h2 {
+          margin: 0;
+          color: var(--foreground);
+          font-size: 1.05rem;
+        }
+
+        .count-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 28px;
+          min-height: 28px;
+          padding: 4px 9px;
+          border-radius: 999px;
+          font-size: 0.75rem;
+          font-weight: 700;
+        }
+
+        .count-badge.income {
+          background: var(--success-soft);
+          color: var(--success);
+        }
+
+        .count-badge.expense {
+          background: var(--danger-soft);
+          color: var(--danger);
+        }
+
+        .count-badge.neutral {
+          background: var(--muted);
+          color: var(--muted-foreground);
+        }
+
+        .category-list {
+          display: grid;
+          gap: 10px;
+        }
+
+        .category-item {
+          border: 1px solid var(--border);
+          border-radius: 9px;
+          padding: 12px;
+        }
+
+        .category-info {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          min-width: 0;
+        }
+
+        .category-name {
+          min-width: 0;
+          overflow: hidden;
+          color: var(--foreground);
+          font-size: 0.9rem;
+          font-weight: 600;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+
+        .type-badge {
+          flex-shrink: 0;
+          padding: 4px 8px;
+          border-radius: 999px;
+          font-size: 0.7rem;
+          font-weight: 700;
+        }
+
+        .type-badge.income {
+          background: var(--success-soft);
+          color: var(--success);
+        }
+
+        .type-badge.expense {
+          background: var(--danger-soft);
+          color: var(--danger);
+        }
+
+        .category-actions {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+          margin-top: 10px;
+        }
+
+        .archived-section {
+          margin-top: 18px;
+        }
+
+        .archived-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+        }
+
+        .archived-actions {
+          flex-shrink: 0;
+          width: 120px;
+        }
+
+        @media (max-width: 760px) {
+          .categories-page {
+            padding: 18px 12px 40px;
+          }
+
+          .create-grid,
+          .filter-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .category-columns {
+            grid-template-columns: 1fr;
+          }
+
+          .create-grid .primary-button,
+          .filter-grid .primary-button,
+          .filter-grid .secondary-button {
+            width: 100%;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .categories-page {
+            padding-left: 10px;
+            padding-right: 10px;
+          }
+
+          .section-card,
+          .category-section {
+            padding: 15px;
+          }
+
+          .section-heading {
+            flex-direction: column;
+            gap: 8px;
+          }
+
+          .category-info {
+            align-items: flex-start;
+          }
+
+          .category-actions {
+            grid-template-columns: 1fr;
+          }
+
+          .archived-item {
+            align-items: stretch;
+            flex-direction: column;
+          }
+
+          .archived-actions {
+            width: 100%;
+          }
+        }
+      `}</style>
     </main>
+  );
+}
+
+function CategorySection({
+  title,
+  count,
+  tone,
+  emptyText,
+  categories,
+}: {
+  title: string;
+  count: number;
+  tone: "income" | "expense";
+  emptyText: string;
+  categories: Category[];
+}) {
+  return (
+    <section className="card category-section">
+      <div className="category-section-header">
+        <h2>{title}</h2>
+
+        <span className={`count-badge ${tone}`}>{count}</span>
+      </div>
+
+      {categories.length === 0 ? (
+        <div className="empty-state">
+          <p>{emptyText}</p>
+        </div>
+      ) : (
+        <div className="category-list">
+          {categories.map((category) => (
+            <div key={category.id} className="category-item">
+              <div className="category-info">
+                <span className="category-name">{category.name}</span>
+
+                <span className={`type-badge ${tone}`}>
+                  {tone === "income" ? "Income" : "Expense"}
+                </span>
+              </div>
+
+              <div className="category-actions">
+                <EditCategoryButton
+                  categoryId={category.id}
+                  initialName={category.name}
+                  initialType={category.category_type}
+                />
+
+                <ArchiveCategoryButton categoryId={category.id} />
+
+                <DeleteCategoryButton categoryId={category.id} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }

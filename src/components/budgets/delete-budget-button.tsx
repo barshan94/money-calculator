@@ -8,7 +8,9 @@ type Props = {
   budgetId: string;
 };
 
-export function DeleteBudgetButton({ budgetId }: Props) {
+export function DeleteBudgetButton({
+  budgetId,
+}: Props) {
   const supabase = createClient();
   const router = useRouter();
 
@@ -25,9 +27,12 @@ export function DeleteBudgetButton({ budgetId }: Props) {
     setLoading(true);
     setMessage("");
 
-    const { error } = await supabase.rpc("delete_budget", {
-      p_budget_id: budgetId,
-    });
+    const { error } = await supabase.rpc(
+      "delete_budget",
+      {
+        p_budget_id: budgetId,
+      },
+    );
 
     if (error) {
       setMessage(error.message);
@@ -40,31 +45,22 @@ export function DeleteBudgetButton({ budgetId }: Props) {
   }
 
   return (
-    <div>
+    <div className="flex flex-col items-stretch gap-2">
       <button
         type="button"
         onClick={handleDelete}
         disabled={loading}
-        style={{
-          padding: "10px 14px",
-          border: "1px solid var(--danger)",
-          borderRadius: 8,
-          background: "#fff",
-          color: "var(--danger)",
-          fontWeight: 600,
-          opacity: loading ? 0.7 : 1,
-        }}
+        aria-busy={loading}
+        className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[var(--danger)] px-3.5 py-2 text-sm font-semibold text-[var(--danger)] transition hover:bg-[var(--danger-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--danger)] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
       >
         {loading ? "Deleting..." : "Delete Budget"}
       </button>
 
       {message && (
         <p
-          style={{
-            margin: "8px 0 0",
-            color: "var(--danger)",
-            fontSize: 13,
-          }}
+          role="alert"
+          aria-live="polite"
+          className="max-w-xs text-xs leading-5 text-[var(--danger)]"
         >
           {message}
         </p>
@@ -72,3 +68,4 @@ export function DeleteBudgetButton({ budgetId }: Props) {
     </div>
   );
 }
+

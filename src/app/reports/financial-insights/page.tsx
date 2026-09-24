@@ -1,4 +1,7 @@
+import Link from "next/link";
 import { getFinancialInsights } from "@/lib/intelligence/get-financial-insights";
+
+type Severity = "info" | "warning" | "critical";
 
 function formatValue(
   value: number | undefined,
@@ -30,31 +33,51 @@ function formatValue(
   });
 }
 
-function severityStyle(
-  severity: "info" | "warning" | "critical",
-) {
+function severityStyle(severity: Severity) {
   if (severity === "critical") {
     return {
-      border: "1px solid #dc2626",
-      background: "#fef2f2",
+      border:
+        "1px solid var(--destructive-border, #dc2626)",
+      background:
+        "var(--destructive-muted, #fef2f2)",
     };
   }
 
   if (severity === "warning") {
     return {
-      border: "1px solid #d97706",
-      background: "#fffbeb",
+      border:
+        "1px solid var(--warning-border, #d97706)",
+      background:
+        "var(--warning-muted, #fffbeb)",
     };
   }
 
   return {
-    border: "1px solid #2563eb",
-    background: "#eff6ff",
+    border:
+      "1px solid var(--info-border, #2563eb)",
+    background:
+      "var(--info-muted, #eff6ff)",
   };
+}
+
+function severityLabel(severity: Severity) {
+  switch (severity) {
+    case "critical":
+      return "Critical";
+    case "warning":
+      return "Warning";
+    default:
+      return "Info";
+  }
 }
 
 export default async function FinancialInsightsPage() {
   const results = await getFinancialInsights();
+
+  const totalInsights = results.reduce(
+    (sum, result) => sum + result.insights.length,
+    0,
+  );
 
   return (
     <main
@@ -64,152 +87,317 @@ export default async function FinancialInsightsPage() {
         padding: "24px 16px 48px",
       }}
     >
-      <div style={{ marginBottom: 24 }}>
-        <h1>Financial Insights</h1>
+      <header style={{ marginBottom: 28 }}>
+        <Link
+          href="/reports"
+          style={{
+            display: "inline-block",
+            marginBottom: 12,
+            textDecoration: "none",
+            fontSize: 14,
+          }}
+        >
+          ← Back to Reports
+        </Link>
 
-        <p>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: "clamp(28px, 5vw, 36px)",
+            lineHeight: 1.15,
+          }}
+        >
+          Financial Insights
+        </h1>
+
+        <p
+          style={{
+            margin: "10px 0 0",
+            maxWidth: 760,
+            color: "var(--muted-foreground, #666)",
+            lineHeight: 1.6,
+          }}
+        >
           Deterministic insights generated from your existing
           financial health, trends, forecasts, goals, budgets,
           and liquidity data.
         </p>
-      </div>
+      </header>
 
       {results.length === 0 ? (
-        <section className="card">
-          <h2>No insights available</h2>
-          <p>
+        <section
+          className="card"
+          style={{
+            padding: "36px 20px",
+            textAlign: "center",
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>
+            No insights available
+          </h2>
+
+          <p
+            style={{
+              margin: "8px auto 0",
+              maxWidth: 560,
+              color: "var(--muted-foreground, #666)",
+              lineHeight: 1.6,
+            }}
+          >
             There is not enough financial data to generate
             insights yet.
           </p>
         </section>
       ) : (
-        <div
-          style={{
-            display: "grid",
-            gap: 24,
-          }}
-        >
-          {results.map((result) => (
-            <section
-              key={result.currency}
-              className="card"
+        <>
+          <section
+            className="card"
+            style={{
+              marginBottom: 24,
+              padding: 18,
+            }}
+          >
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(180px, 1fr))",
+                gap: 12,
+              }}
             >
-              <div
+              <SummaryCard
+                label="Currencies analyzed"
+                value={String(results.length)}
+              />
+
+              <SummaryCard
+                label="Total insights"
+                value={String(totalInsights)}
+              />
+            </div>
+          </section>
+
+          <div
+            style={{
+              display: "grid",
+              gap: 24,
+            }}
+          >
+            {results.map((result) => (
+              <section
+                key={result.currency}
+                className="card"
                 style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  gap: 12,
-                  flexWrap: "wrap",
-                  marginBottom: 16,
+                  minWidth: 0,
+                  padding: 20,
                 }}
               >
-                <h2 style={{ margin: 0 }}>
-                  {result.currency}
-                </h2>
-
-                <span>
-                  {result.insights.length}{" "}
-                  {result.insights.length === 1
-                    ? "insight"
-                    : "insights"}
-                </span>
-              </div>
-
-              {result.insights.length === 0 ? (
-                <p>
-                  No notable conditions were detected by
-                  the current rules.
-                </p>
-              ) : (
                 <div
                   style={{
-                    display: "grid",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                     gap: 12,
+                    flexWrap: "wrap",
+                    marginBottom: 18,
                   }}
                 >
-                  {result.insights.map(
-                    (insight, index) => {
-                      const value = formatValue(
-                        insight.value,
-                        insight.unit,
-                      );
+                  <div>
+                    <h2
+                      style={{
+                        margin: 0,
+                        fontSize: 22,
+                      }}
+                    >
+                      {result.currency}
+                    </h2>
 
-                      return (
-                        <article
-                          key={`${result.currency}-${insight.type}-${index}`}
-                          style={{
-                            ...severityStyle(
-                              insight.severity,
-                            ),
-                            borderRadius: 10,
-                            padding: 16,
-                          }}
-                        >
-                          <div
+                    <p
+                      style={{
+                        margin: "6px 0 0",
+                        fontSize: 13,
+                        color:
+                          "var(--muted-foreground, #666)",
+                      }}
+                    >
+                      Insights based on available financial
+                      data.
+                    </p>
+                  </div>
+
+                  <span
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      minHeight: 30,
+                      padding: "0 10px",
+                      borderRadius: 999,
+                      background:
+                        "var(--surface-muted, #f3f4f6)",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {result.insights.length}{" "}
+                    {result.insights.length === 1
+                      ? "insight"
+                      : "insights"}
+                  </span>
+                </div>
+
+                {result.insights.length === 0 ? (
+                  <div
+                    style={{
+                      padding: 16,
+                      borderRadius: 10,
+                      background:
+                        "var(--surface-muted, #f3f4f6)",
+                    }}
+                  >
+                    <p
+                      style={{
+                        margin: 0,
+                        color:
+                          "var(--muted-foreground, #666)",
+                        lineHeight: 1.6,
+                      }}
+                    >
+                      No notable conditions were detected by
+                      the current rules.
+                    </p>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: "grid",
+                      gap: 12,
+                    }}
+                  >
+                    {result.insights.map(
+                      (insight, index) => {
+                        const value = formatValue(
+                          insight.value,
+                          insight.unit,
+                        );
+
+                        return (
+                          <article
+                            key={`${result.currency}-${insight.type}-${index}`}
                             style={{
-                              display: "flex",
-                              justifyContent:
-                                "space-between",
-                              alignItems: "flex-start",
-                              gap: 12,
-                              flexWrap: "wrap",
+                              ...severityStyle(
+                                insight.severity,
+                              ),
+                              borderRadius: 10,
+                              padding: 16,
+                              minWidth: 0,
                             }}
                           >
-                            <div>
-                              <strong>
-                                {insight.title}
-                              </strong>
-
-                              <p
-                                style={{
-                                  margin:
-                                    "8px 0 0",
-                                }}
-                              >
-                                {insight.message}
-                              </p>
-                            </div>
-
-                            <span
-                              style={{
-                                fontWeight: 600,
-                                textTransform:
-                                  "capitalize",
-                              }}
-                            >
-                              {insight.severity}
-                            </span>
-                          </div>
-
-                          {value !== null && (
                             <div
                               style={{
-                                marginTop: 12,
-                                fontWeight: 600,
+                                display: "flex",
+                                justifyContent:
+                                  "space-between",
+                                alignItems: "flex-start",
+                                gap: 12,
+                                flexWrap: "wrap",
                               }}
                             >
-                              Value: {value}
+                              <div
+                                style={{
+                                  minWidth: 0,
+                                  flex: "1 1 260px",
+                                }}
+                              >
+                                <strong
+                                  style={{
+                                    display: "block",
+                                    lineHeight: 1.4,
+                                  }}
+                                >
+                                  {insight.title}
+                                </strong>
+
+                                <p
+                                  style={{
+                                    margin: "8px 0 0",
+                                    lineHeight: 1.6,
+                                  }}
+                                >
+                                  {insight.message}
+                                </p>
+                              </div>
+
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  minHeight: 28,
+                                  padding: "0 9px",
+                                  borderRadius: 999,
+                                  background:
+                                    "rgba(255,255,255,0.65)",
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
+                                {severityLabel(
+                                  insight.severity,
+                                )}
+                              </span>
                             </div>
-                          )}
-                        </article>
-                      );
-                    },
-                  )}
-                </div>
-              )}
-            </section>
-          ))}
-        </div>
+
+                            {value !== null && (
+                              <div
+                                style={{
+                                  marginTop: 14,
+                                  paddingTop: 12,
+                                  borderTop:
+                                    "1px solid rgba(0,0,0,0.08)",
+                                  fontSize: 14,
+                                  fontWeight: 600,
+                                  overflowWrap: "anywhere",
+                                }}
+                              >
+                                Value: {value}
+                              </div>
+                            )}
+                          </article>
+                        );
+                      },
+                    )}
+                  </div>
+                )}
+              </section>
+            ))}
+          </div>
+        </>
       )}
 
       <section
         className="card"
-        style={{ marginTop: 24 }}
+        style={{
+          marginTop: 24,
+          padding: 20,
+        }}
       >
-        <h2>Methodology</h2>
+        <h2
+          style={{
+            marginTop: 0,
+            fontSize: 19,
+          }}
+        >
+          Methodology
+        </h2>
 
-        <p>
+        <p
+          style={{
+            marginBottom: 0,
+            color: "var(--muted-foreground, #666)",
+            lineHeight: 1.7,
+          }}
+        >
           These insights are produced from explicit,
           deterministic rules using existing financial
           calculations. They do not predict guaranteed
@@ -217,6 +405,75 @@ export default async function FinancialInsightsPage() {
           recommend investments.
         </p>
       </section>
+
+      <style>{`
+        a:focus-visible {
+          outline: 2px solid currentColor;
+          outline-offset: 3px;
+        }
+
+        @media (max-width: 600px) {
+          main {
+            padding: 18px 12px 36px !important;
+          }
+
+          .card {
+            padding: 16px !important;
+          }
+
+          a {
+            -webkit-tap-highlight-color: transparent;
+          }
+        }
+
+        @media (max-width: 420px) {
+          main {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+          }
+        }
+      `}</style>
     </main>
   );
 }
+
+function SummaryCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div
+      style={{
+        minWidth: 0,
+        padding: 16,
+        border:
+          "1px solid var(--border, #ddd)",
+        borderRadius: 12,
+      }}
+    >
+      <div
+        style={{
+          fontSize: 13,
+          color: "var(--muted-foreground, #666)",
+          marginBottom: 8,
+        }}
+      >
+        {label}
+      </div>
+
+      <div
+        style={{
+          fontSize: 22,
+          fontWeight: 700,
+          overflowWrap: "anywhere",
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+

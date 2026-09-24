@@ -21,8 +21,8 @@ export function DashboardShell({
 
   return (
     <div className="app-shell">
-      <aside className="sidebar">
-        <div className="brand">
+      <aside className="sidebar" aria-label="Application sidebar">
+        <div className="brand" aria-label="Money Calculator">
           <div>Money</div>
           <div>Calculator</div>
         </div>
@@ -40,3 +40,4 @@ export function DashboardShell({
     </div>
   );
 }
+

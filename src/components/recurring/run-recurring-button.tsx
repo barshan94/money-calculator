@@ -52,33 +52,96 @@ export function RunRecurringButton({
   }
 
   return (
-    <div>
+    <div className="run-recurring-wrapper">
+      <style>{`
+        .run-recurring-wrapper {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-start;
+          min-width: 0;
+        }
+
+        .run-recurring-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 40px;
+          padding: 0 12px;
+          border: 1px solid var(--border);
+          border-radius: 7px;
+          background: #fff;
+          color: var(--primary);
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          white-space: nowrap;
+          transition:
+            background 0.15s ease,
+            border-color 0.15s ease,
+            opacity 0.15s ease;
+        }
+
+        .run-recurring-button:hover:not(:disabled) {
+          background: #f8fafc;
+          border-color: #cbd5e1;
+        }
+
+        .run-recurring-button:focus-visible {
+          outline: 2px solid var(--primary);
+          outline-offset: 2px;
+        }
+
+        .run-recurring-button:disabled {
+          cursor: not-allowed;
+          opacity: 0.6;
+        }
+
+        .run-recurring-message {
+          max-width: 260px;
+          margin: 7px 0 0;
+          color: var(--success);
+          font-size: 12px;
+          line-height: 1.4;
+          overflow-wrap: anywhere;
+        }
+
+        .run-recurring-error {
+          color: var(--danger);
+        }
+
+        @media (max-width: 500px) {
+          .run-recurring-wrapper {
+            width: 100%;
+          }
+
+          .run-recurring-button {
+            width: 100%;
+          }
+
+          .run-recurring-message {
+            max-width: none;
+          }
+        }
+      `}</style>
+
       <button
         type="button"
+        className="run-recurring-button"
         onClick={handleRun}
         disabled={loading}
-        style={{
-          padding: "10px 14px",
-          borderRadius: 8,
-          border: "1px solid var(--border)",
-          background: "#fff",
-          color: "var(--primary)",
-          fontWeight: 600,
-          opacity: loading ? 0.7 : 1,
-        }}
+        aria-busy={loading}
       >
         {loading ? "Running..." : "Run Now"}
       </button>
 
       {message && (
         <p
-          style={{
-            margin: "8px 0 0",
-            color: message.includes("successfully")
-              ? "var(--success)"
-              : "var(--danger)",
-            fontSize: 13,
-          }}
+          className={`run-recurring-message ${
+            message.includes("successfully")
+              ? ""
+              : "run-recurring-error"
+          }`}
+          role="status"
         >
           {message}
         </p>
@@ -86,3 +149,4 @@ export function RunRecurringButton({
     </div>
   );
 }
+

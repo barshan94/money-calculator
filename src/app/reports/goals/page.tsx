@@ -70,50 +70,89 @@ export default async function GoalsReportPage() {
         padding: "24px 16px 48px",
       }}
     >
-      <Link
-        href="/reports"
+      <header
         style={{
-          display: "inline-block",
-          marginBottom: "12px",
-          textDecoration: "none",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "20px",
+          marginBottom: "28px",
+          flexWrap: "wrap",
         }}
       >
-        ← Back to Reports
-      </Link>
-
-      <div style={{ marginBottom: "28px" }}>
-        <h1 style={{ margin: 0 }}>Goals Report</h1>
-
-        <p
+        <div
           style={{
-            margin: "8px 0 0",
-            opacity: 0.7,
+            minWidth: 0,
+            flex: "1 1 500px",
           }}
         >
-          Track your savings targets and progress toward each goal.
-        </p>
-      </div>
+          <Link
+            href="/reports"
+            style={{
+              display: "inline-block",
+              marginBottom: "12px",
+              textDecoration: "none",
+              fontSize: "14px",
+            }}
+          >
+            ← Back to Reports
+          </Link>
+
+          <h1
+            style={{
+              margin: 0,
+              fontSize: "clamp(28px, 5vw, 36px)",
+              lineHeight: 1.15,
+            }}
+          >
+            Goals Report
+          </h1>
+
+          <p
+            style={{
+              margin: "10px 0 0",
+              maxWidth: "700px",
+              color: "var(--muted-foreground, #666)",
+              lineHeight: 1.6,
+            }}
+          >
+            Track your savings targets and progress toward each
+            goal.
+          </p>
+        </div>
+      </header>
 
       {!hasGoals ? (
         <section
+          className="card"
           style={{
-            border: "1px solid #ddd",
-            borderRadius: "12px",
-            padding: "32px 20px",
+            padding: "36px 20px",
             textAlign: "center",
           }}
         >
           <h2 style={{ marginTop: 0 }}>No goals available</h2>
 
-          <p style={{ opacity: 0.7 }}>
-            Create a financial goal to start tracking your progress.
+          <p
+            style={{
+              color: "var(--muted-foreground, #666)",
+              lineHeight: 1.6,
+            }}
+          >
+            Create a financial goal to start tracking your
+            progress.
           </p>
 
           <Link
             href="/goals/new"
             style={{
-              display: "inline-block",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minHeight: "44px",
               marginTop: "12px",
+              padding: "0 16px",
+              borderRadius: "8px",
+              border: "1px solid var(--border, #ddd)",
               textDecoration: "none",
             }}
           >
@@ -149,17 +188,19 @@ export default async function GoalsReportPage() {
                     alignItems: "center",
                     gap: "10px",
                     marginBottom: "16px",
+                    flexWrap: "wrap",
                   }}
                 >
                   <h2 style={{ margin: 0 }}>{currency}</h2>
 
                   <span
                     style={{
-                      fontSize: "13px",
+                      fontSize: "12px",
                       padding: "4px 8px",
-                      border: "1px solid #ddd",
+                      border: "1px solid var(--border, #ddd)",
                       borderRadius: "999px",
-                      opacity: 0.75,
+                      color:
+                        "var(--muted-foreground, #666)",
                     }}
                   >
                     Currency
@@ -174,91 +215,34 @@ export default async function GoalsReportPage() {
                     gap: "14px",
                   }}
                 >
-                  <div
-                    style={{
-                      border: "1px solid #ddd",
-                      borderRadius: "12px",
-                      padding: "18px",
-                    }}
-                  >
-                    <h3
-                      style={{
-                        margin: "0 0 8px",
-                        fontSize: "15px",
-                      }}
-                    >
-                      Total Target
-                    </h3>
+                  <MetricCard
+                    label="Total Target"
+                    value={formatMoney(
+                      total.target,
+                      currency,
+                    )}
+                  />
 
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "22px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {formatMoney(total.target, currency)}
-                    </p>
-                  </div>
+                  <MetricCard
+                    label="Total Saved"
+                    value={formatMoney(
+                      total.current,
+                      currency,
+                    )}
+                  />
+
+                  <MetricCard
+                    label="Remaining"
+                    value={formatMoney(
+                      remaining,
+                      currency,
+                    )}
+                  />
 
                   <div
+                    className="card"
                     style={{
-                      border: "1px solid #ddd",
-                      borderRadius: "12px",
-                      padding: "18px",
-                    }}
-                  >
-                    <h3
-                      style={{
-                        margin: "0 0 8px",
-                        fontSize: "15px",
-                      }}
-                    >
-                      Total Saved
-                    </h3>
-
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "22px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {formatMoney(total.current, currency)}
-                    </p>
-                  </div>
-
-                  <div
-                    style={{
-                      border: "1px solid #ddd",
-                      borderRadius: "12px",
-                      padding: "18px",
-                    }}
-                  >
-                    <h3
-                      style={{
-                        margin: "0 0 8px",
-                        fontSize: "15px",
-                      }}
-                    >
-                      Remaining
-                    </h3>
-
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "22px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {formatMoney(remaining, currency)}
-                    </p>
-                  </div>
-
-                  <div
-                    style={{
-                      border: "1px solid #ddd",
-                      borderRadius: "12px",
+                      minWidth: 0,
                       padding: "18px",
                     }}
                   >
@@ -286,7 +270,7 @@ export default async function GoalsReportPage() {
                       max={100}
                       style={{
                         width: "100%",
-                        marginTop: "10px",
+                        marginTop: "12px",
                       }}
                     />
                   </div>
@@ -296,7 +280,21 @@ export default async function GoalsReportPage() {
           })}
 
           <section>
-            <h2>Goal Details</h2>
+            <div style={{ marginBottom: "16px" }}>
+              <h2 style={{ margin: 0 }}>Goal Details</h2>
+
+              <p
+                style={{
+                  margin: "6px 0 0",
+                  fontSize: "14px",
+                  color:
+                    "var(--muted-foreground, #666)",
+                }}
+              >
+                Select a goal to view its details and update its
+                progress.
+              </p>
+            </div>
 
             <div
               style={{
@@ -304,7 +302,6 @@ export default async function GoalsReportPage() {
                 gridTemplateColumns:
                   "repeat(auto-fit, minmax(280px, 1fr))",
                 gap: "14px",
-                marginTop: "16px",
               }}
             >
               {(goals ?? []).map((goal) => {
@@ -313,7 +310,10 @@ export default async function GoalsReportPage() {
 
                 const percentage =
                   target > 0
-                    ? Math.min((current / target) * 100, 100)
+                    ? Math.min(
+                        (current / target) * 100,
+                        100,
+                      )
                     : 0;
 
                 const remaining = Math.max(
@@ -321,15 +321,19 @@ export default async function GoalsReportPage() {
                   0,
                 );
 
+                const completed = percentage >= 100;
+
                 return (
                   <Link
                     href={`/goals/${goal.id}`}
                     key={goal.id}
                     style={{
                       display: "block",
-                      border: "1px solid #ddd",
-                      borderRadius: "12px",
+                      minWidth: 0,
                       padding: "18px",
+                      border:
+                        "1px solid var(--border, #ddd)",
+                      borderRadius: "12px",
                       textDecoration: "none",
                     }}
                   >
@@ -345,6 +349,8 @@ export default async function GoalsReportPage() {
                         style={{
                           margin: 0,
                           fontSize: "17px",
+                          lineHeight: 1.35,
+                          overflowWrap: "anywhere",
                         }}
                       >
                         {goal.name}
@@ -352,12 +358,15 @@ export default async function GoalsReportPage() {
 
                       <span
                         style={{
+                          flexShrink: 0,
                           fontSize: "12px",
                           padding: "4px 8px",
-                          border: "1px solid #ddd",
+                          border:
+                            "1px solid var(--border, #ddd)",
                           borderRadius: "999px",
                           whiteSpace: "nowrap",
-                          opacity: 0.75,
+                          color:
+                            "var(--muted-foreground, #666)",
                         }}
                       >
                         {goal.currency}
@@ -368,88 +377,113 @@ export default async function GoalsReportPage() {
                       style={{
                         margin: "12px 0 4px",
                         fontSize: "13px",
-                        opacity: 0.65,
+                        color:
+                          "var(--muted-foreground, #666)",
                       }}
                     >
                       {goal.goal_type} · {goal.status}
                     </p>
 
-                    <p
-                      style={{
-                        margin: "14px 0 6px",
-                        fontSize: "13px",
-                        opacity: 0.65,
-                      }}
-                    >
-                      Progress
-                    </p>
+                    <div style={{ marginTop: "16px" }}>
+                      <p
+                        style={{
+                          margin: "0 0 5px",
+                          fontSize: "13px",
+                          color:
+                            "var(--muted-foreground, #666)",
+                        }}
+                      >
+                        Progress
+                      </p>
 
-                    <p
-                      style={{
-                        margin: 0,
-                        fontSize: "19px",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {formatMoney(current, goal.currency)}
-                    </p>
-
-                    <p
-                      style={{
-                        margin: "4px 0 12px",
-                        fontSize: "13px",
-                        opacity: 0.65,
-                      }}
-                    >
-                      of {formatMoney(target, goal.currency)}
-                    </p>
-
-                    <progress
-                      value={percentage}
-                      max={100}
-                      style={{
-                        width: "100%",
-                      }}
-                    />
-
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: "12px",
-                        marginTop: "8px",
-                        fontSize: "13px",
-                        opacity: 0.7,
-                      }}
-                    >
-                      <span>{percentage.toFixed(1)}% complete</span>
-
-                      <span>
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: "20px",
+                          fontWeight: 700,
+                          overflowWrap: "anywhere",
+                        }}
+                      >
                         {formatMoney(
-                          remaining,
+                          current,
                           goal.currency,
-                        )}{" "}
-                        left
-                      </span>
+                        )}
+                      </p>
+
+                      <p
+                        style={{
+                          margin: "4px 0 12px",
+                          fontSize: "13px",
+                          color:
+                            "var(--muted-foreground, #666)",
+                        }}
+                      >
+                        of{" "}
+                        {formatMoney(
+                          target,
+                          goal.currency,
+                        )}
+                      </p>
+
+                      <progress
+                        value={percentage}
+                        max={100}
+                        style={{
+                          width: "100%",
+                        }}
+                      />
+
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "flex-start",
+                          gap: "12px",
+                          marginTop: "8px",
+                          fontSize: "13px",
+                          color:
+                            "var(--muted-foreground, #666)",
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <span>
+                          {percentage.toFixed(1)}% complete
+                        </span>
+
+                        <span>
+                          {completed
+                            ? "Target reached"
+                            : `${formatMoney(
+                                remaining,
+                                goal.currency,
+                              )} left`}
+                        </span>
+                      </div>
                     </div>
 
                     {goal.target_date && (
-                      <p
+                      <div
                         style={{
-                          margin: "14px 0 0",
+                          marginTop: "16px",
+                          paddingTop: "14px",
+                          borderTop:
+                            "1px solid var(--border, #ddd)",
                           fontSize: "13px",
-                          opacity: 0.7,
+                          color:
+                            "var(--muted-foreground, #666)",
                         }}
                       >
-                        Target: {formatDate(goal.target_date)}
-                      </p>
+                        Target:{" "}
+                        {formatDate(goal.target_date)}
+                      </div>
                     )}
 
                     <p
                       style={{
                         margin: "14px 0 0",
                         fontSize: "13px",
-                        opacity: 0.6,
+                        color:
+                          "var(--muted-foreground, #666)",
                       }}
                     >
                       View goal →
@@ -461,7 +495,79 @@ export default async function GoalsReportPage() {
           </section>
         </>
       )}
+
+      <style>{`
+        a:focus-visible {
+          outline: 2px solid currentColor;
+          outline-offset: 3px;
+        }
+
+        @media (max-width: 600px) {
+          main {
+            padding: 18px 12px 36px !important;
+          }
+
+          .card {
+            padding: 16px !important;
+          }
+
+          h2 {
+            font-size: 21px;
+          }
+
+          a {
+            -webkit-tap-highlight-color: transparent;
+          }
+        }
+
+        @media (max-width: 420px) {
+          main {
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+          }
+        }
+      `}</style>
     </main>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div
+      className="card"
+      style={{
+        minWidth: 0,
+        padding: "18px",
+      }}
+    >
+      <h3
+        style={{
+          margin: "0 0 8px",
+          fontSize: "15px",
+          lineHeight: 1.4,
+        }}
+      >
+        {label}
+      </h3>
+
+      <p
+        style={{
+          margin: 0,
+          fontSize: "22px",
+          fontWeight: 700,
+          lineHeight: 1.3,
+          overflowWrap: "anywhere",
+        }}
+      >
+        {value}
+      </p>
+    </div>
   );
 }
 
