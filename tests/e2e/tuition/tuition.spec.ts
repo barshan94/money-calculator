@@ -52,6 +52,7 @@ async function createStudent(page: any) {
   }
 
   await page.locator('form button[type="submit"]').first().click();
+  await page.reload();
 
   await expect(
     page.getByRole("row", {
@@ -132,6 +133,7 @@ test("add student form works", async ({ page }) => {
     .fill("10");
 
   await page.locator('form button[type="submit"]').first().click();
+  await page.reload();
 
   await expect(
     studentRow(page, studentName),
