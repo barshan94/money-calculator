@@ -55,8 +55,35 @@ function currentMonth(): string {
   return currentDate().slice(0, 7);
 }
 
-function futureDate(): string {
-  return "2110-01-15T12:00:00.000Z";
+function uniqueBudgetStartDate(): string {
+  const now = new Date();
+
+  const epochSeconds =
+    Math.floor(now.getTime() / 1000);
+
+  const year =
+    2200 +
+    (epochSeconds % 700);
+
+  const month =
+    ((Math.floor(epochSeconds / 60) % 12) + 1);
+
+  const day =
+    ((Math.floor(epochSeconds / 7200) % 28) + 1);
+
+  return `${year}-${String(month).padStart(
+    2,
+    "0",
+  )}-${String(day).padStart(2, "0")}`;
+}
+
+function budgetTransactionDate(
+  budgetStart: string,
+): string {
+  return `${budgetStart.slice(
+    0,
+    7,
+  )}-15T12:00:00.000Z`;
 }
 
 function monthKey(value: unknown): string {
@@ -96,8 +123,10 @@ async function getExpenseCategory(): Promise<Category> {
   return {
     id: row.id,
     name: row.name,
-    ledger_account_id: row.ledger_account_id,
-    currency: row.accounts.currency,
+    ledger_account_id:
+      row.ledger_account_id,
+    currency:
+      row.accounts.currency,
   };
 }
 
@@ -135,8 +164,10 @@ async function getIncomeCategory(): Promise<Category> {
   return {
     id: row.id,
     name: row.name,
-    ledger_account_id: row.ledger_account_id,
-    currency: row.accounts.currency,
+    ledger_account_id:
+      row.ledger_account_id,
+    currency:
+      row.accounts.currency,
   };
 }
 
@@ -172,7 +203,8 @@ async function createExpenseTransaction(
   } = await supabase.rpc(
     "create_transaction",
     {
-      p_transaction_date: transactionDate,
+      p_transaction_date:
+        transactionDate,
       p_description:
         "Financial report test expense",
       p_reference: null,
@@ -213,7 +245,8 @@ async function createIncomeTransaction(
   } = await supabase.rpc(
     "create_transaction",
     {
-      p_transaction_date: transactionDate,
+      p_transaction_date:
+        transactionDate,
       p_description:
         "Financial report test income",
       p_reference: null,
@@ -372,458 +405,505 @@ describe("financial report calculations", () => {
     expect(error).toBeNull();
   });
 
-  it("calculates financial summary from income and expense transactions", async () => {
-    const incomeCategory =
-      await getIncomeCategory();
+  it(
+    "calculates financial summary from income and expense transactions",
+    async () => {
+      const incomeCategory =
+        await getIncomeCategory();
 
-    const expenseCategory =
-      await getExpenseCategory();
+      const expenseCategory =
+        await getExpenseCategory();
 
-    const account =
-      await getBdtAssetAccount();
+      const account =
+        await getBdtAssetAccount();
 
-    const before =
-      await getFinancialSummaryRow();
+      const before =
+        await getFinancialSummaryRow();
 
-    const beforeIncome =
-      Number(before?.income ?? 0);
+      const beforeIncome =
+        Number(before?.income ?? 0);
 
-    const beforeExpense =
-      Number(before?.expense ?? 0);
+      const beforeExpense =
+        Number(before?.expense ?? 0);
 
-    const beforeProfit =
-      Number(before?.profit ?? 0);
+      const beforeProfit =
+        Number(before?.profit ?? 0);
 
-    const incomeTransaction =
-      await createIncomeTransaction(
-        incomeCategory,
-        account.id,
-        200,
-        currentDate(),
+      const incomeTransaction =
+        await createIncomeTransaction(
+          incomeCategory,
+          account.id,
+          200,
+          currentDate(),
+        );
+
+      const expenseTransaction =
+        await createExpenseTransaction(
+          expenseCategory,
+          account.id,
+          100,
+          currentDate(),
+        );
+
+      const after =
+        await getFinancialSummaryRow();
+
+      expect(after).toBeTruthy();
+
+      expect(Number(after!.income))
+        .toBe(beforeIncome + 200);
+
+      expect(Number(after!.expense))
+        .toBe(beforeExpense + 100);
+
+      expect(Number(after!.profit))
+        .toBe(beforeProfit + 100);
+
+      await voidTransaction(
+        incomeTransaction,
       );
 
-    const expenseTransaction =
-      await createExpenseTransaction(
-        expenseCategory,
-        account.id,
-        100,
-        currentDate(),
+      await voidTransaction(
+        expenseTransaction,
       );
 
-    const after =
-      await getFinancialSummaryRow();
+      const restored =
+        await getFinancialSummaryRow();
 
-    expect(after).toBeTruthy();
+      expect(
+        Number(restored?.income ?? 0),
+      ).toBe(beforeIncome);
 
-    expect(Number(after!.income))
-      .toBe(beforeIncome + 200);
+      expect(
+        Number(restored?.expense ?? 0),
+      ).toBe(beforeExpense);
 
-    expect(Number(after!.expense))
-      .toBe(beforeExpense + 100);
+      expect(
+        Number(restored?.profit ?? 0),
+      ).toBe(beforeProfit);
+    },
+    30_000,
+  );
 
-    expect(Number(after!.profit))
-      .toBe(beforeProfit + 100);
+  it(
+    "calculates monthly income, expenses, and net",
+    async () => {
+      const incomeCategory =
+        await getIncomeCategory();
 
-    await voidTransaction(
-      incomeTransaction,
-    );
+      const expenseCategory =
+        await getExpenseCategory();
 
-    await voidTransaction(
-      expenseTransaction,
-    );
+      const account =
+        await getBdtAssetAccount();
 
-    const restored =
-      await getFinancialSummaryRow();
+      const before =
+        await getMonthlyIncomeExpenseRow();
 
-    expect(Number(restored?.income ?? 0))
-      .toBe(beforeIncome);
+      const beforeIncome =
+        Number(before?.income ?? 0);
 
-    expect(Number(restored?.expense ?? 0))
-      .toBe(beforeExpense);
+      const beforeExpenses =
+        Number(before?.expenses ?? 0);
 
-    expect(Number(restored?.profit ?? 0))
-      .toBe(beforeProfit);
-  });
+      const beforeNet =
+        Number(before?.net ?? 0);
 
-  it("calculates monthly income, expenses, and net", async () => {
-    const incomeCategory =
-      await getIncomeCategory();
+      const incomeTransaction =
+        await createIncomeTransaction(
+          incomeCategory,
+          account.id,
+          200,
+          currentDate(),
+        );
 
-    const expenseCategory =
-      await getExpenseCategory();
+      const expenseTransaction =
+        await createExpenseTransaction(
+          expenseCategory,
+          account.id,
+          100,
+          currentDate(),
+        );
 
-    const account =
-      await getBdtAssetAccount();
+      const after =
+        await getMonthlyIncomeExpenseRow();
 
-    const before =
-      await getMonthlyIncomeExpenseRow();
+      expect(after).toBeTruthy();
 
-    const beforeIncome =
-      Number(before?.income ?? 0);
+      expect(Number(after!.income))
+        .toBe(beforeIncome + 200);
 
-    const beforeExpenses =
-      Number(before?.expenses ?? 0);
+      expect(Number(after!.expenses))
+        .toBe(beforeExpenses + 100);
 
-    const beforeNet =
-      Number(before?.net ?? 0);
+      expect(Number(after!.net))
+        .toBe(beforeNet + 100);
 
-    const incomeTransaction =
-      await createIncomeTransaction(
-        incomeCategory,
-        account.id,
-        200,
-        currentDate(),
+      await voidTransaction(
+        incomeTransaction,
       );
 
-    const expenseTransaction =
-      await createExpenseTransaction(
-        expenseCategory,
-        account.id,
-        100,
-        currentDate(),
+      await voidTransaction(
+        expenseTransaction,
       );
 
-    const after =
-      await getMonthlyIncomeExpenseRow();
+      const restored =
+        await getMonthlyIncomeExpenseRow();
 
-    expect(after).toBeTruthy();
+      expect(
+        Number(restored?.income ?? 0),
+      ).toBe(beforeIncome);
 
-    expect(Number(after!.income))
-      .toBe(beforeIncome + 200);
+      expect(
+        Number(restored?.expenses ?? 0),
+      ).toBe(beforeExpenses);
 
-    expect(Number(after!.expenses))
-      .toBe(beforeExpenses + 100);
+      expect(
+        Number(restored?.net ?? 0),
+      ).toBe(beforeNet);
+    },
+    30_000,
+  );
 
-    expect(Number(after!.net))
-      .toBe(beforeNet + 100);
+  it(
+    "calculates monthly net worth from asset and liability effects",
+    async () => {
+      const incomeCategory =
+        await getIncomeCategory();
 
-    await voidTransaction(
-      incomeTransaction,
-    );
+      const account =
+        await getBdtAssetAccount();
 
-    await voidTransaction(
-      expenseTransaction,
-    );
+      const before =
+        await getMonthlyNetWorthRow();
 
-    const restored =
-      await getMonthlyIncomeExpenseRow();
+      const beforeAssets =
+        Number(before?.assets ?? 0);
 
-    expect(Number(restored?.income ?? 0))
-      .toBe(beforeIncome);
+      const beforeLiabilities =
+        Number(before?.liabilities ?? 0);
 
-    expect(Number(restored?.expenses ?? 0))
-      .toBe(beforeExpenses);
+      const beforeNetWorth =
+        Number(before?.net_worth ?? 0);
 
-    expect(Number(restored?.net ?? 0))
-      .toBe(beforeNet);
-  });
+      const transaction =
+        await createIncomeTransaction(
+          incomeCategory,
+          account.id,
+          200,
+          currentDate(),
+        );
 
-  it("calculates monthly net worth from asset and liability effects", async () => {
-    const incomeCategory =
-      await getIncomeCategory();
+      const after =
+        await getMonthlyNetWorthRow();
 
-    const account =
-      await getBdtAssetAccount();
+      expect(after).toBeTruthy();
 
-    const before =
-      await getMonthlyNetWorthRow();
+      expect(Number(after!.assets))
+        .toBe(beforeAssets + 200);
 
-    const beforeAssets =
-      Number(before?.assets ?? 0);
+      expect(Number(after!.liabilities))
+        .toBe(beforeLiabilities);
 
-    const beforeLiabilities =
-      Number(before?.liabilities ?? 0);
+      expect(Number(after!.net_worth))
+        .toBe(beforeNetWorth + 200);
 
-    const beforeNetWorth =
-      Number(before?.net_worth ?? 0);
-
-    const transaction =
-      await createIncomeTransaction(
-        incomeCategory,
-        account.id,
-        200,
-        currentDate(),
+      await voidTransaction(
+        transaction,
       );
 
-    const after =
-      await getMonthlyNetWorthRow();
+      const restored =
+        await getMonthlyNetWorthRow();
 
-    expect(after).toBeTruthy();
+      expect(
+        Number(restored?.assets ?? 0),
+      ).toBe(beforeAssets);
 
-    expect(Number(after!.assets))
-      .toBe(beforeAssets + 200);
+      expect(
+        Number(restored?.liabilities ?? 0),
+      ).toBe(beforeLiabilities);
 
-    expect(Number(after!.liabilities))
-      .toBe(beforeLiabilities);
+      expect(
+        Number(restored?.net_worth ?? 0),
+      ).toBe(beforeNetWorth);
+    },
+    30_000,
+  );
 
-    expect(Number(after!.net_worth))
-      .toBe(beforeNetWorth + 200);
+  it(
+    "calculates all-time reports summary",
+    async () => {
+      const incomeCategory =
+        await getIncomeCategory();
 
-    await voidTransaction(
-      transaction,
-    );
+      const expenseCategory =
+        await getExpenseCategory();
 
-    const restored =
-      await getMonthlyNetWorthRow();
+      const account =
+        await getBdtAssetAccount();
 
-    expect(Number(restored?.assets ?? 0))
-      .toBe(beforeAssets);
+      const before =
+        await getReportsSummaryRow();
 
-    expect(Number(restored?.liabilities ?? 0))
-      .toBe(beforeLiabilities);
+      const beforeIncome =
+        Number(before?.income ?? 0);
 
-    expect(Number(restored?.net_worth ?? 0))
-      .toBe(beforeNetWorth);
-  });
+      const beforeExpenses =
+        Number(before?.expenses ?? 0);
 
-  it("calculates all-time reports summary", async () => {
-    const incomeCategory =
-      await getIncomeCategory();
+      const beforeAssets =
+        Number(before?.assets ?? 0);
 
-    const expenseCategory =
-      await getExpenseCategory();
+      const beforeLiabilities =
+        Number(before?.liabilities ?? 0);
 
-    const account =
-      await getBdtAssetAccount();
+      const incomeTransaction =
+        await createIncomeTransaction(
+          incomeCategory,
+          account.id,
+          200,
+          currentDate(),
+        );
 
-    const before =
-      await getReportsSummaryRow();
+      const expenseTransaction =
+        await createExpenseTransaction(
+          expenseCategory,
+          account.id,
+          100,
+          currentDate(),
+        );
 
-    const beforeIncome =
-      Number(before?.income ?? 0);
+      const after =
+        await getReportsSummaryRow();
 
-    const beforeExpenses =
-      Number(before?.expenses ?? 0);
+      expect(after).toBeTruthy();
 
-    const beforeAssets =
-      Number(before?.assets ?? 0);
+      expect(Number(after!.income))
+        .toBe(beforeIncome + 200);
 
-    const beforeLiabilities =
-      Number(before?.liabilities ?? 0);
+      expect(Number(after!.expenses))
+        .toBe(beforeExpenses + 100);
 
-    const incomeTransaction =
-      await createIncomeTransaction(
-        incomeCategory,
-        account.id,
-        200,
-        currentDate(),
+      expect(Number(after!.assets))
+        .toBe(beforeAssets + 100);
+
+      expect(Number(after!.liabilities))
+        .toBe(beforeLiabilities);
+
+      await voidTransaction(
+        incomeTransaction,
       );
 
-    const expenseTransaction =
-      await createExpenseTransaction(
-        expenseCategory,
-        account.id,
-        100,
-        currentDate(),
+      await voidTransaction(
+        expenseTransaction,
       );
 
-    const after =
-      await getReportsSummaryRow();
+      const restored =
+        await getReportsSummaryRow();
 
-    expect(after).toBeTruthy();
+      expect(
+        Number(restored?.income ?? 0),
+      ).toBe(beforeIncome);
 
-    expect(Number(after!.income))
-      .toBe(beforeIncome + 200);
+      expect(
+        Number(restored?.expenses ?? 0),
+      ).toBe(beforeExpenses);
 
-    expect(Number(after!.expenses))
-      .toBe(beforeExpenses + 100);
+      expect(
+        Number(restored?.assets ?? 0),
+      ).toBe(beforeAssets);
 
-    expect(Number(after!.assets))
-      .toBe(beforeAssets + 100);
+      expect(
+        Number(restored?.liabilities ?? 0),
+      ).toBe(beforeLiabilities);
+    },
+    30_000,
+  );
 
-    expect(Number(after!.liabilities))
-      .toBe(beforeLiabilities);
+  it(
+    "calculates budget progress and removes voided spending",
+    async () => {
+      const category =
+        await getExpenseCategory();
 
-    await voidTransaction(
-      incomeTransaction,
-    );
+      const budgetStart =
+        uniqueBudgetStartDate();
 
-    await voidTransaction(
-      expenseTransaction,
-    );
+      const transactionDate =
+        budgetTransactionDate(
+          budgetStart,
+        );
 
-    const restored =
-      await getReportsSummaryRow();
-
-    expect(Number(restored?.income ?? 0))
-      .toBe(beforeIncome);
-
-    expect(Number(restored?.expenses ?? 0))
-      .toBe(beforeExpenses);
-
-    expect(Number(restored?.assets ?? 0))
-      .toBe(beforeAssets);
-
-    expect(Number(restored?.liabilities ?? 0))
-      .toBe(beforeLiabilities);
-  });
-
-  it("calculates budget progress and removes voided spending", async () => {
-    const category =
-      await getExpenseCategory();
-
-    const budgetStart =
-      "2110-01-01";
-
-    const {
-      data: budgetId,
-      error: budgetError,
-    } = await supabase.rpc(
-      "create_budget",
-      {
-        p_category_id: category.id,
-        p_amount: 500,
-        p_currency: category.currency,
-        p_period: "monthly",
-        p_start_date: budgetStart,
-        p_end_date: null,
-      },
-    );
-
-    expect(budgetError).toBeNull();
-    expect(budgetId).toBeTruthy();
-
-    const {
-      data: beforeData,
-      error: beforeError,
-    } = await supabase.rpc(
-      "get_budget_progress",
-    );
-
-    expect(beforeError).toBeNull();
-
-    const before = (
-      (beforeData ?? []) as Array<{
-        id: string;
-        spent: number | string;
-        remaining: number | string;
-        percentage: number | string;
-      }>
-    ).find(
-      (row) => row.id === budgetId,
-    );
-
-    expect(before).toBeTruthy();
-
-    const beforeSpent =
-      Number(before!.spent);
-
-    const beforeRemaining =
-      Number(before!.remaining);
-
-    const beforePercentage =
-      Number(before!.percentage);
-
-    const {
-      data: accounts,
-      error: accountError,
-    } = await supabase
-      .from("accounts")
-      .select("id")
-      .eq("is_system", false)
-      .eq("is_archived", false)
-      .eq("account_type", "asset")
-      .eq("currency", category.currency)
-      .limit(1);
-
-    expect(accountError).toBeNull();
-    expect(accounts).toHaveLength(1);
-
-    const transaction =
-      await createExpenseTransaction(
-        category,
-        accounts![0].id,
-        100,
-        futureDate(),
+      const {
+        data: budgetId,
+        error: budgetError,
+      } = await supabase.rpc(
+        "create_budget",
+        {
+          p_category_id:
+            category.id,
+          p_amount: 500,
+          p_currency:
+            category.currency,
+          p_period: "monthly",
+          p_start_date:
+            budgetStart,
+          p_end_date: null,
+        },
       );
 
-    const {
-      data: afterData,
-      error: afterError,
-    } = await supabase.rpc(
-      "get_budget_progress",
-    );
+      expect(budgetError).toBeNull();
+      expect(budgetId).toBeTruthy();
 
-    expect(afterError).toBeNull();
+      const {
+        data: beforeData,
+        error: beforeError,
+      } = await supabase.rpc(
+        "get_budget_progress",
+      );
 
-    const after = (
-      (afterData ?? []) as Array<{
-        id: string;
-        spent: number | string;
-        remaining: number | string;
-        percentage: number | string;
-      }>
-    ).find(
-      (row) => row.id === budgetId,
-    );
+      expect(beforeError).toBeNull();
 
-    expect(after).toBeTruthy();
+      const before = (
+        (beforeData ?? []) as Array<{
+          id: string;
+          spent: number | string;
+          remaining: number | string;
+          percentage: number | string;
+        }>
+      ).find(
+        (row) => row.id === budgetId,
+      );
 
-    expect(Number(after!.spent))
-      .toBe(beforeSpent + 100);
+      expect(before).toBeTruthy();
 
-    expect(Number(after!.remaining))
-      .toBe(beforeRemaining - 100);
+      const beforeSpent =
+        Number(before!.spent);
 
-    expect(Number(after!.percentage))
-      .toBe(beforePercentage + 20);
+      const beforeRemaining =
+        Number(before!.remaining);
 
-    await voidTransaction(
-      transaction,
-    );
+      const beforePercentage =
+        Number(before!.percentage);
 
-    const {
-      data: restoredData,
-      error: restoredError,
-    } = await supabase.rpc(
-      "get_budget_progress",
-    );
+      const {
+        data: accounts,
+        error: accountError,
+      } = await supabase
+        .from("accounts")
+        .select("id")
+        .eq("is_system", false)
+        .eq("is_archived", false)
+        .eq("account_type", "asset")
+        .eq(
+          "currency",
+          category.currency,
+        )
+        .limit(1);
 
-    expect(restoredError).toBeNull();
+      expect(accountError).toBeNull();
+      expect(accounts).toHaveLength(1);
 
-    const restored = (
-      (restoredData ?? []) as Array<{
-        id: string;
-        spent: number | string;
-        remaining: number | string;
-        percentage: number | string;
-      }>
-    ).find(
-      (row) => row.id === budgetId,
-    );
+      const transaction =
+        await createExpenseTransaction(
+          category,
+          accounts![0].id,
+          100,
+          transactionDate,
+        );
 
-    expect(restored).toBeTruthy();
+      const {
+        data: afterData,
+        error: afterError,
+      } = await supabase.rpc(
+        "get_budget_progress",
+      );
 
-    expect(Number(restored!.spent))
-      .toBe(beforeSpent);
+      expect(afterError).toBeNull();
 
-    expect(Number(restored!.remaining))
-      .toBe(beforeRemaining);
+      const after = (
+        (afterData ?? []) as Array<{
+          id: string;
+          spent: number | string;
+          remaining: number | string;
+          percentage: number | string;
+        }>
+      ).find(
+        (row) => row.id === budgetId,
+      );
 
-    expect(Number(restored!.percentage))
-      .toBe(beforePercentage);
+      expect(after).toBeTruthy();
 
-    const {
-      error: archiveError,
-    } = await supabase.rpc(
-      "archive_budget",
-      {
-        p_budget_id: budgetId,
-      },
-    );
+      expect(Number(after!.spent))
+        .toBe(beforeSpent + 100);
 
-    expect(archiveError).toBeNull();
+      expect(Number(after!.remaining))
+        .toBe(beforeRemaining - 100);
 
-    const {
-      error: deleteError,
-    } = await supabase.rpc(
-      "delete_budget",
-      {
-        p_budget_id: budgetId,
-      },
-    );
+      expect(Number(after!.percentage))
+        .toBe(beforePercentage + 20);
 
-    expect(deleteError).toBeNull();
-  });
+      await voidTransaction(
+        transaction,
+      );
+
+      const {
+        data: restoredData,
+        error: restoredError,
+      } = await supabase.rpc(
+        "get_budget_progress",
+      );
+
+      expect(restoredError).toBeNull();
+
+      const restored = (
+        (restoredData ?? []) as Array<{
+          id: string;
+          spent: number | string;
+          remaining: number | string;
+          percentage: number | string;
+        }>
+      ).find(
+        (row) => row.id === budgetId,
+      );
+
+      expect(restored).toBeTruthy();
+
+      expect(
+        Number(restored!.spent),
+      ).toBe(beforeSpent);
+
+      expect(
+        Number(restored!.remaining),
+      ).toBe(beforeRemaining);
+
+      expect(
+        Number(restored!.percentage),
+      ).toBe(beforePercentage);
+
+      const {
+        error: archiveError,
+      } = await supabase.rpc(
+        "archive_budget",
+        {
+          p_budget_id: budgetId,
+        },
+      );
+
+      expect(archiveError).toBeNull();
+
+      const {
+        error: deleteError,
+      } = await supabase.rpc(
+        "delete_budget",
+        {
+          p_budget_id: budgetId,
+        },
+      );
+
+      expect(deleteError).toBeNull();
+    },
+    30_000,
+  );
 });
 

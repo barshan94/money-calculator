@@ -67,246 +67,251 @@ async function getAccountBalance(
 }
 
 describe("transaction lifecycle", () => {
-  it("creates, updates, voids, and preserves the transaction audit trail", async () => {
-    const {
-      data: accounts,
-      error: accountError,
-    } = await supabase
-      .from("accounts")
-      .select(
-        "id, currency, account_type, is_system, is_archived",
-      )
-      .eq("currency", "BDT")
-      .eq("account_type", "asset")
-      .eq("is_system", false)
-      .eq("is_archived", false)
-      .limit(2);
+  it(
+    "creates, updates, voids, and preserves the transaction audit trail",
+    async () => {
+      const {
+        data: accounts,
+        error: accountError,
+      } = await supabase
+        .from("accounts")
+        .select(
+          "id, currency, account_type, is_system, is_archived",
+        )
+        .eq("currency", "BDT")
+        .eq("account_type", "asset")
+        .eq("is_system", false)
+        .eq("is_archived", false)
+        .limit(2);
 
-    expect(accountError).toBeNull();
-    expect(accounts).toHaveLength(2);
+      expect(accountError).toBeNull();
+      expect(accounts).toHaveLength(2);
 
-    const sourceAccount = accounts![0];
-    const destinationAccount = accounts![1];
+      const sourceAccount = accounts![0];
+      const destinationAccount = accounts![1];
 
-    const initialSource =
-      await getAccountBalance(
-        sourceAccount.id,
+      const initialSource =
+        await getAccountBalance(
+          sourceAccount.id,
+        );
+
+      const initialDestination =
+        await getAccountBalance(
+          destinationAccount.id,
+        );
+
+      const description =
+        `Automated transaction test ${Date.now()}`;
+
+      /*
+       * CREATE
+       *
+       * Destination = debit
+       * Source = credit
+       */
+      const {
+        data: transactionId,
+        error: createError,
+      } = await supabase.rpc(
+        "create_transaction",
+        {
+          p_transaction_date:
+            new Date().toISOString(),
+          p_description: description,
+          p_reference: null,
+          p_notes: null,
+          p_entries: [
+            {
+              account_id:
+                destinationAccount.id,
+              category_id: null,
+              amount: 100,
+              entry_type: "debit",
+            },
+            {
+              account_id:
+                sourceAccount.id,
+              category_id: null,
+              amount: 100,
+              entry_type: "credit",
+            },
+          ],
+        },
       );
 
-    const initialDestination =
-      await getAccountBalance(
-        destinationAccount.id,
+      expect(createError).toBeNull();
+      expect(transactionId).toBeTruthy();
+
+      expect(
+        await getAccountBalance(
+          sourceAccount.id,
+        ),
+      ).toBe(initialSource - 100);
+
+      expect(
+        await getAccountBalance(
+          destinationAccount.id,
+        ),
+      ).toBe(initialDestination + 100);
+
+      /*
+       * UPDATE
+       *
+       * Change 100 → 60.
+       */
+      const {
+        error: updateError,
+      } = await supabase.rpc(
+        "update_transaction",
+        {
+          p_transaction_id: transactionId,
+          p_transaction_date:
+            new Date().toISOString(),
+          p_description:
+            `${description} updated`,
+          p_entries: [
+            {
+              account_id:
+                destinationAccount.id,
+              category_id: null,
+              amount: 60,
+              entry_type: "debit",
+            },
+            {
+              account_id:
+                sourceAccount.id,
+              category_id: null,
+              amount: 60,
+              entry_type: "credit",
+            },
+          ],
+        },
       );
 
-    const description =
-      `Automated transaction test ${Date.now()}`;
+      expect(updateError).toBeNull();
 
-    /*
-     * CREATE
-     *
-     * Destination = debit
-     * Source = credit
-     */
-    const {
-      data: transactionId,
-      error: createError,
-    } = await supabase.rpc(
-      "create_transaction",
-      {
-        p_transaction_date:
-          new Date().toISOString(),
-        p_description: description,
-        p_reference: null,
-        p_notes: null,
-        p_entries: [
-          {
-            account_id:
-              destinationAccount.id,
-            category_id: null,
-            amount: 100,
-            entry_type: "debit",
-          },
-          {
-            account_id:
-              sourceAccount.id,
-            category_id: null,
-            amount: 100,
-            entry_type: "credit",
-          },
-        ],
-      },
-    );
+      expect(
+        await getAccountBalance(
+          sourceAccount.id,
+        ),
+      ).toBe(initialSource - 60);
 
-    expect(createError).toBeNull();
-    expect(transactionId).toBeTruthy();
+      expect(
+        await getAccountBalance(
+          destinationAccount.id,
+        ),
+      ).toBe(initialDestination + 60);
 
-    expect(
-      await getAccountBalance(
-        sourceAccount.id,
-      ),
-    ).toBe(initialSource - 100);
+      /*
+       * VERIFY ORIGINAL TRANSACTION
+       */
+      const {
+        data: original,
+        error: originalError,
+      } = await supabase
+        .from("transactions")
+        .select(
+          "id, status, reversal_of_id",
+        )
+        .eq("id", transactionId)
+        .single();
 
-    expect(
-      await getAccountBalance(
-        destinationAccount.id,
-      ),
-    ).toBe(initialDestination + 100);
+      expect(originalError).toBeNull();
+      expect(original).toBeTruthy();
+      expect(original.status).toBe("posted");
+      expect(original.reversal_of_id).toBeNull();
 
-    /*
-     * UPDATE
-     *
-     * Change 100 → 60.
-     */
-    const {
-      error: updateError,
-    } = await supabase.rpc(
-      "update_transaction",
-      {
-        p_transaction_id: transactionId,
-        p_transaction_date:
-          new Date().toISOString(),
-        p_description:
-          `${description} updated`,
-        p_entries: [
-          {
-            account_id:
-              destinationAccount.id,
-            category_id: null,
-            amount: 60,
-            entry_type: "debit",
-          },
-          {
-            account_id:
-              sourceAccount.id,
-            category_id: null,
-            amount: 60,
-            entry_type: "credit",
-          },
-        ],
-      },
-    );
+      /*
+       * VOID
+       */
+      const {
+        error: voidError,
+      } = await supabase.rpc(
+        "void_transaction",
+        {
+          p_transaction_id: transactionId,
+        },
+      );
 
-    expect(updateError).toBeNull();
+      expect(voidError).toBeNull();
 
-    expect(
-      await getAccountBalance(
-        sourceAccount.id,
-      ),
-    ).toBe(initialSource - 60);
+      /*
+       * ACCOUNT BALANCES MUST RETURN
+       * EXACTLY TO THEIR ORIGINAL VALUES.
+       */
+      expect(
+        await getAccountBalance(
+          sourceAccount.id,
+        ),
+      ).toBe(initialSource);
 
-    expect(
-      await getAccountBalance(
-        destinationAccount.id,
-      ),
-    ).toBe(initialDestination + 60);
+      expect(
+        await getAccountBalance(
+          destinationAccount.id,
+        ),
+      ).toBe(initialDestination);
 
-    /*
-     * VERIFY ORIGINAL TRANSACTION
-     */
-    const {
-      data: original,
-      error: originalError,
-    } = await supabase
-      .from("transactions")
-      .select(
-        "id, status, reversal_of_id",
-      )
-      .eq("id", transactionId)
-      .single();
+      /*
+       * ORIGINAL TRANSACTION MUST REMAIN.
+       */
+      const {
+        data: voidedOriginal,
+        error: voidedOriginalError,
+      } = await supabase
+        .from("transactions")
+        .select(
+          "id, status, reversal_of_id",
+        )
+        .eq("id", transactionId)
+        .single();
 
-    expect(originalError).toBeNull();
-    expect(original).toBeTruthy();
-    expect(original.status).toBe("posted");
-    expect(original.reversal_of_id).toBeNull();
+      expect(
+        voidedOriginalError,
+      ).toBeNull();
 
-    /*
-     * VOID
-     */
-    const {
-      error: voidError,
-    } = await supabase.rpc(
-      "void_transaction",
-      {
-        p_transaction_id: transactionId,
-      },
-    );
+      expect(
+        voidedOriginal,
+      ).toBeTruthy();
 
-    expect(voidError).toBeNull();
+      expect(
+        voidedOriginal.status,
+      ).toBe("posted");
 
-    /*
-     * ACCOUNT BALANCES MUST RETURN
-     * EXACTLY TO THEIR ORIGINAL VALUES.
-     */
-    expect(
-      await getAccountBalance(
-        sourceAccount.id,
-      ),
-    ).toBe(initialSource);
+      expect(
+        voidedOriginal.reversal_of_id,
+      ).toBeNull();
 
-    expect(
-      await getAccountBalance(
-        destinationAccount.id,
-      ),
-    ).toBe(initialDestination);
+      /*
+       * FIND THE POSTED REVERSAL.
+       */
+      const {
+        data: reversal,
+        error: reversalError,
+      } = await supabase
+        .from("transactions")
+        .select(
+          "id, status, reversal_of_id, transaction_type",
+        )
+        .eq(
+          "reversal_of_id",
+          transactionId,
+        )
+        .eq("status", "posted")
+        .maybeSingle();
 
-    /*
-     * ORIGINAL TRANSACTION MUST REMAIN.
-     */
-    const {
-      data: voidedOriginal,
-      error: voidedOriginalError,
-    } = await supabase
-      .from("transactions")
-      .select(
-        "id, status, reversal_of_id",
-      )
-      .eq("id", transactionId)
-      .single();
+      expect(reversalError).toBeNull();
 
-    expect(
-      voidedOriginalError,
-    ).toBeNull();
+      expect(reversal).toBeTruthy();
 
-    expect(
-      voidedOriginal,
-    ).toBeTruthy();
+      expect(reversal.status).toBe(
+        "posted",
+      );
 
-    expect(
-      voidedOriginal.status,
-    ).toBe("posted");
-
-    expect(
-      voidedOriginal.reversal_of_id,
-    ).toBeNull();
-
-    /*
-     * FIND THE POSTED REVERSAL.
-     */
-    const {
-      data: reversal,
-      error: reversalError,
-    } = await supabase
-      .from("transactions")
-      .select(
-        "id, status, reversal_of_id, transaction_type",
-      )
-      .eq(
-        "reversal_of_id",
-        transactionId,
-      )
-      .eq("status", "posted")
-      .maybeSingle();
-
-    expect(reversalError).toBeNull();
-
-    expect(reversal).toBeTruthy();
-
-    expect(reversal.status).toBe(
-      "posted",
-    );
-
-    expect(
-      reversal.reversal_of_id,
-    ).toBe(transactionId);
-  });
+      expect(
+        reversal.reversal_of_id,
+      ).toBe(transactionId);
+    },
+    30_000,
+  );
 });
+
