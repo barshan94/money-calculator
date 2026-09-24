@@ -5,24 +5,16 @@ import {
   expect,
   it,
 } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import {
-  createClient,
-  type SupabaseClient,
-} from "@supabase/supabase-js";
-
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL!;
-
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-
-const email =
-  process.env.PLAYWRIGHT_TEST_EMAIL!;
-
-const password =
-  process.env.PLAYWRIGHT_TEST_PASSWORD!;
+  createAdminClient,
+  createAuthenticatedClient,
+  signInTestUser,
+} from "./test-helpers";
 
 let supabase: SupabaseClient;
+let admin: SupabaseClient;
 
 type Account = {
   id: string;
@@ -170,10 +162,17 @@ async function archiveRecurring(
 async function cleanupRecurring(
   recurringId: string,
 ) {
-  await supabase
+  /*
+   * Cleanup intentionally uses the service-role
+   * client. This is test infrastructure, not the
+   * application mutation path being tested.
+   */
+  const { error } = await admin
     .from("recurring_transactions")
     .delete()
     .eq("id", recurringId);
+
+  expect(error).toBeNull();
 }
 
 function getDaysAgo(days: number): string {
@@ -200,18 +199,12 @@ describe("recurring transaction edge cases", () => {
   const createdRecurringIds: string[] = [];
 
   beforeAll(async () => {
-    supabase = createClient(
-      supabaseUrl,
-      supabaseKey,
-    );
+    supabase =
+      createAuthenticatedClient();
 
-    const { error } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    admin = createAdminClient();
 
-    expect(error).toBeNull();
+    await signInTestUser(supabase);
   });
 
   afterAll(async () => {
@@ -555,21 +548,26 @@ describe("recurring transaction edge cases", () => {
 
     expect(updateError).toBeNull();
 
-    const { data: beforeProcess, error: beforeError } =
-      await supabase
-        .from("recurring_transactions")
-        .select(
-          "id, user_id, is_active, next_run_date",
-        )
-        .eq("id", recurringId)
-        .single();
+    const {
+      data: beforeProcess,
+      error: beforeError,
+    } = await supabase
+      .from("recurring_transactions")
+      .select(
+        "id, user_id, is_active, next_run_date",
+      )
+      .eq("id", recurringId)
+      .single();
 
     expect(beforeError).toBeNull();
     expect(beforeProcess).toBeTruthy();
     expect(beforeProcess.is_active).toBe(true);
+
     expect(
       beforeProcess.next_run_date <=
-        new Date().toISOString().slice(0, 10),
+        new Date()
+          .toISOString()
+          .slice(0, 10),
     ).toBe(true);
 
     const {
@@ -599,7 +597,9 @@ describe("recurring transaction edge cases", () => {
 
     expect(
       afterProcess.next_run_date >
-        new Date().toISOString().slice(0, 10),
+        new Date()
+          .toISOString()
+          .slice(0, 10),
     ).toBe(true);
   });
 
@@ -651,3 +651,4 @@ describe("recurring transaction edge cases", () => {
     expect(error).toBeTruthy();
   });
 });
+

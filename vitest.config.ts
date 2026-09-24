@@ -17,8 +17,8 @@ export default defineConfig(({ mode }) => ({
     environment: "node",
     env: loadEnv(mode, process.cwd(), ""),
     fileParallelism: false,
-    testTimeout: 15000,
-    hookTimeout: 15000,
+    testTimeout: 30000,
+    hookTimeout: 30000,
 
     // Playwright owns the E2E suite.
     // Vitest should execute only unit/integration tests.

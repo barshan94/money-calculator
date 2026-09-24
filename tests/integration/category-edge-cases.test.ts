@@ -5,25 +5,17 @@ import {
   expect,
   it,
 } from "vitest";
-import {
-  createClient,
-  type SupabaseClient,
-} from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL!;
-
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-
-const email =
-  process.env.PLAYWRIGHT_TEST_EMAIL!;
-
-const password =
-  process.env.PLAYWRIGHT_TEST_PASSWORD!;
+import {
+  createAdminClient,
+  createAuthenticatedClient,
+  signInTestUser,
+} from "./test-helpers";
 
 let supabase: SupabaseClient;
+let admin: SupabaseClient;
 
 const createdCategoryIds: string[] = [];
 const createdRecurringIds: string[] = [];
@@ -122,28 +114,34 @@ async function createTransactionHistory(
 
 describe("category edge cases", () => {
   beforeAll(async () => {
-    supabase = createClient(
-      supabaseUrl,
-      supabaseKey,
-    );
+    supabase =
+      createAuthenticatedClient();
 
-    const { error } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+    admin = createAdminClient();
 
-    expect(error).toBeNull();
+    await signInTestUser(supabase);
   });
 
   afterAll(async () => {
+    /*
+     * Recurring transactions are test fixtures.
+     * Cleanup intentionally uses the service-role
+     * client because production authenticated
+     * users will not retain direct DELETE
+     * privileges on this table.
+     */
     for (const recurringId of createdRecurringIds) {
-      await supabase
+      await admin
         .from("recurring_transactions")
         .delete()
         .eq("id", recurringId);
     }
 
+    /*
+     * Category deletion itself must continue
+     * through the authenticated RPC because
+     * delete_category is application logic under test.
+     */
     for (const categoryId of createdCategoryIds) {
       await supabase.rpc(
         "delete_category",
@@ -592,4 +590,3 @@ describe("category edge cases", () => {
     expect(deletedAccount).toBeNull();
   });
 });
-

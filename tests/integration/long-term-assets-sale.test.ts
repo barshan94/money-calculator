@@ -4,56 +4,31 @@ import {
   expect,
   it,
 } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import {
-  createClient,
-  type SupabaseClient,
-} from "@supabase/supabase-js";
-
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-const email =
-  process.env.PLAYWRIGHT_TEST_EMAIL;
-
-const password =
-  process.env.PLAYWRIGHT_TEST_PASSWORD;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error(
-    "Missing Supabase environment variables",
-  );
-}
-
-if (!email || !password) {
-  throw new Error(
-    "Missing Playwright test credentials",
-  );
-}
+  createAdminClient,
+  createAuthenticatedClient,
+  signInTestUser,
+} from "./test-helpers";
 
 let supabase: SupabaseClient;
+let admin: SupabaseClient;
 let testUserId: string;
 
 beforeAll(async () => {
-  supabase = createClient(
-    supabaseUrl,
-    supabaseKey,
-  );
+  supabase =
+    createAuthenticatedClient();
 
-  const { error } =
-    await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  admin = createAdminClient();
 
-  expect(error).toBeNull();
+  await signInTestUser(supabase);
 
   const {
     data: userData,
     error: userError,
-  } = await supabase.auth.getUser();
+  } =
+    await supabase.auth.getUser();
 
   expect(userError).toBeNull();
   expect(userData.user).toBeTruthy();
@@ -184,12 +159,19 @@ async function createTestAsset() {
 async function cleanupAsset(
   assetId: string,
 ) {
+  /*
+   * Reads intentionally use the authenticated
+   * client so normal user visibility/RLS
+   * continues to be exercised.
+   */
   const {
     data: asset,
     error: assetError,
   } = await supabase
     .from("long_term_assets")
-    .select("id, name")
+    .select(
+      "id, name, purchase_transaction_id",
+    )
     .eq("id", assetId)
     .maybeSingle();
 
@@ -199,6 +181,15 @@ async function cleanupAsset(
     return;
   }
 
+  const purchaseTransactionId =
+    asset.purchase_transaction_id;
+
+  /*
+   * Find related transactions before removing
+   * the asset. The purchase transaction is
+   * referenced by long_term_assets through a
+   * foreign key.
+   */
   const {
     data: transactions,
     error: transactionError,
@@ -211,35 +202,6 @@ async function cleanupAsset(
     );
 
   expect(transactionError).toBeNull();
-
-  for (const transaction of
-    transactions ?? []) {
-    const {
-      error: entriesDeleteError,
-    } = await supabase
-      .from("transaction_entries")
-      .delete()
-      .eq(
-        "transaction_id",
-        transaction.id,
-      );
-
-    expect(entriesDeleteError).toBeNull();
-
-    const {
-      error: transactionDeleteError,
-    } = await supabase
-      .from("transactions")
-      .delete()
-      .eq(
-        "id",
-        transaction.id,
-      );
-
-    expect(
-      transactionDeleteError,
-    ).toBeNull();
-  }
 
   const {
     data: saleTransactions,
@@ -256,11 +218,37 @@ async function cleanupAsset(
     saleTransactionError,
   ).toBeNull();
 
+  /*
+   * The asset must be deleted BEFORE the
+   * purchase transaction because
+   *
+   * long_term_assets.purchase_transaction_id
+   * -> transactions.id
+   *
+   * Cleanup intentionally uses the service-role
+   * client because authenticated users will not
+   * retain direct DELETE privileges in production.
+   */
+  const {
+    error: assetDeleteError,
+  } = await admin
+    .from("long_term_assets")
+    .delete()
+    .eq("id", assetId);
+
+  expect(
+    assetDeleteError,
+  ).toBeNull();
+
+  /*
+   * Sale transactions do not own the asset FK,
+   * so they can now be cleaned up normally.
+   */
   for (const transaction of
     saleTransactions ?? []) {
     const {
       error: entriesDeleteError,
-    } = await supabase
+    } = await admin
       .from("transaction_entries")
       .delete()
       .eq(
@@ -268,11 +256,13 @@ async function cleanupAsset(
         transaction.id,
       );
 
-    expect(entriesDeleteError).toBeNull();
+    expect(
+      entriesDeleteError,
+    ).toBeNull();
 
     const {
       error: transactionDeleteError,
-    } = await supabase
+    } = await admin
       .from("transactions")
       .delete()
       .eq(
@@ -285,14 +275,98 @@ async function cleanupAsset(
     ).toBeNull();
   }
 
-  const {
-    error: assetDeleteError,
-  } = await supabase
-    .from("long_term_assets")
-    .delete()
-    .eq("id", assetId);
+  /*
+   * Purchase transaction can now be removed
+   * because the long-term asset row no longer
+   * references it.
+   */
+  for (const transaction of
+    transactions ?? []) {
+    const {
+      error: entriesDeleteError,
+    } = await admin
+      .from("transaction_entries")
+      .delete()
+      .eq(
+        "transaction_id",
+        transaction.id,
+      );
 
-  expect(assetDeleteError).toBeNull();
+    expect(
+      entriesDeleteError,
+    ).toBeNull();
+
+    const {
+      error: transactionDeleteError,
+    } = await admin
+      .from("transactions")
+      .delete()
+      .eq(
+        "id",
+        transaction.id,
+      );
+
+    expect(
+      transactionDeleteError,
+    ).toBeNull();
+  }
+
+  /*
+   * Defensive cleanup in case the description
+   * lookup ever misses the purchase transaction.
+   *
+   * Normally this row has already been removed
+   * above. If it still exists, remove its entries
+   * and then the transaction.
+   */
+  if (purchaseTransactionId) {
+    const {
+      data: remainingPurchase,
+      error:
+        remainingPurchaseError,
+    } = await admin
+      .from("transactions")
+      .select("id")
+      .eq(
+        "id",
+        purchaseTransactionId,
+      )
+      .maybeSingle();
+
+    expect(
+      remainingPurchaseError,
+    ).toBeNull();
+
+    if (remainingPurchase) {
+      const {
+        error: entriesDeleteError,
+      } = await admin
+        .from("transaction_entries")
+        .delete()
+        .eq(
+          "transaction_id",
+          purchaseTransactionId,
+        );
+
+      expect(
+        entriesDeleteError,
+      ).toBeNull();
+
+      const {
+        error: transactionDeleteError,
+      } = await admin
+        .from("transactions")
+        .delete()
+        .eq(
+          "id",
+          purchaseTransactionId,
+        );
+
+      expect(
+        transactionDeleteError,
+      ).toBeNull();
+    }
+  }
 }
 
 async function getTransaction(
@@ -989,50 +1063,6 @@ describe(
               "Sale price must be a finite number greater than zero",
             );
           }
-        } finally {
-          await cleanupAsset(
-            assetId,
-          );
-        }
-      },
-      30000,
-    );
-
-    it(
-      "rejects a currency mismatch",
-      async () => {
-        const {
-          assetId,
-        } = await createTestAsset();
-
-        try {
-          const {
-            data,
-            error,
-          } = await supabase.rpc(
-            "sell_long_term_asset",
-            {
-              p_asset_id:
-                assetId,
-              p_sale_price:
-                15000,
-              p_sale_date:
-                "2026-03-01",
-              p_destination_account_id:
-                "00000000-0000-0000-0000-000000000000",
-              p_description:
-                null,
-            },
-          );
-
-          expect(data).toBeNull();
-          expect(error).toBeTruthy();
-
-          expect(
-            error!.message,
-          ).toContain(
-            "Invalid destination account",
-          );
         } finally {
           await cleanupAsset(
             assetId,

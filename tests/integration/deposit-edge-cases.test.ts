@@ -1,33 +1,19 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import {
-  createClient,
-  type SupabaseClient,
-} from "@supabase/supabase-js";
-
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-const email =
-  process.env.PLAYWRIGHT_TEST_EMAIL!;
-const password =
-  process.env.PLAYWRIGHT_TEST_PASSWORD!;
+  createAuthenticatedClient,
+  createAdminClient,
+  signInTestUser,
+} from "./test-helpers";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 let supabase: SupabaseClient;
+let admin: SupabaseClient;
 
 beforeAll(async () => {
-  supabase = createClient(
-    supabaseUrl,
-    supabaseKey,
-  );
+  supabase = createAuthenticatedClient();
+  admin = createAdminClient();
 
-  const { error } =
-    await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-  expect(error).toBeNull();
+  await signInTestUser(supabase);
 });
 
 async function getAccount() {
@@ -207,7 +193,7 @@ describe("deposit financial edge cases", () => {
       expect(result.data).toBeNull();
       expect(result.error).toBeTruthy();
     } finally {
-      await supabase
+      await admin
         .from("deposits")
         .update({
           status: "withdrawn",
@@ -235,7 +221,7 @@ describe("deposit financial edge cases", () => {
       expect(result.data).toBeNull();
       expect(result.error).toBeTruthy();
     } finally {
-      await supabase
+      await admin
         .from("deposits")
         .update({
           status: "withdrawn",
@@ -263,7 +249,7 @@ describe("deposit financial edge cases", () => {
       expect(result.data).toBeNull();
       expect(result.error).toBeTruthy();
     } finally {
-      await supabase
+      await admin
         .from("deposits")
         .update({
           status: "withdrawn",
@@ -354,7 +340,7 @@ describe("deposit financial edge cases", () => {
         ),
       ).toBe(10000);
     } finally {
-      await supabase
+      await admin
         .from("deposits")
         .update({
           status: "withdrawn",
@@ -363,3 +349,4 @@ describe("deposit financial edge cases", () => {
     }
   });
 });
+

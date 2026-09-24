@@ -1,22 +1,14 @@
 import { beforeAll, describe, expect, it } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import {
-  createClient,
-  type SupabaseClient,
-} from "@supabase/supabase-js";
-
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL!;
-
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-
-const email =
-  process.env.PLAYWRIGHT_TEST_EMAIL!;
-
-const password =
-  process.env.PLAYWRIGHT_TEST_PASSWORD!;
+  createAdminClient,
+  createAuthenticatedClient,
+  signInTestUser,
+} from "./test-helpers";
 
 let supabase: SupabaseClient;
+let admin: SupabaseClient;
 
 type TuitionStatusRow = {
   student_id: string;
@@ -89,18 +81,12 @@ describe(
   "tuition payment accumulation",
   () => {
     beforeAll(async () => {
-      supabase = createClient(
-        supabaseUrl,
-        supabaseKey,
-      );
+      supabase =
+        createAuthenticatedClient();
 
-      const { error } =
-        await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+      admin = createAdminClient();
 
-      expect(error).toBeNull();
+      await signInTestUser(supabase);
     });
 
     it(
@@ -467,11 +453,16 @@ describe(
         ).toBe(1000);
 
         /*
-         * FINAL CLEANUP.
+         * FINAL CLEANUP
+         *
+         * Cleanup intentionally uses the
+         * service-role client because production
+         * authenticated users will not retain
+         * direct DELETE privileges on this table.
          */
         const {
           error: cleanupError,
-        } = await supabase
+        } = await admin
           .from("tuition_students")
           .delete()
           .eq("id", studentId);
@@ -481,4 +472,3 @@ describe(
     );
   },
 );
-

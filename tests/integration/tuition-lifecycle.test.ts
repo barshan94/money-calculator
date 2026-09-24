@@ -1,17 +1,13 @@
-
 import { beforeAll, describe, expect, it } from "vitest";
 import {
-  createClient,
-  type SupabaseClient,
-} from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-const email = process.env.PLAYWRIGHT_TEST_EMAIL!;
-const password = process.env.PLAYWRIGHT_TEST_PASSWORD!;
+  createAuthenticatedClient,
+  createAdminClient,
+  signInTestUser,
+} from "./test-helpers";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 let supabase: SupabaseClient;
+let admin: SupabaseClient;
 
 type AccountBalanceRow = {
   id: string;
@@ -107,23 +103,15 @@ async function getPaymentByTransaction(
 
 describe("tuition lifecycle", () => {
   beforeAll(async () => {
-    supabase = createClient(
-      supabaseUrl,
-      supabaseKey,
-    );
+    supabase = createAuthenticatedClient();
+    admin = createAdminClient();
 
-    const { error } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-    expect(error).toBeNull();
+    await signInTestUser(supabase);
   });
 
   it(
-  "creates, edits, cancels, settles, and reverses tuition payments",
-  async () => {
+    "creates, edits, cancels, settles, and reverses tuition payments",
+    async () => {
       const studentName =
         `Automated Tuition ${Date.now()}`;
 
@@ -327,7 +315,6 @@ describe("tuition lifecycle", () => {
         partialHistoryPayment,
       ).toBeTruthy();
 
-
       /*
        * INVALID EDIT: 400 -> 1100
        *
@@ -388,8 +375,6 @@ describe("tuition lifecycle", () => {
           account.id,
         ),
       ).toBe(initialBalance + 400);
-    
-
 
       /*
        * EDIT 400 -> 600
@@ -651,32 +636,33 @@ describe("tuition lifecycle", () => {
       expect(finalHistory).toBeTruthy();
 
       const cancelledPaymentHistory =
-  finalHistory!.find(
-    (row: {
-      payment_id: string;
-      amount: number | string;
-    }) =>
-      Number(row.amount) === 600 &&
-      row.payment_id === firstPayment.id,
-  );
+        finalHistory!.find(
+          (row: {
+            payment_id: string;
+            amount: number | string;
+          }) =>
+            Number(row.amount) === 600 &&
+            row.payment_id === firstPayment.id,
+        );
 
-expect(
-  cancelledPaymentHistory,
-).toBeTruthy();
+      expect(
+        cancelledPaymentHistory,
+      ).toBeTruthy();
 
-const postedPaymentHistory =
-  finalHistory!.find(
-    (row: {
-      payment_id: string;
-      amount: number | string;
-    }) =>
-      Number(row.amount) === 1000 &&
-      row.payment_id === fullPayment.id,
-  );
+      const postedPaymentHistory =
+        finalHistory!.find(
+          (row: {
+            payment_id: string;
+            amount: number | string;
+          }) =>
+            Number(row.amount) === 1000 &&
+            row.payment_id === fullPayment.id,
+        );
 
-expect(
-  postedPaymentHistory,
-).toBeTruthy();
+      expect(
+        postedPaymentHistory,
+      ).toBeTruthy();
+
       /*
        * RELIABILITY RPC MUST INCLUDE
        * THE TEST STUDENT.
@@ -770,16 +756,21 @@ expect(
 
       /*
        * CLEANUP STUDENT.
+       *
+       * Cleanup intentionally uses the service-role
+       * client so the authenticated role can later
+       * lose direct DELETE privileges.
        */
       const {
         error: cleanupError,
-      } = await supabase
+      } = await admin
         .from("tuition_students")
         .delete()
         .eq("id", studentId);
 
       expect(cleanupError).toBeNull();
     },
-     30000,
+    30000,
   );
 });
+

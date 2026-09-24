@@ -1,48 +1,27 @@
-import { beforeAll, describe, expect, it } from "vitest";
 import {
-  createClient,
-  type SupabaseClient,
-} from "@supabase/supabase-js";
+  beforeAll,
+  describe,
+  expect,
+  it,
+} from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-const email =
-  process.env.PLAYWRIGHT_TEST_EMAIL;
-
-const password =
-  process.env.PLAYWRIGHT_TEST_PASSWORD;
-
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error(
-    "Missing Supabase environment variables",
-  );
-}
-
-if (!email || !password) {
-  throw new Error(
-    "Missing Playwright test credentials",
-  );
-}
+import {
+  createAdminClient,
+  createAuthenticatedClient,
+  signInTestUser,
+} from "./test-helpers";
 
 let supabase: SupabaseClient;
+let admin: SupabaseClient;
 
 beforeAll(async () => {
-  supabase = createClient(
-    supabaseUrl,
-    supabaseKey,
-  );
+  supabase =
+    createAuthenticatedClient();
 
-  const { error } =
-    await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  admin = createAdminClient();
 
-  expect(error).toBeNull();
+  await signInTestUser(supabase);
 });
 
 async function getTestAccount() {
@@ -122,7 +101,9 @@ async function cleanupAsset(
     error: assetError,
   } = await supabase
     .from("long_term_assets")
-    .select("id, name")
+    .select(
+      "id, name, purchase_transaction_id",
+    )
     .eq("id", assetId)
     .maybeSingle();
 
@@ -131,6 +112,9 @@ async function cleanupAsset(
   if (!asset) {
     return;
   }
+
+  const purchaseTransactionId =
+    asset.purchase_transaction_id;
 
   const {
     data: transactions,
@@ -145,10 +129,26 @@ async function cleanupAsset(
 
   expect(transactionError).toBeNull();
 
-  for (const transaction of transactions ?? []) {
+  /*
+   * The asset row references its purchase
+   * transaction, so delete the asset first.
+   */
+  const {
+    error: assetDeleteError,
+  } = await admin
+    .from("long_term_assets")
+    .delete()
+    .eq("id", assetId);
+
+  expect(
+    assetDeleteError,
+  ).toBeNull();
+
+  for (const transaction of
+    transactions ?? []) {
     const {
       error: entriesDeleteError,
-    } = await supabase
+    } = await admin
       .from("transaction_entries")
       .delete()
       .eq(
@@ -156,11 +156,13 @@ async function cleanupAsset(
         transaction.id,
       );
 
-    expect(entriesDeleteError).toBeNull();
+    expect(
+      entriesDeleteError,
+    ).toBeNull();
 
     const {
       error: transactionDeleteError,
-    } = await supabase
+    } = await admin
       .from("transactions")
       .delete()
       .eq(
@@ -168,17 +170,64 @@ async function cleanupAsset(
         transaction.id,
       );
 
-    expect(transactionDeleteError).toBeNull();
+    expect(
+      transactionDeleteError,
+    ).toBeNull();
   }
 
-  const {
-    error: assetDeleteError,
-  } = await supabase
-    .from("long_term_assets")
-    .delete()
-    .eq("id", assetId);
+  /*
+   * Defensive cleanup in case the transaction
+   * was not found by description.
+   */
+  if (purchaseTransactionId) {
+    const {
+      data: remainingTransaction,
+      error:
+        remainingTransactionError,
+    } = await admin
+      .from("transactions")
+      .select("id")
+      .eq(
+        "id",
+        purchaseTransactionId,
+      )
+      .maybeSingle();
 
-  expect(assetDeleteError).toBeNull();
+    expect(
+      remainingTransactionError,
+    ).toBeNull();
+
+    if (remainingTransaction) {
+      const {
+        error: entriesDeleteError,
+      } = await admin
+        .from("transaction_entries")
+        .delete()
+        .eq(
+          "transaction_id",
+          purchaseTransactionId,
+        );
+
+      expect(
+        entriesDeleteError,
+      ).toBeNull();
+
+      const {
+        error:
+          transactionDeleteError,
+      } = await admin
+        .from("transactions")
+        .delete()
+        .eq(
+          "id",
+          purchaseTransactionId,
+        );
+
+      expect(
+        transactionDeleteError,
+      ).toBeNull();
+    }
+  }
 }
 
 describe(
@@ -428,10 +477,15 @@ describe(
         } = await createTestAsset();
 
         try {
+          /*
+           * Fixture setup intentionally uses
+           * the admin client. The authenticated
+           * RPC remains the operation under test.
+           */
           const {
             error:
               statusError,
-          } = await supabase
+          } = await admin
             .from(
               "long_term_assets",
             )
@@ -592,3 +646,4 @@ describe(
     );
   },
 );
+

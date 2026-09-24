@@ -4,50 +4,16 @@ import {
   expect,
   it,
 } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import {
-  createClient,
-  type SupabaseClient,
-} from "@supabase/supabase-js";
-
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL;
-
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
-
-const email =
-  process.env.PLAYWRIGHT_TEST_EMAIL;
-
-const password =
-  process.env.PLAYWRIGHT_TEST_PASSWORD;
-
-if (
-  !supabaseUrl ||
-  !supabaseKey ||
-  !email ||
-  !password
-) {
-  throw new Error(
-    "Missing required Supabase or test credentials in .env.local",
-  );
-}
+  createAdminClient,
+  createAuthenticatedClient,
+  signInTestUser,
+} from "./test-helpers";
 
 let supabase: SupabaseClient;
-
-beforeAll(async () => {
-  supabase = createClient(
-    supabaseUrl,
-    supabaseKey,
-  );
-
-  const result =
-    await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-  expect(result.error).toBeNull();
-});
+let admin: SupabaseClient;
 
 async function getTestAccount() {
   const { data, error } =
@@ -138,6 +104,11 @@ async function getTransactionEntries(
 async function cleanupAsset(
   assetId: string,
 ) {
+  /*
+   * Reads intentionally use the authenticated
+   * client so the test continues to exercise
+   * normal user visibility/RLS.
+   */
   const { data: asset } =
     await supabase
       .from("long_term_assets")
@@ -147,61 +118,127 @@ async function cleanupAsset(
       .eq("id", assetId)
       .maybeSingle();
 
-  if (asset?.purchase_transaction_id) {
+  if (!asset) {
+    return;
+  }
+
+  const purchaseTransactionId =
+    asset.purchase_transaction_id;
+
+  let reversalId:
+    | string
+    | null = null;
+
+  if (purchaseTransactionId) {
     const { data: reversal } =
       await supabase
         .from("transactions")
         .select("id")
         .eq(
           "reversal_of_id",
-          asset.purchase_transaction_id,
+          purchaseTransactionId,
         )
         .maybeSingle();
 
-    if (reversal?.id) {
-      await supabase
-        .from("transaction_entries")
-        .delete()
-        .eq(
-          "transaction_id",
-          reversal.id,
-        );
+    reversalId =
+      reversal?.id ?? null;
+  }
 
-      await supabase
-        .from("transactions")
-        .delete()
-        .eq(
-          "id",
-          reversal.id,
-        );
-    }
+  /*
+   * The long_term_assets row contains a foreign
+   * key pointing to the purchase transaction.
+   *
+   * Therefore the asset must be deleted BEFORE
+   * deleting the purchase transaction.
+   *
+   * Cleanup intentionally uses the service-role
+   * client because production authenticated
+   * users will not retain direct DELETE privileges.
+   */
+  const {
+    error: assetDeleteError,
+  } = await admin
+    .from("long_term_assets")
+    .delete()
+    .eq("id", assetId);
 
-    await supabase
+  expect(
+    assetDeleteError,
+  ).toBeNull();
+
+  if (reversalId) {
+    const {
+      error: reversalEntriesDeleteError,
+    } = await admin
       .from("transaction_entries")
       .delete()
       .eq(
         "transaction_id",
-        asset.purchase_transaction_id,
+        reversalId,
       );
 
-    await supabase
+    expect(
+      reversalEntriesDeleteError,
+    ).toBeNull();
+
+    const {
+      error: reversalDeleteError,
+    } = await admin
       .from("transactions")
       .delete()
       .eq(
         "id",
-        asset.purchase_transaction_id,
+        reversalId,
       );
+
+    expect(
+      reversalDeleteError,
+    ).toBeNull();
   }
 
-  await supabase
-    .from("long_term_assets")
-    .delete()
-    .eq("id", assetId);
+  if (purchaseTransactionId) {
+    const {
+      error: purchaseEntriesDeleteError,
+    } = await admin
+      .from("transaction_entries")
+      .delete()
+      .eq(
+        "transaction_id",
+        purchaseTransactionId,
+      );
+
+    expect(
+      purchaseEntriesDeleteError,
+    ).toBeNull();
+
+    const {
+      error: purchaseDeleteError,
+    } = await admin
+      .from("transactions")
+      .delete()
+      .eq(
+        "id",
+        purchaseTransactionId,
+      );
+
+    expect(
+      purchaseDeleteError,
+    ).toBeNull();
+  }
 }
 
 describe(
   "long-term asset cancellation lifecycle",
   () => {
+    beforeAll(async () => {
+      supabase =
+        createAuthenticatedClient();
+
+      admin = createAdminClient();
+
+      await signInTestUser(supabase);
+    });
+
     it(
       "cancels an asset and reverses its purchase transaction",
       async () => {
@@ -476,5 +513,4 @@ describe(
     );
   },
 );
-
 

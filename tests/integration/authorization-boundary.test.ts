@@ -1,25 +1,16 @@
 import {
   beforeAll,
+  afterAll,
   describe,
   expect,
   it,
 } from "vitest";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import {
-  createClient,
-  type SupabaseClient,
-} from "@supabase/supabase-js";
-
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL!;
-
-const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!;
-
-const email =
-  process.env.PLAYWRIGHT_TEST_EMAIL!;
-
-const password =
-  process.env.PLAYWRIGHT_TEST_PASSWORD!;
+  createAuthenticatedClient,
+  signInTestUser,
+} from "./test-helpers";
 
 let supabase: SupabaseClient;
 
@@ -27,18 +18,14 @@ const fakeId =
   "00000000-0000-0000-0000-000000000000";
 
 beforeAll(async () => {
-  supabase = createClient(
-    supabaseUrl,
-    supabaseKey,
-  );
+  supabase =
+    createAuthenticatedClient();
 
-  const { error } =
-    await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  await signInTestUser(supabase);
+});
 
-  expect(error).toBeNull();
+afterAll(async () => {
+  await supabase.auth.signOut();
 });
 
 describe("authorization boundaries", () => {
@@ -135,6 +122,7 @@ describe("authorization boundaries", () => {
       expect(
         investment.data,
       ).toBeNull();
+
       expect(
         investment.error,
       ).toBeTruthy();
@@ -152,6 +140,7 @@ describe("authorization boundaries", () => {
         );
 
       expect(asset.data).toBeNull();
+
       expect(
         asset.error,
       ).toBeTruthy();
@@ -256,11 +245,19 @@ describe("authorization boundaries", () => {
           .eq("id", account.id);
 
       /*
-       * Supabase may return no error when
-       * RLS silently prevents the UPDATE.
-       * Therefore verify the actual stored value.
+       * Before the privilege lockdown, RLS may
+       * silently prevent the update and return no
+       * error.
+       *
+       * After authenticated UPDATE is revoked,
+       * PostgreSQL may instead reject the operation.
+       *
+       * Either behavior is acceptable as long as
+       * the forged user ID is never stored.
        */
-      expect(result.error).toBeNull();
+      if (result.error) {
+        expect(result.error).toBeTruthy();
+      }
 
       const {
         data: verify,
@@ -278,13 +275,10 @@ describe("authorization boundaries", () => {
         originalUserId,
       );
 
-      /*
-       * If the forged ID was actually stored,
-       * this is a genuine security failure.
-       */
       expect(verify!.user_id).not.toBe(
         forgedUserId,
       );
     },
   );
 });
+
