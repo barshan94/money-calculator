@@ -498,7 +498,7 @@ test.describe("Budgets", () => {
 
     await page.reload();
 
-    await expect(
+    const deletedArchivedCard =
       page
         .locator(
           `[data-testid^="archived-budget-card-"]`,
@@ -509,7 +509,17 @@ test.describe("Budgets", () => {
             level: 3,
             exact: true,
           }),
-        }),
+        })
+        .filter({
+          has: page
+            .locator("span")
+            .filter({
+              hasText: moneyRegex(amount),
+            }),
+        });
+
+    await expect(
+      deletedArchivedCard,
     ).toHaveCount(0, {
       timeout: 15000,
     });
