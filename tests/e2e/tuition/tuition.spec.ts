@@ -55,6 +55,13 @@ async function createStudent(page: any) {
 
   await page.goto("/tuition");
 
+  const studentRows = page.locator("table tbody tr");
+
+  console.log(
+    "TUITION ROWS AFTER CREATE:",
+    await studentRows.allTextContents(),
+  );
+
   await expect(
     studentRow(page, studentName),
   ).toBeVisible({ timeout: 15000 });
@@ -68,7 +75,10 @@ function studentRow(page: any, studentName: string) {
     .getByRole("row")
     .filter({ hasText: studentName })
     .filter({
-      has: page.getByRole("button", { name: "Edit", exact: true }),
+      has: page.getByRole("button", {
+        name: "Edit",
+        exact: true,
+      }),
     })
     .first();
 }
@@ -134,6 +144,13 @@ test("add student form works", async ({ page }) => {
   await page.locator('form button[type="submit"]').first().click();
 
   await page.goto("/tuition");
+
+  const studentRows = page.locator("table tbody tr");
+
+  console.log(
+    "TUITION ROWS AFTER STANDALONE CREATE:",
+    await studentRows.allTextContents(),
+  );
 
   await expect(
     studentRow(page, studentName),
@@ -430,6 +447,4 @@ test("student history action works", async ({
     exact: true,
   }).click();
 });
-
-
 
