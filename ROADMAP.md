@@ -1,7 +1,3 @@
-
-### 6. `ROADMAP.md`
-
-```md
 # Money Calculator — Roadmap
 
 ## Phase 1 — Foundation & Architecture
@@ -39,6 +35,7 @@ Status: COMPLETE
 - Tuition
 - Deposits
 - Investments
+- Long-term assets
 
 ---
 
@@ -55,9 +52,10 @@ Status: COMPLETE
 
 ## Phase 5 — Dashboard & Reports
 
-Status: MOSTLY COMPLETE
+Status: COMPLETE
 
 - Dashboard
+- Recent activity
 - Account reports
 - Income/expense reports
 - Loan reports
@@ -65,36 +63,44 @@ Status: MOSTLY COMPLETE
 - Investment reports
 - Goal reports
 - Liquidity
-
-Remaining improvements can continue during UX phases.
+- Financial insights
+- Forecasting reports
+- What-if analysis
 
 ---
 
 ## Phase 6 — Testing & Financial Integrity
 
-Status: IN PROGRESS
+Status: COMPLETE
 
-### Completed
-
+- Unit testing
 - Integration testing
-- 31 integration test files
-- 181/181 integration tests passing
+- Cross-module financial integrity testing
+- Financial edge-case testing
+- Authorization-boundary testing
+- Transaction protection testing
+- Loan lifecycle testing
+- Tuition lifecycle testing
+- Deposit testing
+- Investment testing
+- Long-term asset testing
+- Recurring transaction testing
+- Production build verification
+
+### Current verification
+
+- 25 unit test files
+- 134/134 unit tests passing
+- 32 integration test files
+- 185/185 integration tests passing
 - Production build passing
-- Playwright E2E coverage
-- GitHub Actions verification
-
-### Remaining
-
-- Final E2E regression
-- Cross-module financial integrity audit
+- Playwright/E2E testing deferred until laptop/Codespace is available
 
 ---
 
 ## Phase 7 — Security & Production Hardening
 
-Status: NEXT
-
-Planned:
+Status: COMPLETE
 
 - RLS audit
 - RPC ownership audit
@@ -104,12 +110,29 @@ Planned:
 - Input validation audit
 - Authorization audit
 - Financial mutation audit
+- Direct financial-table mutation privileges revoked
+- Anonymous financial mutation privileges revoked
+- Internal RPC execution privileges restricted
+- Long-term asset mutation policies removed
+- Legacy loan RPC access revoked
+- Integration-test database access hardened
+- Security boundary tests verified
+- Production build verified
+
+### Security verification
+
+- Authenticated financial INSERT/UPDATE/DELETE privileges revoked
+- Anonymous financial INSERT/UPDATE/DELETE privileges revoked
+- Internal financial RPCs restricted
+- Ownership checks verified
+- Protected financial mutations routed through RPCs
+- 185/185 integration tests passing
 
 ---
 
 ## Phase 8 — UX & Mobile Experience
 
-Planned:
+Status: NEXT
 
 - Responsive polish
 - Loading states
@@ -119,7 +142,10 @@ Planned:
 - Navigation
 - Search/filter/sort
 - Accessibility
-- Performance
+- Mobile usability
+- Performance optimization
+- Consistent UI patterns
+- Dashboard UX refinement
 
 ---
 
@@ -137,6 +163,7 @@ Planned:
 - What-if simulations
 - AI financial assistant
 - Anomaly detection
+- Financial recommendations and insights
 
 ---
 
@@ -162,4 +189,3 @@ Planned:
 "Complete" means a usable and verified milestone.
 
 The project may continue with new phases after Phase 10 as the product evolves.
-
