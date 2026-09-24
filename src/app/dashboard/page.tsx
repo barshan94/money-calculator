@@ -5,6 +5,8 @@ import { getDashboardSummary } from "@/lib/finance/get-dashboard-summary";
 import { getFinancialSummary } from "@/lib/finance/get-financial-summary";
 import { formatMoney } from "@/lib/finance/format-money";
 import { getMonthlyNetWorth } from "@/lib/finance/get-monthly-net-worth";
+import { getLoanBalances } from "@/lib/finance/get-loan-balances";
+import { getTuitionMonthlyStatus } from "@/lib/finance/get-tuition-monthly-status";
 import { getCashFlowForecast } from "@/lib/intelligence/get-cash-flow-forecast";
 import { getFinancialInsights } from "@/lib/intelligence/get-financial-insights";
 import type {
@@ -78,12 +80,17 @@ function calculateGoalProgress(
 }
 
 export default async function DashboardPage() {
+  const currentMonth =
+    new Date().toISOString().slice(0, 7) + "-01";
+
   const [
     accounts,
     summary,
     dashboard,
     financialInsights,
     cashFlowForecast,
+    loanBalances,
+    tuitionStatuses,
   ] = await Promise.all([
     getAccountBalances(),
     getFinancialSummary(),
@@ -93,6 +100,8 @@ export default async function DashboardPage() {
       lookbackMonths: 6,
       months: 6,
     }),
+    getLoanBalances(),
+    getTuitionMonthlyStatus(currentMonth),
   ]);
 
   const netWorthCurrencies = [
@@ -135,6 +144,47 @@ export default async function DashboardPage() {
       expense: 0,
       profit: 0,
     };
+
+  const loanCurrencies = [
+    ...new Set(
+      loanBalances.map((loan) => loan.currency),
+    ),
+  ];
+
+  const tuitionSummary = {
+    totalDue: 0,
+    totalPaid: 0,
+    totalRemaining: 0,
+    paidCount: 0,
+    partialCount: 0,
+    unpaidCount: 0,
+  };
+
+  for (const status of tuitionStatuses) {
+    tuitionSummary.totalDue += Number(
+      status.monthly_fee ?? 0,
+    );
+
+    tuitionSummary.totalPaid += Number(
+      status.paid_amount ?? 0,
+    );
+
+    tuitionSummary.totalRemaining += Number(
+      status.remaining_amount ?? 0,
+    );
+
+    if (status.payment_status === "paid") {
+      tuitionSummary.paidCount += 1;
+    }
+
+    if (status.payment_status === "partial") {
+      tuitionSummary.partialCount += 1;
+    }
+
+    if (status.payment_status === "unpaid") {
+      tuitionSummary.unpaidCount += 1;
+    }
+  }
 
   return (
     <main className="dashboard-page">
@@ -703,6 +753,206 @@ export default async function DashboardPage() {
         <section className="dashboard-section">
           <div className="dashboard-section-header">
             <div>
+              <h2>Loans & Tuition Obligations</h2>
+
+              <p>
+                Outstanding loans and current-month
+                tuition collection status.
+              </p>
+            </div>
+          </div>
+
+          <div className="dashboard-obligations-grid">
+            <div className="dashboard-obligation-card">
+              <div className="dashboard-obligation-card-header">
+                <div>
+                  <span className="dashboard-planning-label">
+                    Loans
+                  </span>
+
+                  <strong>
+                    {loanBalances.filter(
+                      (loan) =>
+                        loan.status === "active" &&
+                        Number(
+                          loan.remaining_amount,
+                        ) > 0,
+                    ).length}{" "}
+                    outstanding
+                  </strong>
+                </div>
+
+                <Link href="/loans">
+                  View loans →
+                </Link>
+              </div>
+
+              {loanCurrencies.length === 0 ? (
+                <p className="dashboard-empty">
+                  No outstanding loans.
+                </p>
+              ) : (
+                <div className="dashboard-obligation-list">
+                  {loanCurrencies
+                    .sort()
+                    .map((currency) => {
+                      const lent = loanBalances
+                        .filter(
+                          (loan) =>
+                            loan.currency ===
+                              currency &&
+                            loan.loan_type ===
+                              "lent" &&
+                            loan.status ===
+                              "active" &&
+                            Number(
+                              loan.remaining_amount,
+                            ) > 0,
+                        )
+                        .reduce(
+                          (sum, loan) =>
+                            sum +
+                            Number(
+                              loan.remaining_amount,
+                            ),
+                          0,
+                        );
+
+                      const borrowed = loanBalances
+                        .filter(
+                          (loan) =>
+                            loan.currency ===
+                              currency &&
+                            loan.loan_type ===
+                              "borrowed" &&
+                            loan.status ===
+                              "active" &&
+                            Number(
+                              loan.remaining_amount,
+                            ) > 0,
+                        )
+                        .reduce(
+                          (sum, loan) =>
+                            sum +
+                            Number(
+                              loan.remaining_amount,
+                            ),
+                          0,
+                        );
+
+                      return (
+                        <div
+                          className="dashboard-obligation-row"
+                          key={currency}
+                        >
+                          <span>{currency}</span>
+
+                          <div>
+                            <span>
+                              Lent{" "}
+                              {formatMoney(
+                                lent,
+                                currency,
+                              )}
+                            </span>
+
+                            <span>
+                              Borrowed{" "}
+                              {formatMoney(
+                                borrowed,
+                                currency,
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+
+            <div className="dashboard-obligation-card">
+              <div className="dashboard-obligation-card-header">
+                <div>
+                  <span className="dashboard-planning-label">
+                    Tuition
+                  </span>
+
+                  <strong>
+                    {tuitionStatuses.length} active
+                    students
+                  </strong>
+                </div>
+
+                <Link href="/tuition">
+                  View tuition →
+                </Link>
+              </div>
+
+              {tuitionStatuses.length === 0 ? (
+                <p className="dashboard-empty">
+                  No active tuition students.
+                </p>
+              ) : (
+                <div className="dashboard-tuition-summary">
+                  <div className="dashboard-obligation-row">
+                    <span>Monthly due</span>
+
+                    <strong>
+                      {formatMoney(
+                        tuitionSummary.totalDue,
+                        "BDT",
+                      )}
+                    </strong>
+                  </div>
+
+                  <div className="dashboard-obligation-row">
+                    <span>Collected</span>
+
+                    <strong>
+                      {formatMoney(
+                        tuitionSummary.totalPaid,
+                        "BDT",
+                      )}
+                    </strong>
+                  </div>
+
+                  <div className="dashboard-obligation-row">
+                    <span>Remaining</span>
+
+                    <strong>
+                      {formatMoney(
+                        tuitionSummary.totalRemaining,
+                        "BDT",
+                      )}
+                    </strong>
+                  </div>
+
+                  <div className="dashboard-tuition-statuses">
+                    <span>
+                      Paid{" "}
+                      {tuitionSummary.paidCount}
+                    </span>
+
+                    <span>
+                      Partial{" "}
+                      {tuitionSummary.partialCount}
+                    </span>
+
+                    <span>
+                      Unpaid{" "}
+                      {tuitionSummary.unpaidCount}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="dashboard-section">
+          <div className="dashboard-section-header">
+            <div>
               <h2>Net Worth</h2>
 
               <p>
@@ -878,7 +1128,8 @@ export default async function DashboardPage() {
         .dashboard-overview-card,
         .dashboard-metric-card,
         .dashboard-net-worth-card,
-        .dashboard-planning-card {
+        .dashboard-planning-card,
+        .dashboard-obligation-card {
           border: 1px solid rgba(
             127,
             127,
@@ -1113,20 +1364,23 @@ export default async function DashboardPage() {
           gap: 18px;
         }
 
-        .dashboard-planning-card-header {
+        .dashboard-planning-card-header,
+        .dashboard-obligation-card-header {
           display: flex;
           align-items: flex-start;
           justify-content: space-between;
           gap: 14px;
         }
 
-        .dashboard-planning-card-header > div {
+        .dashboard-planning-card-header > div,
+        .dashboard-obligation-card-header > div {
           display: flex;
           flex-direction: column;
           gap: 6px;
         }
 
-        .dashboard-planning-card-header a {
+        .dashboard-planning-card-header a,
+        .dashboard-obligation-card-header a {
           flex-shrink: 0;
           font-size: 14px;
         }
@@ -1136,7 +1390,8 @@ export default async function DashboardPage() {
           opacity: 0.6;
         }
 
-        .dashboard-planning-card-header strong {
+        .dashboard-planning-card-header strong,
+        .dashboard-obligation-card-header strong {
           font-size: 20px;
         }
 
@@ -1154,7 +1409,8 @@ export default async function DashboardPage() {
 
         .dashboard-goal-summary-header,
         .dashboard-goal-summary-values,
-        .dashboard-budget-summary-row {
+        .dashboard-budget-summary-row,
+        .dashboard-obligation-row {
           display: flex;
           align-items: center;
           justify-content: space-between;
@@ -1210,6 +1466,77 @@ export default async function DashboardPage() {
           font-size: 13px;
           line-height: 1.5;
           opacity: 0.62;
+        }
+
+        .dashboard-obligations-grid {
+          display: grid;
+          grid-template-columns: repeat(
+            2,
+            minmax(0, 1fr)
+          );
+          gap: 14px;
+        }
+
+        .dashboard-obligation-card {
+          display: flex;
+          flex-direction: column;
+          gap: 18px;
+        }
+
+        .dashboard-obligation-list {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+
+        .dashboard-obligation-row {
+          padding-bottom: 12px;
+          border-bottom: 1px solid
+            rgba(127, 127, 127, 0.15);
+        }
+
+        .dashboard-obligation-row:last-child {
+          padding-bottom: 0;
+          border-bottom: 0;
+        }
+
+        .dashboard-obligation-row > div {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 4px;
+          font-size: 13px;
+          opacity: 0.75;
+        }
+
+        .dashboard-tuition-summary {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+
+        .dashboard-tuition-summary
+          .dashboard-obligation-row
+          strong {
+          font-size: 16px;
+        }
+
+        .dashboard-tuition-statuses {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          font-size: 12px;
+        }
+
+        .dashboard-tuition-statuses span {
+          padding: 6px 9px;
+          border: 1px solid rgba(
+            127,
+            127,
+            127,
+            0.18
+          );
+          border-radius: 999px;
         }
 
         .dashboard-net-worth-grid {
@@ -1310,7 +1637,8 @@ export default async function DashboardPage() {
             );
           }
 
-          .dashboard-planning-grid {
+          .dashboard-planning-grid,
+          .dashboard-obligations-grid {
             grid-template-columns: 1fr;
           }
         }
@@ -1352,6 +1680,23 @@ export default async function DashboardPage() {
           .dashboard-goal-summary-values {
             flex-direction: column;
             align-items: flex-start;
+          }
+
+          .dashboard-obligation-card-header {
+            flex-direction: column;
+          }
+
+          .dashboard-obligation-card-header a {
+            align-self: flex-start;
+          }
+
+          .dashboard-obligation-row {
+            align-items: flex-start;
+          }
+
+          .dashboard-obligation-row > div {
+            align-items: flex-end;
+            text-align: right;
           }
         }
       `}</style>
