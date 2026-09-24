@@ -27,7 +27,7 @@ async function createExpenseCategory(
   await nameInput.fill(categoryName);
 
   await page
-    .getByLabel("Category type", {
+    .getByLabel("Type", {
       exact: true,
     })
     .selectOption("expense");
