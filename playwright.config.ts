@@ -8,6 +8,11 @@ export default defineConfig({
 
   testMatch: /.*\.spec\.ts$/,
 
+  // Cleans up leftover "E2E ..." rows (tuition students, investments,
+  // budgets) from prior CI runs before the suite starts. See
+  // tests/e2e/global-setup.ts for why this exists.
+  globalSetup: require.resolve("./tests/e2e/global-setup.ts"),
+
   workers: 1,
 
   use: {
@@ -49,14 +54,15 @@ export default defineConfig({
   ],
 
   webServer: {
-  command:
-    "npm run build -- --webpack && npm run start -- --hostname 127.0.0.1",
+    command:
+      "npm run build -- --webpack && npm run start -- --hostname 127.0.0.1",
 
-  url: "http://127.0.0.1:3000",
+    url: "http://127.0.0.1:3000",
 
-  reuseExistingServer: true,
+    reuseExistingServer: true,
 
-  timeout: 180000,
-},
-
+    timeout: 180000,
+  },
 });
+
+
