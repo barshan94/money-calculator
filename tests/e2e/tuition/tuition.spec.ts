@@ -1,6 +1,11 @@
 import { test, expect } from "@playwright/test";
 
 async function openAddStudentForm(page: any) {
+  page.on("dialog", async (dialog) => {
+    console.log("ALERT:", dialog.message());
+    await dialog.dismiss();
+  });
+
   await page.goto("/tuition");
 
   await expect(
@@ -25,9 +30,7 @@ async function waitForStudentCreation(page: any) {
 
   await expect(submitButton).toHaveText(
     "Saving...",
-    {
-      timeout: 5000,
-    },
+    { timeout: 5000 },
   ).catch(() => {
     // The RPC may complete before Playwright observes
     // the intermediate "Saving..." state.
@@ -35,9 +38,7 @@ async function waitForStudentCreation(page: any) {
 
   await expect(submitButton).toHaveText(
     "Add Student",
-    {
-      timeout: 15000,
-    },
+    { timeout: 15000 },
   );
 }
 
@@ -85,7 +86,6 @@ async function createStudent(page: any) {
   return { studentName, guardianName };
 }
 
-/** Only match student list rows (have Edit), not history/other tables. */
 function studentRow(page: any, studentName: string) {
   return page
     .getByRole("row")
