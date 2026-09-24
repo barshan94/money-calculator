@@ -51,14 +51,7 @@ async function createStudent(page: any) {
     await dueDay.fill("10");
   }
 
-  // Submit and wait for any background network processing to resolve before navigating
-  await Promise.all([
-    page.waitForLoadState("networkidle").catch(() => {}),
-    page.locator('form button[type="submit"]').first().click(),
-  ]);
-
-  // Wait for the modal/form input to close before proceeding
-  await expect(page.locator("#student-name")).not.toBeVisible({ timeout: 10000 });
+  await page.locator('form button[type="submit"]').first().click();
 
   await page.goto("/tuition");
 
@@ -138,12 +131,7 @@ test("add student form works", async ({ page }) => {
     .getByLabel("Due Day", { exact: true })
     .fill("10");
 
-  await Promise.all([
-    page.waitForLoadState("networkidle").catch(() => {}),
-    page.locator('form button[type="submit"]').first().click(),
-  ]);
-
-  await expect(page.locator("#student-name")).not.toBeVisible({ timeout: 10000 });
+  await page.locator('form button[type="submit"]').first().click();
 
   await page.goto("/tuition");
 
@@ -170,13 +158,10 @@ test("edit a tuition student", async ({ page }) => {
 
   await editInput.fill(updatedName);
 
-  await Promise.all([
-    page.waitForLoadState("networkidle").catch(() => {}),
-    page.getByRole("button", {
-      name: "Save Changes",
-      exact: true,
-    }).click(),
-  ]);
+  await page.getByRole("button", {
+    name: "Save Changes",
+    exact: true,
+  }).click();
 
   await expect(
     studentRow(page, updatedName),
@@ -222,13 +207,10 @@ test("record a tuition payment", async ({ page }) => {
     index: 1,
   });
 
-  await Promise.all([
-    page.waitForLoadState("networkidle").catch(() => {}),
-    paymentForm.getByRole("button", {
-      name: "Record Payment",
-      exact: true,
-    }).click(),
-  ]);
+  await paymentForm.getByRole("button", {
+    name: "Record Payment",
+    exact: true,
+  }).click();
 
   await expect(
     studentRow(page, studentName),
@@ -282,15 +264,12 @@ test("cancel a tuition payment", async ({ page }) => {
     index: 1,
   });
 
-  await Promise.all([
-    page.waitForLoadState("networkidle").catch(() => {}),
-    paymentForm
-      .getByRole("button", {
-        name: "Record Payment",
-        exact: true,
-      })
-      .click(),
-  ]);
+  await paymentForm
+    .getByRole("button", {
+      name: "Record Payment",
+      exact: true,
+    })
+    .click();
 
   // Re-query after mutation.
   row = studentRow(page, studentName);
@@ -451,5 +430,6 @@ test("student history action works", async ({
     exact: true,
   }).click();
 });
+
 
 
