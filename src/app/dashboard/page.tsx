@@ -4,6 +4,7 @@ import { getAccountBalances } from "@/lib/finance/get-account-balances";
 import { getDashboardSummary } from "@/lib/finance/get-dashboard-summary";
 import { getFinancialSummary } from "@/lib/finance/get-financial-summary";
 import { formatMoney } from "@/lib/finance/format-money";
+import { getCashFlowForecast } from "@/lib/intelligence/get-cash-flow-forecast";
 import { getFinancialInsights } from "@/lib/intelligence/get-financial-insights";
 import type {
   FinancialInsight,
@@ -60,11 +61,16 @@ export default async function DashboardPage() {
     summary,
     dashboard,
     financialInsights,
+    cashFlowForecast,
   ] = await Promise.all([
     getAccountBalances(),
     getFinancialSummary(),
     getDashboardSummary(),
     getFinancialInsights(),
+    getCashFlowForecast({
+      lookbackMonths: 6,
+      months: 6,
+    }),
   ]);
 
   const bdtSummary = summary.BDT ?? {
@@ -431,6 +437,148 @@ export default async function DashboardPage() {
       <section className="dashboard-section">
         <div className="dashboard-section-header">
           <div>
+            <h2>Cash Flow Forecast</h2>
+
+            <p>
+              Six-month projection using the existing
+              cash-flow methodology.
+            </p>
+          </div>
+
+          <Link href="/reports/cash-flow-forecast">
+            View forecast →
+          </Link>
+        </div>
+
+        {cashFlowForecast.length === 0 ? (
+          <p className="dashboard-empty">
+            Not enough financial history to generate a
+            cash-flow forecast.
+          </p>
+        ) : (
+          <div className="dashboard-cash-flow-groups">
+            {cashFlowForecast.map(
+              ({ currency, months }) => {
+                const nextMonth = months[0];
+
+                if (!nextMonth) {
+                  return null;
+                }
+
+                return (
+                  <div
+                    className="dashboard-cash-flow-group"
+                    key={currency}
+                  >
+                    <div className="dashboard-cash-flow-summary">
+                      <div className="dashboard-cash-flow-summary-card">
+                        <span>
+                          Next projected income
+                        </span>
+
+                        <strong>
+                          {formatMoney(
+                            nextMonth.projectedIncome,
+                            currency,
+                          )}
+                        </strong>
+                      </div>
+
+                      <div className="dashboard-cash-flow-summary-card">
+                        <span>
+                          Next projected expenses
+                        </span>
+
+                        <strong>
+                          {formatMoney(
+                            nextMonth.projectedExpenses,
+                            currency,
+                          )}
+                        </strong>
+                      </div>
+
+                      <div className="dashboard-cash-flow-summary-card">
+                        <span>
+                          Next projected net
+                        </span>
+
+                        <strong>
+                          {formatMoney(
+                            nextMonth.projectedNet,
+                            currency,
+                          )}
+                        </strong>
+                      </div>
+                    </div>
+
+                    <div className="dashboard-cash-flow-table-wrapper">
+                      <table className="dashboard-cash-flow-table">
+                        <thead>
+                          <tr>
+                            <th scope="col">
+                              Period
+                            </th>
+
+                            <th scope="col">
+                              Income
+                            </th>
+
+                            <th scope="col">
+                              Expenses
+                            </th>
+
+                            <th scope="col">
+                              Net
+                            </th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {months.map((month) => (
+                            <tr
+                              key={`${currency}-${month.monthIndex}`}
+                            >
+                              <td>
+                                Month{" "}
+                                {month.monthIndex}
+                              </td>
+
+                              <td>
+                                {formatMoney(
+                                  month.projectedIncome,
+                                  currency,
+                                )}
+                              </td>
+
+                              <td>
+                                {formatMoney(
+                                  month.projectedExpenses,
+                                  currency,
+                                )}
+                              </td>
+
+                              <td>
+                                {formatMoney(
+                                  month.projectedNet,
+                                  currency,
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              },
+            )}
+          </div>
+        )}
+      </section>
+
+      <section className="dashboard-section">
+        <div className="dashboard-section-header">
+          <div>
             <h2>Net Worth</h2>
 
             <p>
@@ -646,7 +794,8 @@ export default async function DashboardPage() {
         .dashboard-metric-card,
         .dashboard-net-worth-card,
         .dashboard-account-card,
-        .dashboard-insight-card {
+        .dashboard-insight-card,
+        .dashboard-cash-flow-summary-card {
           border: 1px solid rgba(
             127,
             127,
@@ -774,25 +923,108 @@ export default async function DashboardPage() {
           );
         }
 
-        .dashboard-net-worth-grid {
+        .dashboard-cash-flow-groups {
+          display: flex;
+          flex-direction: column;
+          gap: 20px;
+        }
+
+        .dashboard-cash-flow-group {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+        }
+
+        .dashboard-cash-flow-summary {
           display: grid;
           grid-template-columns: repeat(
-            auto-fit,
-            minmax(220px, 1fr)
+            3,
+            minmax(0, 1fr)
           );
           gap: 14px;
         }
 
-        .dashboard-net-worth-card h3 {
-          margin: 0 0 16px;
+        .dashboard-cash-flow-summary-card {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .dashboard-cash-flow-summary-card span {
+          font-size: 13px;
+          opacity: 0.65;
+        }
+
+        .dashboard-cash-flow-summary-card strong {
           font-size: 20px;
+        }
+
+        .dashboard-cash-flow-table-wrapper {
+          overflow-x: auto;
+          border: 1px solid rgba(
+            127,
+            127,
+            127,
+            0.25
+          );
+          border-radius: 14px;
+        }
+
+        .dashboard-cash-flow-table {
+          width: 100%;
+          border-collapse: collapse;
+          min-width: 560px;
+        }
+
+        .dashboard-cash-flow-table th,
+        .dashboard-cash-flow-table td {
+          padding: 12px 14px;
+          text-align: right;
+          border-bottom: 1px solid
+            rgba(127, 127, 127, 0.15);
+          white-space: nowrap;
+        }
+
+        .dashboard-cash-flow-table th:first-child,
+        .dashboard-cash-flow-table td:first-child {
+          text-align: left;
+        }
+
+        .dashboard-cash-flow-table th {
+          font-size: 12px;
+          opacity: 0.65;
+        }
+
+        .dashboard-cash-flow-table tr:last-child td {
+          border-bottom: 0;
+        }
+
+        .dashboard-net-worth-grid,
+        .dashboard-accounts-grid {
+          display: grid;
+          grid-template-columns: repeat(
+            2,
+            minmax(0, 1fr)
+          );
+          gap: 14px;
+        }
+
+        .dashboard-net-worth-card {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .dashboard-net-worth-card h3 {
+          margin: 0;
+          font-size: 18px;
         }
 
         .dashboard-net-worth-card > div {
           display: flex;
+          align-items: center;
           justify-content: space-between;
           gap: 16px;
-          padding: 8px 0;
         }
 
         .dashboard-net-worth-card span {
@@ -800,19 +1032,13 @@ export default async function DashboardPage() {
         }
 
         .dashboard-net-worth-total {
-          margin-top: 8px;
-          padding-top: 14px !important;
+          padding-top: 12px;
           border-top: 1px solid
             rgba(127, 127, 127, 0.2);
         }
 
-        .dashboard-accounts-grid {
-          display: grid;
-          grid-template-columns: repeat(
-            auto-fit,
-            minmax(220px, 1fr)
-          );
-          gap: 14px;
+        .dashboard-net-worth-total strong {
+          font-size: 20px;
         }
 
         .dashboard-account-card {
@@ -844,7 +1070,8 @@ export default async function DashboardPage() {
 
         @media (max-width: 900px) {
           .dashboard-metrics-grid,
-          .dashboard-insights-grid {
+          .dashboard-insights-grid,
+          .dashboard-cash-flow-summary {
             grid-template-columns: repeat(
               2,
               minmax(0, 1fr)
@@ -882,7 +1109,8 @@ export default async function DashboardPage() {
 
           .dashboard-overview-grid,
           .dashboard-metrics-grid,
-          .dashboard-insights-grid {
+          .dashboard-insights-grid,
+          .dashboard-cash-flow-summary {
             grid-template-columns: 1fr;
           }
 
