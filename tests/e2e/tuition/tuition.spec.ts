@@ -18,6 +18,29 @@ async function openAddStudentForm(page: any) {
   await expect(page.locator("#student-name")).toBeVisible();
 }
 
+async function waitForStudentCreation(page: any) {
+  const submitButton = page
+    .locator('form button[type="submit"]')
+    .first();
+
+  await expect(submitButton).toHaveText(
+    "Saving...",
+    {
+      timeout: 5000,
+    },
+  ).catch(() => {
+    // The RPC may complete before Playwright observes
+    // the intermediate "Saving..." state.
+  });
+
+  await expect(submitButton).toHaveText(
+    "Add Student",
+    {
+      timeout: 15000,
+    },
+  );
+}
+
 async function createStudent(page: any) {
   const timestamp = Date.now();
   const studentName = `E2E Student ${timestamp}`;
@@ -53,14 +76,7 @@ async function createStudent(page: any) {
 
   await page.locator('form button[type="submit"]').first().click();
 
-  await page.goto("/tuition");
-
-  const studentRows = page.locator("table tbody tr");
-
-  console.log(
-    "TUITION ROWS AFTER CREATE:",
-    await studentRows.allTextContents(),
-  );
+  await waitForStudentCreation(page);
 
   await expect(
     studentRow(page, studentName),
@@ -143,14 +159,7 @@ test("add student form works", async ({ page }) => {
 
   await page.locator('form button[type="submit"]').first().click();
 
-  await page.goto("/tuition");
-
-  const studentRows = page.locator("table tbody tr");
-
-  console.log(
-    "TUITION ROWS AFTER STANDALONE CREATE:",
-    await studentRows.allTextContents(),
-  );
+  await waitForStudentCreation(page);
 
   await expect(
     studentRow(page, studentName),
@@ -288,7 +297,6 @@ test("cancel a tuition payment", async ({ page }) => {
     })
     .click();
 
-  // Re-query after mutation.
   row = studentRow(page, studentName);
 
   await expect(row).toBeVisible({
@@ -321,7 +329,6 @@ test("cancel a tuition payment", async ({ page }) => {
     timeout: 15000,
   });
 
-  // cancelPayment() uses window.confirm().
   page.once("dialog", (dialog) => dialog.accept());
 
   await historyRow
@@ -331,7 +338,6 @@ test("cancel a tuition payment", async ({ page }) => {
     })
     .click();
 
-  // Cancelled payments remain in history for audit purposes.
   await expect(historyRow).toBeVisible({
     timeout: 15000,
   });
@@ -343,8 +349,6 @@ test("cancel a tuition payment", async ({ page }) => {
     })
     .click();
 
-  // The cancelled payment must no longer count toward the
-  // student's current month's tuition status.
   row = studentRow(page, studentName);
 
   await expect(row).toBeVisible({
