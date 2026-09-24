@@ -28,7 +28,8 @@ setup("authenticate", async ({ baseURL }) => {
   page.setDefaultNavigationTimeout(30000);
 
   const origin =
-    baseURL?.replace(/\/$/, "") ?? "http://127.0.0.1:3000";
+    baseURL?.replace(/\/$/, "") ??
+    "http://127.0.0.1:3000";
 
   try {
     console.log("E2E BASE URL:", origin);
@@ -42,8 +43,13 @@ setup("authenticate", async ({ baseURL }) => {
       page.getByPlaceholder("Email"),
     ).toBeVisible();
 
-    await page.getByPlaceholder("Email").fill(email);
-    await page.getByPlaceholder("Password").fill(password);
+    await page
+      .getByPlaceholder("Email")
+      .fill(email);
+
+    await page
+      .getByPlaceholder("Password")
+      .fill(password);
 
     await page.getByRole("button", {
       name: "Login",
@@ -123,18 +129,18 @@ setup("authenticate", async ({ baseURL }) => {
       .fill(categoryName);
 
     await page
-      .getByLabel("Category type")
+      .getByLabel("Type")
       .selectOption("expense");
 
-    const createCategoryButton = page.getByRole(
-      "button",
-      {
+    const createCategoryButton =
+      page.getByRole("button", {
         name: "Create Category",
         exact: true,
-      },
-    );
+      });
 
-    await expect(createCategoryButton).toBeEnabled();
+    await expect(
+      createCategoryButton,
+    ).toBeEnabled();
 
     await createCategoryButton.click();
 
@@ -146,7 +152,10 @@ setup("authenticate", async ({ baseURL }) => {
       timeout: 30000,
     });
 
-    console.log("E2E CATEGORY:", categoryName);
+    console.log(
+      "E2E CATEGORY:",
+      categoryName,
+    );
 
     await context.storageState({
       path: "playwright/.auth/user.json",
@@ -167,7 +176,9 @@ setup("authenticate", async ({ baseURL }) => {
 
     console.error(
       "Page title:",
-      await page.title().catch(() => "Unable to read title"),
+      await page
+        .title()
+        .catch(() => "Unable to read title"),
     );
 
     console.error(
@@ -176,7 +187,9 @@ setup("authenticate", async ({ baseURL }) => {
         await page
           .locator("body")
           .innerText()
-          .catch(() => "Unable to read body")
+          .catch(
+            () => "Unable to read body",
+          )
       ).slice(0, 5000),
     );
 
@@ -185,5 +198,4 @@ setup("authenticate", async ({ baseURL }) => {
     await browser.close();
   }
 });
-
 
