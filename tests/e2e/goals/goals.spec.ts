@@ -229,22 +229,27 @@ test.describe("Goals", () => {
       }),
     ).toBeVisible();
 
-    await page
-      .getByLabel("Current Amount")
-      .fill("1500");
+    const amount = page.getByLabel("Current Amount");
+
+    await amount.fill("1500");
+
+    await expect(amount).toHaveJSProperty(
+      "validity.valid",
+      false,
+    );
+
+    await expect(amount).toHaveAttribute(
+      "max",
+      "1000",
+    );
 
     await page.getByRole("button", {
       name: "Update Progress",
       exact: true,
     }).click();
 
-    await expect(
-      page.getByText(
-        "Amount cannot exceed the target.",
-        {
-          exact: true,
-        },
-      ),
-    ).toBeVisible();
+    await expect(page).toHaveURL(
+      /\/goals\/[^/]+\/progress$/,
+    );
   });
 });

@@ -5,7 +5,7 @@ async function createRecurringExpenseCategory(page: any) {
   await page.goto("/categories");
   await expect(page.getByLabel("Category name")).toBeVisible({ timeout: 15000 });
   await page.getByLabel("Category name").fill(categoryName);
-  await page.getByRole("radio", { name: "Expense", exact: true }).check();
+  await page.getByLabel("Type", { exact: true }).selectOption("expense");
   await page.getByRole("button", { name: "Create Category", exact: true }).click();
   await expect(page.getByText(categoryName, { exact: true })).toBeVisible({ timeout: 15000 });
 
@@ -111,7 +111,7 @@ test.describe("Recurring Transactions E2E", () => {
       recurringName,
     );
 
-    await page.getByRole("radio", { name: "Expense", exact: true }).check();
+    await page.getByLabel("Type", { exact: true }).selectOption("expense");
 
     await page.getByLabel("Amount", { exact: true }).fill(
       "100",
@@ -171,7 +171,7 @@ test.describe("Recurring Transactions E2E", () => {
       recurringName,
     );
 
-    await page.getByRole("radio", { name: "Expense", exact: true }).check();
+    await page.getByLabel("Type", { exact: true }).selectOption("expense");
 
     await page.getByLabel("Amount", { exact: true }).fill(
       "102",
@@ -335,7 +335,7 @@ test.describe("Recurring Transactions E2E", () => {
       recurringName,
     );
 
-    await page.getByRole("radio", { name: "Expense", exact: true }).check();
+    await page.getByLabel("Type", { exact: true }).selectOption("expense");
 
     await page.getByLabel("Amount", { exact: true }).fill(
       "101",

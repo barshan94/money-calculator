@@ -118,6 +118,7 @@ test("dashboard shows financial position, insights, cash flow forecast, and plan
       hasText: /^Goals$/,
     }),
   ).toBeVisible();
+
   await expect(
     page.getByRole("link", {
       name: "View goals →",
@@ -129,8 +130,8 @@ test("dashboard shows financial position, insights, cash flow forecast, and plan
   );
 
   await expect(
-    page.getByText("Budgets", {
-      exact: true,
+    page.locator(".dashboard-planning-label").filter({
+      hasText: /^Budgets$/,
     }),
   ).toBeVisible();
 
@@ -144,5 +145,4 @@ test("dashboard shows financial position, insights, cash flow forecast, and plan
     "/budgets",
   );
 });
-
 
