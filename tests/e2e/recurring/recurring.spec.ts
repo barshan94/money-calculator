@@ -111,7 +111,7 @@ test.describe("Recurring Transactions E2E", () => {
       recurringName,
     );
 
-    await page.getByLabel("Type", { exact: true }).selectOption("expense");
+    await page.getByRole("radio", { name: "Expense", exact: true }).check();
 
     await page.getByLabel("Amount", { exact: true }).fill(
       "100",
@@ -171,7 +171,7 @@ test.describe("Recurring Transactions E2E", () => {
       recurringName,
     );
 
-    await page.getByLabel("Type", { exact: true }).selectOption("expense");
+    await page.getByRole("radio", { name: "Expense", exact: true }).check();
 
     await page.getByLabel("Amount", { exact: true }).fill(
       "102",
@@ -335,7 +335,7 @@ test.describe("Recurring Transactions E2E", () => {
       recurringName,
     );
 
-    await page.getByLabel("Type", { exact: true }).selectOption("expense");
+    await page.getByRole("radio", { name: "Expense", exact: true }).check();
 
     await page.getByLabel("Amount", { exact: true }).fill(
       "101",
