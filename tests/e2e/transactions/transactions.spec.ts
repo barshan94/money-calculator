@@ -48,11 +48,48 @@ async function createExpense(
   const categoryOptions =
     await categorySelect
       .locator("option")
-      .all();
+      .allTextContents();
 
-  expect(
+  console.log(
+    "E2E CATEGORY OPTIONS COUNT:",
     categoryOptions.length,
-  ).toBeGreaterThan(1);
+  );
+
+  console.log(
+    "E2E CATEGORY OPTIONS:",
+    JSON.stringify(
+      categoryOptions.slice(0, 20),
+    ),
+  );
+
+  if (categoryOptions.length <= 1) {
+    console.log(
+      "E2E CATEGORY DIAGNOSTIC:",
+      "No usable category options were rendered.",
+    );
+
+    console.log(
+      "E2E CURRENT URL:",
+      page.url(),
+    );
+
+    console.log(
+      "E2E PAGE BODY:",
+      (
+        await page
+          .locator("body")
+          .innerText()
+          .catch(
+            () =>
+              "Unable to read page body",
+          )
+      ).slice(0, 10000),
+    );
+
+    throw new Error(
+      `Transaction form rendered ${categoryOptions.length} category option(s). Expected more than 1.`,
+    );
+  }
 
   await categorySelect.selectOption({
     index: 1,
@@ -74,11 +111,48 @@ async function createExpense(
   const accountOptions =
     await accountSelect
       .locator("option")
-      .all();
+      .allTextContents();
 
-  expect(
+  console.log(
+    "E2E ACCOUNT OPTIONS COUNT:",
     accountOptions.length,
-  ).toBeGreaterThan(1);
+  );
+
+  console.log(
+    "E2E ACCOUNT OPTIONS:",
+    JSON.stringify(
+      accountOptions.slice(0, 20),
+    ),
+  );
+
+  if (accountOptions.length <= 1) {
+    console.log(
+      "E2E ACCOUNT DIAGNOSTIC:",
+      "No usable account options were rendered.",
+    );
+
+    console.log(
+      "E2E CURRENT URL:",
+      page.url(),
+    );
+
+    console.log(
+      "E2E PAGE BODY:",
+      (
+        await page
+          .locator("body")
+          .innerText()
+          .catch(
+            () =>
+              "Unable to read page body",
+          )
+      ).slice(0, 10000),
+    );
+
+    throw new Error(
+      `Transaction form rendered ${accountOptions.length} account option(s). Expected more than 1.`,
+    );
+  }
 
   await accountSelect.selectOption({
     index: 1,
