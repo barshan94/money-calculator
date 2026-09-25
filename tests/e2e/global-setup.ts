@@ -3,18 +3,40 @@ import { createClient } from "@supabase/supabase-js";
 /**
  * Runs once before the whole Playwright suite.
  *
- * The E2E specs (tuition, investments, budgets) create rows tagged with an
- * "E2E ..." prefix but never delete them, so every CI run left its test
- * data behind permanently. Over many runs this made list-reload queries
- * (get_tuition_reliability, get_budget_progress, the students/investments
- * list fetches) slow enough to blow past the 15s `toBeVisible` timeouts
- * used throughout the specs — producing intermittent, spreading failures
- * that had nothing to do with the feature under test.
+ * The CI Supabase project's only purpose is running this E2E suite against
+ * one fixed test account (PLAYWRIGHT_TEST_EMAIL). Every spec — tuition,
+ * investments, budgets, transactions, accounts, categories, deposits,
+ * loans, goals, recurring transactions — creates timestamped rows and
+ * never deletes them. Over hundreds of CI runs this left tens of thousands
+ * of leftover rows (visible directly in dropdown option counts in the app
+ * itself), which slowed every list/reload query enough to blow past the
+ * 15-30s timeouts used throughout the specs — producing failures that
+ * looked like feature bugs but were actually data-volume/performance
+ * issues unrelated to the code under test.
  *
- * This uses the Supabase service role key (already present in CI secrets)
- * to bypass RLS and delete prior E2E-tagged rows before the suite starts,
- * so every run begins from a clean, fast baseline.
+ * Since this account holds no real data (CI-only, confirmed), the fix is
+ * a full wipe of every row belonging to this one user before each run,
+ * rather than pattern-matching "E2E ..." prefixes table by table (which
+ * only ever covers the specs someone remembered to handle).
+ *
+ * Delete order is dictated by ON DELETE RESTRICT foreign keys uncovered
+ * via information_schema (see PR history) — CASCADE/SET NULL relationships
+ * are left to the database:
+ *
+ *   1. long_term_assets      (RESTRICTs transactions)
+ *   2. tuition_students      (cascades tuition_payments, which RESTRICTs accounts)
+ *   3. investments           (cascades investment_activity)
+ *   4. recurring_transactions, loans, deposits, goals, investment_performance
+ *      (no blocking FKs among this set — order-independent)
+ *   5. transactions          (cascades transaction_entries; safe now that
+ *                             long_term_assets is gone)
+ *   6. budgets               (RESTRICTs categories)
+ *   7. categories            (RESTRICTs accounts; safe now that budgets is gone)
+ *   8. accounts              (last — every RESTRICT source above is cleared)
  */
+
+const TEST_USER_EMAIL = process.env.PLAYWRIGHT_TEST_EMAIL;
+
 export default async function globalSetup() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -26,205 +48,79 @@ export default async function globalSetup() {
     return;
   }
 
+  if (!TEST_USER_EMAIL) {
+    console.warn(
+      "[global-setup] Missing PLAYWRIGHT_TEST_EMAIL — skipping E2E data cleanup.",
+    );
+    return;
+  }
+
   const supabase = createClient(url, serviceRoleKey, {
     auth: { persistSession: false },
   });
 
-  // tuition_payments.transaction_id and investment_activity.transaction_id
-  // are ON DELETE SET NULL toward transactions, not CASCADE. So deleting
-  // tuition_students/investments alone (which cascades their payments/
-  // activity rows) leaves the underlying transactions + transaction_entries
-  // rows permanently orphaned — every payment and cancellation ever
-  // recorded in CI. We collect those transaction ids first, then delete
-  // the transactions explicitly (transaction_entries cascades from that).
+  // Resolve the test user's id from their email rather than hardcoding it,
+  // so this keeps working if the CI test account is ever rotated.
+  const { data: usersPage, error: userLookupError } =
+    await supabase.auth.admin.listUsers({ perPage: 1000 });
 
-  const orphanTransactionIds = new Set<string>();
-
-  // 1. Tuition students — collect linked transaction ids before deleting.
-  {
-    const { data: students, error: studentLookupError } = await supabase
-      .from("tuition_students")
-      .select("id")
-      .like("student_name", "E2E Student %");
-
-    if (studentLookupError) {
-      console.error(
-        "[global-setup] Failed to look up E2E tuition_students:",
-        studentLookupError.message,
-      );
-    } else {
-      const studentIds = (students ?? []).map((s) => s.id);
-
-      if (studentIds.length > 0) {
-        const { data: payments, error: paymentLookupError } = await supabase
-          .from("tuition_payments")
-          .select("transaction_id")
-          .in("student_id", studentIds);
-
-        if (paymentLookupError) {
-          console.error(
-            "[global-setup] Failed to look up tuition_payments transactions:",
-            paymentLookupError.message,
-          );
-        } else {
-          for (const p of payments ?? []) {
-            if (p.transaction_id) orphanTransactionIds.add(p.transaction_id);
-          }
-        }
-      }
-
-      const { error, count } = await supabase
-        .from("tuition_students")
-        .delete({ count: "exact" })
-        .like("student_name", "E2E Student %");
-
-      if (error) {
-        console.error(
-          "[global-setup] Failed to clean up tuition_students:",
-          error.message,
-        );
-      } else {
-        console.log(
-          `[global-setup] Deleted ${count ?? 0} leftover tuition_students row(s).`,
-        );
-      }
-    }
+  if (userLookupError) {
+    console.error(
+      "[global-setup] Failed to look up test user:",
+      userLookupError.message,
+    );
+    return;
   }
 
-  // 2. Investments — collect linked transaction ids before deleting.
-  {
-    const { data: investments, error: investmentLookupError } = await supabase
-      .from("investments")
-      .select("id")
-      .like("name", "E2E Investment %");
+  const testUser = usersPage.users.find(
+    (u) => u.email === TEST_USER_EMAIL,
+  );
 
-    if (investmentLookupError) {
-      console.error(
-        "[global-setup] Failed to look up E2E investments:",
-        investmentLookupError.message,
-      );
-    } else {
-      const investmentIds = (investments ?? []).map((i) => i.id);
-
-      if (investmentIds.length > 0) {
-        const { data: activity, error: activityLookupError } = await supabase
-          .from("investment_activity")
-          .select("transaction_id")
-          .in("investment_id", investmentIds);
-
-        if (activityLookupError) {
-          console.error(
-            "[global-setup] Failed to look up investment_activity transactions:",
-            activityLookupError.message,
-          );
-        } else {
-          for (const a of activity ?? []) {
-            if (a.transaction_id) orphanTransactionIds.add(a.transaction_id);
-          }
-        }
-      }
-
-      const { error, count } = await supabase
-        .from("investments")
-        .delete({ count: "exact" })
-        .like("name", "E2E Investment %");
-
-      if (error) {
-        console.error(
-          "[global-setup] Failed to clean up investments:",
-          error.message,
-        );
-      } else {
-        console.log(
-          `[global-setup] Deleted ${count ?? 0} leftover investments row(s).`,
-        );
-      }
-    }
+  if (!testUser) {
+    console.warn(
+      `[global-setup] No auth user found for ${TEST_USER_EMAIL} — skipping E2E data cleanup.`,
+    );
+    return;
   }
 
-  // 3. Delete the orphaned ledger transactions (e.g. original payment
-  // transactions AND the reversal transactions cancel_tuition_payment
-  // creates, which point back via reversal_of_id). transaction_entries
-  // cascades automatically since that FK is ON DELETE CASCADE.
-  if (orphanTransactionIds.size > 0) {
-    const ids = Array.from(orphanTransactionIds);
+  const userId = testUser.id;
 
-    // Include any reversal transactions that point at the ones we found,
-    // since reversal_of_id -> transactions is ON DELETE SET NULL too.
-    const { data: reversals, error: reversalLookupError } = await supabase
-      .from("transactions")
-      .select("id")
-      .in("reversal_of_id", ids);
+  // Ordered per the FK dependency analysis above. Each entry is a table
+  // with a user_id column; transaction_entries has no user_id and is
+  // cleaned up purely via CASCADE from the transactions delete.
+  const deletionOrder = [
+    "long_term_assets",
+    "tuition_students",
+    "investments",
+    "recurring_transactions",
+    "loans",
+    "deposits",
+    "goals",
+    "investment_performance",
+    "transactions",
+    "budgets",
+    "categories",
+    "accounts",
+  ];
 
-    if (reversalLookupError) {
-      console.error(
-        "[global-setup] Failed to look up reversal transactions:",
-        reversalLookupError.message,
-      );
-    } else {
-      for (const r of reversals ?? []) ids.push(r.id);
-    }
-
+  for (const table of deletionOrder) {
     const { error, count } = await supabase
-      .from("transactions")
+      .from(table)
       .delete({ count: "exact" })
-      .in("id", ids);
+      .eq("user_id", userId);
 
     if (error) {
       console.error(
-        "[global-setup] Failed to clean up orphaned transactions:",
+        `[global-setup] Failed to clean up ${table}:`,
         error.message,
       );
+      // Continue with remaining tables rather than aborting the whole
+      // suite — a partial cleanup is still better than none, and the
+      // specific error will point at whichever FK assumption was wrong.
     } else {
       console.log(
-        `[global-setup] Deleted ${count ?? 0} leftover transactions row(s) (and cascaded transaction_entries).`,
+        `[global-setup] Deleted ${count ?? 0} row(s) from ${table}.`,
       );
-    }
-  } else {
-    console.log(
-      "[global-setup] No orphaned E2E transactions found to clean up.",
-    );
-  }
-
-  // 3. Budgets — not named themselves; they hang off the fixture
-  // "E2E Expense *" categories, so look up those category ids first.
-  // Budgets are a leaf table (no FK children), so a direct delete is safe
-  // and doesn't need to go through archive_budget/delete_budget.
-  {
-    const { data: categories, error: categoryError } = await supabase
-      .from("categories")
-      .select("id")
-      .like("name", "E2E Expense %");
-
-    if (categoryError) {
-      console.error(
-        "[global-setup] Failed to look up E2E expense categories:",
-        categoryError.message,
-      );
-    } else {
-      const categoryIds = (categories ?? []).map((c) => c.id);
-
-      if (categoryIds.length > 0) {
-        const { error, count } = await supabase
-          .from("budgets")
-          .delete({ count: "exact" })
-          .in("category_id", categoryIds);
-
-        if (error) {
-          console.error(
-            "[global-setup] Failed to clean up budgets:",
-            error.message,
-          );
-        } else {
-          console.log(
-            `[global-setup] Deleted ${count ?? 0} leftover budgets row(s).`,
-          );
-        }
-      } else {
-        console.log(
-          "[global-setup] No E2E expense categories found — skipping budgets cleanup.",
-        );
-      }
     }
   }
 }
