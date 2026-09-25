@@ -38,9 +38,8 @@ function budgetCard(
     .locator("xpath=ancestor::section[1]")
     .filter({
       has: page
-        .locator("span")
-        .filter({
-          hasText: moneyRegex(amount),
+        .getByText(moneyRegex(amount), {
+          exact: true,
         }),
     })
     .filter({
@@ -103,13 +102,6 @@ async function selectE2EExpenseCategory(page: any) {
 }
 
 async function selectMonthlyBudgetPeriod(page: any) {
-  /*
-   * The application no longer exposes the period field through
-   * getByLabel("Period"). Target the actual <select> instead.
-   *
-   * Prefer an explicit semantic name/id if present. If the markup
-   * does not expose one, locate the select by its monthly option.
-   */
   const namedPeriod = page.locator(
     'select[name="period"], select[name="budgetPeriod"], select[name="budget_period"], #period, #budget-period',
   ).first();
@@ -490,11 +482,7 @@ test.describe("Budgets", () => {
         }),
       })
       .filter({
-        has: page
-          .locator("span")
-          .filter({
-            hasText: moneyRegex(amount),
-          }),
+        hasText: moneyRegex(amount),
       });
 
     await expect(
@@ -556,11 +544,7 @@ test.describe("Budgets", () => {
           }),
         })
         .filter({
-          has: page
-            .locator("span")
-            .filter({
-              hasText: moneyRegex(amount),
-            }),
+          hasText: moneyRegex(amount),
         });
 
     await expect(
