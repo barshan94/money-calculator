@@ -1,17 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = {
   categoryId: string;
+  onChanged: () => void | Promise<void>;
 };
 
 export function ArchiveCategoryButton({
   categoryId,
+  onChanged,
 }: Props) {
-  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const [loading, setLoading] = useState(false);
@@ -39,9 +39,9 @@ export function ArchiveCategoryButton({
       return;
     }
 
-    router.refresh();
+    await onChanged();
+    setLoading(false);
   }
-
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <button

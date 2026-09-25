@@ -114,11 +114,10 @@ test("dashboard shows financial position, insights, cash flow forecast, and plan
   ).toBeVisible();
 
   await expect(
-    page.getByText("Goals", {
-      exact: true,
+    page.locator(".dashboard-planning-label").filter({
+      hasText: /^Goals$/,
     }),
   ).toBeVisible();
-
   await expect(
     page.getByRole("link", {
       name: "View goals →",

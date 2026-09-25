@@ -1,21 +1,21 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = {
   categoryId: string;
   initialName: string;
   initialType: "income" | "expense";
+  onChanged: () => void | Promise<void>;
 };
 
 export function EditCategoryButton({
   categoryId,
   initialName,
+  onChanged,
   initialType,
 }: Props) {
-  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
 
   const [open, setOpen] = useState(false);
@@ -87,9 +87,9 @@ export function EditCategoryButton({
       return;
     }
 
-    setOpen(false);
-    setSaving(false);
-    router.refresh();
+      setOpen(false);
+      setSaving(false);
+      await onChanged();
   }
 
   return (

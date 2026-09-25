@@ -356,6 +356,7 @@ export default function CategoriesPage() {
                 tone="income"
                 emptyText="No income categories found."
                 categories={incomeCategories}
+                onChanged={loadCategories}
               />
             )}
 
@@ -366,6 +367,7 @@ export default function CategoriesPage() {
                 tone="expense"
                 emptyText="No expense categories found."
                 categories={expenseCategories}
+                onChanged={loadCategories}
               />
             )}
           </div>
@@ -407,7 +409,10 @@ export default function CategoriesPage() {
                   </div>
 
                   <div className="archived-actions">
-                    <DeleteCategoryButton categoryId={category.id} />
+                    <DeleteCategoryButton
+                      categoryId={category.id}
+                      onChanged={loadCategories}
+                    />
                   </div>
                 </div>
               ))}
@@ -825,11 +830,13 @@ function CategorySection({
   tone,
   emptyText,
   categories,
+  onChanged,
 }: {
   title: string;
   count: number;
   tone: "income" | "expense";
   emptyText: string;
+  onChanged: () => void;
   categories: Category[];
 }) {
   return (
@@ -861,11 +868,17 @@ function CategorySection({
                   categoryId={category.id}
                   initialName={category.name}
                   initialType={category.category_type}
+                    onChanged={onChanged}
                 />
 
-                <ArchiveCategoryButton categoryId={category.id} />
-
-                <DeleteCategoryButton categoryId={category.id} />
+                  <ArchiveCategoryButton
+                      categoryId={category.id}
+                    onChanged={onChanged}
+                    />
+                  <DeleteCategoryButton
+                      categoryId={category.id}
+                    onChanged={onChanged}
+                    />
               </div>
             </div>
           ))}
