@@ -482,7 +482,7 @@ test.describe("Budgets", () => {
         }),
       })
       .filter({
-        hasText: moneyRegex(amount),
+        has: page.getByText(moneyRegex(amount), { exact: true }),
       });
 
     await expect(
