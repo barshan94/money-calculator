@@ -140,9 +140,13 @@ test.describe("What-if Simulation report", () => {
       .click();
 
     await expect(
-      page.getByRole("heading", {
-        name: "Baseline vs Scenario",
-      }),
+      page
+        .locator(".card")
+        .filter({ hasText: "Baseline vs Scenario" })
+        .first()
+        .getByRole("heading", {
+          name: "Baseline vs Scenario",
+        }),
     ).toBeVisible();
 
     await expect(

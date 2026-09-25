@@ -5,7 +5,7 @@ async function createRecurringExpenseCategory(page: any) {
   await page.goto("/categories");
   await expect(page.getByLabel("Category name")).toBeVisible({ timeout: 15000 });
   await page.getByLabel("Category name").fill(categoryName);
-  await page.getByLabel("Type").selectOption("expense");
+  await page.getByRole("radio", { name: "Expense", exact: true }).check();
   await page.getByRole("button", { name: "Create Category", exact: true }).click();
   await expect(page.getByText(categoryName, { exact: true })).toBeVisible({ timeout: 15000 });
 
@@ -51,7 +51,6 @@ test.describe("Recurring Transactions E2E", () => {
 
     for (const label of [
       "Name",
-      "Type",
       "Amount",
       "Currency",
       "Frequency",
@@ -63,6 +62,12 @@ test.describe("Recurring Transactions E2E", () => {
         page.getByLabel(label, { exact: true }),
       ).toBeVisible();
     }
+
+    await expect(
+      page.locator(".recurring-label").filter({
+        hasText: /^Transaction Type$/,
+      }),
+    ).toBeVisible();
 
     await expect(
       page.getByRole("button", {
@@ -106,9 +111,7 @@ test.describe("Recurring Transactions E2E", () => {
       recurringName,
     );
 
-    await page.getByLabel("Type", { exact: true }).selectOption(
-      "expense",
-    );
+    await page.getByRole("radio", { name: "Expense", exact: true }).check();
 
     await page.getByLabel("Amount", { exact: true }).fill(
       "100",
@@ -168,9 +171,7 @@ test.describe("Recurring Transactions E2E", () => {
       recurringName,
     );
 
-    await page.getByLabel("Type", { exact: true }).selectOption(
-      "expense",
-    );
+    await page.getByRole("radio", { name: "Expense", exact: true }).check();
 
     await page.getByLabel("Amount", { exact: true }).fill(
       "102",
@@ -334,9 +335,7 @@ test.describe("Recurring Transactions E2E", () => {
       recurringName,
     );
 
-    await page.getByLabel("Type", { exact: true }).selectOption(
-      "expense",
-    );
+    await page.getByRole("radio", { name: "Expense", exact: true }).check();
 
     await page.getByLabel("Amount", { exact: true }).fill(
       "101",

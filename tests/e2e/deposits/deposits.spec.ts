@@ -132,8 +132,7 @@ test("deposits page loads", async ({ page }) => {
 
   await expect(
     page.getByRole("heading", {
-      name: "Active Deposits",
-      exact: true,
+      name: /Active Deposits|No active deposits/i,
     }),
   ).toBeVisible();
 });

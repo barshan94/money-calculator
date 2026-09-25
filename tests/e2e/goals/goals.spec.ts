@@ -115,7 +115,7 @@ test.describe("Goals", () => {
 
     await expect(
       page.getByRole("heading", {
-        name: "Update Goal Progress",
+        name: "Update Progress",
       }),
     ).toBeVisible();
 
@@ -225,7 +225,7 @@ test.describe("Goals", () => {
 
     await expect(
       page.getByRole("heading", {
-        name: "Update Goal Progress",
+        name: "Update Progress",
       }),
     ).toBeVisible();
 
