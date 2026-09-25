@@ -1,4 +1,17 @@
 import { test, expect } from "@playwright/test";
+async function createRecurringExpenseCategory(page: any) {
+  const categoryName = `E2E Recurring Expense ${Date.now()}`;
+
+  await page.goto("/categories");
+  await expect(page.getByLabel("Category name")).toBeVisible({ timeout: 15000 });
+  await page.getByLabel("Category name").fill(categoryName);
+  await page.getByLabel("Type").selectOption("expense");
+  await page.getByRole("button", { name: "Create Category", exact: true }).click();
+  await expect(page.getByText(categoryName, { exact: true })).toBeVisible({ timeout: 15000 });
+
+  return categoryName;
+}
+
 
 test.describe("Recurring Transactions E2E", () => {
   test("recurring transactions page loads", async ({ page }) => {
@@ -85,6 +98,7 @@ test.describe("Recurring Transactions E2E", () => {
   test("can create a recurring expense", async ({ page }) => {
     const recurringName =
       `E2E Recurring ${Date.now()}`;
+    const categoryName = await createRecurringExpenseCategory(page);
 
     await page.goto("/recurring/new");
 
@@ -116,7 +130,7 @@ test.describe("Recurring Transactions E2E", () => {
 
     await page.getByLabel("Category", {
       exact: true,
-    }).selectOption({ index: 1 });
+    }).selectOption({ label: categoryName });
 
     await page.getByLabel("Source Account", {
       exact: true,
@@ -141,9 +155,12 @@ test.describe("Recurring Transactions E2E", () => {
     ).toBeVisible();
   });
 
+
   test("can edit a recurring transaction", async ({ page }) => {
     const recurringName =
       `E2E Edit ${Date.now()}`;
+    const categoryName = await createRecurringExpenseCategory(page);
+
 
     await page.goto("/recurring/new");
 
@@ -175,7 +192,7 @@ test.describe("Recurring Transactions E2E", () => {
 
     await page.getByLabel("Category", {
       exact: true,
-    }).selectOption({ index: 1 });
+    }).selectOption({ label: categoryName });
 
     await page.getByLabel("Source Account", {
       exact: true,
@@ -307,7 +324,9 @@ test.describe("Recurring Transactions E2E", () => {
     page,
   }) => {
     const recurringName =
-      `E2E Pause ${Date.now()}`;
+    `E2E Pause ${Date.now()}`;
+      const categoryName = await createRecurringExpenseCategory(page);
+
 
     await page.goto("/recurring/new");
 
@@ -339,7 +358,7 @@ test.describe("Recurring Transactions E2E", () => {
 
     await page.getByLabel("Category", {
       exact: true,
-    }).selectOption({ index: 1 });
+    }).selectOption({ label: categoryName });
 
     await page.getByLabel("Source Account", {
       exact: true,

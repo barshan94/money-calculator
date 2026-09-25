@@ -550,7 +550,6 @@ test("borrowed loan can be created", async ({
 
   // Target the actual borrowed-loan destination account field.
   const accountSelect = page.locator("#loan-account");
-  const accountSelect = page.locator("#loan-account");
 
 
   await accountSelect.selectOption({
