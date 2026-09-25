@@ -64,31 +64,31 @@ test("reports page shows financial summary", async ({
   await page.goto("/reports");
 
   await expect(
-    page.getByText("Income:", {
+    page.getByText("Income", {
       exact: true,
     }).first(),
   ).toBeVisible();
 
   await expect(
-    page.getByText("Expenses:", {
+    page.getByText("Expenses", {
       exact: true,
     }).first(),
   ).toBeVisible();
 
   await expect(
-    page.getByText("Net:", {
+    page.getByText("Net", {
       exact: true,
     }).first(),
   ).toBeVisible();
 
   await expect(
-    page.getByText("Assets:", {
+    page.getByText("Assets", {
       exact: true,
     }).first(),
   ).toBeVisible();
 
   await expect(
-    page.getByText("Liabilities:", {
+    page.getByText("Liabilities", {
       exact: true,
     }).first(),
   ).toBeVisible();

@@ -1,5 +1,40 @@
 import { test, expect } from "@playwright/test";
 
+async function createExpenseForReport(page: any, amount: string) {
+  const categoryName = `E2E Report Expense Category ${Date.now()}`;
+  const description = `E2E Report Expense ${Date.now()}`;
+
+  await page.goto("/categories");
+  await expect(page.getByLabel("Category name")).toBeVisible({ timeout: 15000 });
+  await page.getByLabel("Category name").fill(categoryName);
+  await page.getByLabel("Type").selectOption("expense");
+  await page.getByRole("button", { name: "Create Category", exact: true }).click();
+  await expect(page.getByText(categoryName, { exact: true })).toBeVisible({ timeout: 15000 });
+
+  await page.goto("/transactions/new");
+  await expect(page.getByRole("heading", { name: /transaction/i })).toBeVisible({ timeout: 15000 });
+
+  const expenseToggle = page.locator(
+    'label:has-text("Expense"), input[value="expense"], button:has-text("Expense")',
+  ).first();
+
+  if (await expenseToggle.isVisible({ timeout: 2000 }).catch(() => false)) {
+    await expenseToggle.click();
+  }
+
+  await page.getByLabel("Amount").fill(amount);
+  await page.getByLabel("Date").fill(new Date().toISOString().slice(0, 10));
+  await expect(page.locator("#expense-category").locator("option", { hasText: categoryName })).toHaveCount(1);
+
+  await page.locator("#expense-category").selectOption({ label: categoryName });
+  await page.locator("#expense-account").selectOption({ index: 1 });
+  await page.getByLabel("Description").fill(description);
+  await page.getByRole("button", { name: /save|create|add|submit/i }).click();
+
+  await expect(page).toHaveURL(/\/transactions\/[^/]+$/, { timeout: 15000 });
+}
+
+
 test.describe("Individual Reports E2E", () => {
   test("income vs expenses report loads", async ({ page }) => {
     await page.goto("/reports/income-expense");
@@ -32,6 +67,8 @@ test.describe("Individual Reports E2E", () => {
   });
 
   test("spending by category report loads", async ({ page }) => {
+    await createExpenseForReport(page, "1000");
+
     await page.goto("/reports/spending-by-category");
 
     await expect(
@@ -219,7 +256,7 @@ test.describe("Individual Reports E2E", () => {
 
     await expect(
       page.getByRole("heading", {
-        name: "Forecast settings",
+        name: "Forecast Settings",
         exact: true,
         level: 2,
       }),
