@@ -71,15 +71,33 @@ test("dashboard shows financial position, insights, cash flow forecast, and plan
     "/reports/financial-insights",
   );
 
-  await expect(
+  /*
+   * Scope the forecast link to the Cash Flow Forecast section.
+   *
+   * The dashboard now contains another "View forecast →" link
+   * for Net Worth Forecast, so a page-wide locator is ambiguous.
+   */
+  const cashFlowForecastHeading =
     page.getByRole("heading", {
       name: "Cash Flow Forecast",
       exact: true,
-    }),
+    });
+
+  await expect(
+    cashFlowForecastHeading,
+  ).toBeVisible();
+
+  const cashFlowForecastSection =
+    cashFlowForecastHeading.locator(
+      "xpath=ancestor::*[.//a[normalize-space()='View forecast →']][1]",
+    );
+
+  await expect(
+    cashFlowForecastSection,
   ).toBeVisible();
 
   await expect(
-    page.getByRole("link", {
+    cashFlowForecastSection.getByRole("link", {
       name: "View forecast →",
       exact: true,
     }),
@@ -127,3 +145,5 @@ test("dashboard shows financial position, insights, cash flow forecast, and plan
     "/budgets",
   );
 });
+
+

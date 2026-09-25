@@ -18,9 +18,11 @@ async function createLentLoan(
   await page.getByLabel("Amount").fill(amount);
   await page.getByLabel("Currency").selectOption("BDT");
 
-  const accountSelect = page.getByLabel(
-    /account|money from|wallet/i,
-  );
+  // Target the actual loan account field, not the UserMenu's
+  // "Loading user account" aria-label.
+  const accountSelect = page.locator(
+    'select[name="sourceAccountId"], select[name="source_account_id"]',
+  ).first();
 
   await expect(accountSelect).toBeVisible({
     timeout: 10000,
@@ -172,10 +174,11 @@ test("open loan detail and verify active loan", async ({
 async function selectRepaymentAccount(
   page: any,
 ) {
-  const repaymentAccount =
-    page.getByLabel(
-      /money to|account/i,
-    ).first();
+  // Scope this to an actual select element so the UserMenu
+  // "Loading user account" label can never be matched.
+  const repaymentAccount = page.locator(
+    'select[name="destinationAccountId"], select[name="destination_account_id"], select[name="accountId"], select[name="account_id"]',
+  ).first();
 
   await expect(
     repaymentAccount,
@@ -550,9 +553,10 @@ test("borrowed loan can be created", async ({
     "BDT",
   );
 
-  const accountSelect = page.getByLabel(
-    /account|money into|wallet/i,
-  );
+  // Target the actual borrowed-loan destination account field.
+  const accountSelect = page.locator(
+    'select[name="destinationAccountId"], select[name="destination_account_id"]',
+  ).first();
 
   await expect(accountSelect).toBeVisible({
     timeout: 10000,

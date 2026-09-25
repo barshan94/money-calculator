@@ -102,6 +102,55 @@ async function selectE2EExpenseCategory(page: any) {
   );
 }
 
+async function selectMonthlyBudgetPeriod(page: any) {
+  /*
+   * The application no longer exposes the period field through
+   * getByLabel("Period"). Target the actual <select> instead.
+   *
+   * Prefer an explicit semantic name/id if present. If the markup
+   * does not expose one, locate the select by its monthly option.
+   */
+  const namedPeriod = page.locator(
+    'select[name="period"], select[name="budgetPeriod"], select[name="budget_period"], #period, #budget-period',
+  ).first();
+
+  if (await namedPeriod.count() > 0) {
+    await expect(namedPeriod).toBeVisible({
+      timeout: 10000,
+    });
+
+    const monthlyOption = namedPeriod.locator(
+      'option[value="monthly"]',
+    );
+
+    if (await monthlyOption.count() > 0) {
+      await namedPeriod.selectOption("monthly");
+
+      await expect(namedPeriod).toHaveValue(
+        "monthly",
+      );
+
+      return;
+    }
+  }
+
+  const periodSelect = page.locator("select").filter({
+    has: page.locator(
+      'option[value="monthly"]',
+    ),
+  }).first();
+
+  await expect(periodSelect).toBeVisible({
+    timeout: 10000,
+  });
+
+  await periodSelect.selectOption("monthly");
+
+  await expect(periodSelect).toHaveValue(
+    "monthly",
+  );
+}
+
 async function createBudget(
   page: any,
   amount: string,
@@ -133,11 +182,7 @@ async function createBudget(
     })
     .selectOption("BDT");
 
-  await page
-    .getByLabel("Period", {
-      exact: true,
-    })
-    .selectOption("monthly");
+  await selectMonthlyBudgetPeriod(page);
 
   await page
     .locator("#start-date")
@@ -525,3 +570,4 @@ test.describe("Budgets", () => {
     });
   });
 });
+

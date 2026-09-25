@@ -57,8 +57,15 @@ function categoryCard(
     },
   );
 
+  /*
+   * Do not depend on presentation classes such as "rounded-lg".
+   *
+   * The category container is the nearest ancestor that owns the
+   * category action buttons. This remains stable if the visual
+   * styling changes.
+   */
   return category.locator(
-    "xpath=ancestor::div[contains(@class,'rounded-lg')][1]",
+    "xpath=ancestor::*[.//button[@aria-label='Edit' or normalize-space()='Edit'] and .//button[@aria-label='Archive' or normalize-space()='Archive'] and .//button[@aria-label='Delete' or normalize-space()='Delete']][1]",
   );
 }
 
@@ -105,6 +112,10 @@ test.describe("Categories E2E", () => {
       categoryName,
     );
 
+    await expect(card).toHaveCount(1, {
+      timeout: 15000,
+    });
+
     await expect(card).toBeVisible({
       timeout: 15000,
     });
@@ -135,7 +146,14 @@ test.describe("Categories E2E", () => {
       })
       .click();
 
-    await page.waitForTimeout(1000);
+    await expect(
+      page.getByText(updatedName, {
+        exact: true,
+      }),
+    ).toBeVisible({
+      timeout: 15000,
+    });
+
     await page.reload();
 
     await expect(
@@ -163,6 +181,10 @@ test.describe("Categories E2E", () => {
       categoryName,
     );
 
+    await expect(card).toHaveCount(1, {
+      timeout: 15000,
+    });
+
     await expect(card).toBeVisible({
       timeout: 15000,
     });
@@ -177,7 +199,14 @@ test.describe("Categories E2E", () => {
       exact: true,
     }).click();
 
-    await page.waitForTimeout(1000);
+    await expect(
+      page.getByText(categoryName, {
+        exact: true,
+      }),
+    ).not.toBeVisible({
+      timeout: 15000,
+    });
+
     await page.reload();
 
     await expect(
@@ -205,6 +234,10 @@ test.describe("Categories E2E", () => {
       categoryName,
     );
 
+    await expect(card).toHaveCount(1, {
+      timeout: 15000,
+    });
+
     await expect(card).toBeVisible({
       timeout: 15000,
     });
@@ -219,7 +252,14 @@ test.describe("Categories E2E", () => {
       exact: true,
     }).click();
 
-    await page.waitForTimeout(1000);
+    await expect(
+      page.getByText(categoryName, {
+        exact: true,
+      }),
+    ).not.toBeVisible({
+      timeout: 15000,
+    });
+
     await page.reload();
 
     await expect(
@@ -231,4 +271,5 @@ test.describe("Categories E2E", () => {
     });
   });
 });
+
 
