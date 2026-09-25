@@ -14,9 +14,11 @@ async function createExpense(
     }),
   ).toBeVisible();
 
-  const expenseToggle = page.locator(
-    'label:has-text("Expense"), input[value="expense"], button:has-text("Expense")',
-  ).first();
+  const expenseToggle = page
+    .locator(
+      'label:has-text("Expense"), input[value="expense"], button:has-text("Expense")',
+    )
+    .first();
 
   if (
     await expenseToggle
@@ -38,8 +40,9 @@ async function createExpense(
         .slice(0, 10),
     );
 
-  const categorySelect =
-    page.getByLabel("Category");
+  const categorySelect = page.locator(
+    "#expense-category",
+  );
 
   await expect(
     categorySelect,
@@ -48,61 +51,17 @@ async function createExpense(
   const categoryOptions =
     await categorySelect
       .locator("option")
-      .allTextContents();
+      .count();
 
-  console.log(
-    "E2E CATEGORY OPTIONS COUNT:",
-    categoryOptions.length,
-  );
-
-  console.log(
-    "E2E CATEGORY OPTIONS:",
-    JSON.stringify(
-      categoryOptions.slice(0, 20),
-    ),
-  );
-
-  if (categoryOptions.length <= 1) {
-    console.log(
-      "E2E CATEGORY DIAGNOSTIC:",
-      "No usable category options were rendered.",
-    );
-
-    console.log(
-      "E2E CURRENT URL:",
-      page.url(),
-    );
-
-    console.log(
-      "E2E PAGE BODY:",
-      (
-        await page
-          .locator("body")
-          .innerText()
-          .catch(
-            () =>
-              "Unable to read page body",
-          )
-      ).slice(0, 10000),
-    );
-
-    throw new Error(
-      `Transaction form rendered ${categoryOptions.length} category option(s). Expected more than 1.`,
-    );
-  }
+  expect(categoryOptions).toBeGreaterThan(1);
 
   await categorySelect.selectOption({
     index: 1,
   });
 
-  const accountSelect = page
-    .locator(
-      'select[name*="account"], select[id*="account"]',
-    )
-    .or(
-      page.getByLabel(/account|money/i),
-    )
-    .first();
+  const accountSelect = page.locator(
+    "#expense-account",
+  );
 
   await expect(
     accountSelect,
@@ -111,59 +70,17 @@ async function createExpense(
   const accountOptions =
     await accountSelect
       .locator("option")
-      .allTextContents();
+      .count();
 
-  console.log(
-    "E2E ACCOUNT OPTIONS COUNT:",
-    accountOptions.length,
-  );
-
-  console.log(
-    "E2E ACCOUNT OPTIONS:",
-    JSON.stringify(
-      accountOptions.slice(0, 20),
-    ),
-  );
-
-  if (accountOptions.length <= 1) {
-    console.log(
-      "E2E ACCOUNT DIAGNOSTIC:",
-      "No usable account options were rendered.",
-    );
-
-    console.log(
-      "E2E CURRENT URL:",
-      page.url(),
-    );
-
-    console.log(
-      "E2E PAGE BODY:",
-      (
-        await page
-          .locator("body")
-          .innerText()
-          .catch(
-            () =>
-              "Unable to read page body",
-          )
-      ).slice(0, 10000),
-    );
-
-    throw new Error(
-      `Transaction form rendered ${accountOptions.length} account option(s). Expected more than 1.`,
-    );
-  }
+  expect(accountOptions).toBeGreaterThan(1);
 
   await accountSelect.selectOption({
     index: 1,
   });
 
-  const descriptionInput =
-    page.getByLabel("Description");
-
-  await descriptionInput.fill(
-    description,
-  );
+  await page
+    .getByLabel("Description")
+    .fill(description);
 
   await page.getByRole("button", {
     name: /save|create|add|submit/i,
@@ -355,4 +272,5 @@ test("cancel a transaction and keep audit history", async ({
     }).first(),
   ).toBeVisible();
 });
+
 
