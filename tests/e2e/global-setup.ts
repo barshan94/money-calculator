@@ -123,6 +123,52 @@ export default async function globalSetup() {
       );
     }
   }
+
+  // Re-seed baseline funding accounts.
+  //
+  // These are NOT created by any spec — `is_system = false` accounts like
+  // "Cash" and "Bank" were one-time manual fixtures that every other spec
+  // has quietly depended on ever since (via "select an account, pick the
+  // first option" logic in transactions/investments/deposits/loans/tuition
+  // specs). The full wipe above deletes them along with everything else,
+  // and nothing recreates them automatically — unlike `is_system = true`
+  // accounts (Investments, Deposits, Tuition Income, etc.), which the RPCs
+  // themselves lazily create on demand. So we seed a small, fixed set here
+  // every run instead of relying on fragile one-time manual setup.
+  {
+    const { error } = await supabase.from("accounts").insert([
+      {
+        user_id: userId,
+        name: "Cash",
+        account_type: "asset",
+        currency: "BDT",
+        is_system: false,
+        is_archived: false,
+        liquidity_class: "immediate",
+      },
+      {
+        user_id: userId,
+        name: "Bank",
+        account_type: "asset",
+        currency: "BDT",
+        is_system: false,
+        is_archived: false,
+        liquidity_class: "immediate",
+      },
+    ]);
+
+    if (error) {
+      console.error(
+        "[global-setup] Failed to seed baseline accounts:",
+        error.message,
+      );
+    } else {
+      console.log(
+        "[global-setup] Seeded baseline accounts: Cash, Bank.",
+      );
+    }
+  }
 }
+
 
 
