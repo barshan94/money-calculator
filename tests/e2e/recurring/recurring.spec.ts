@@ -297,7 +297,7 @@ test.describe("Recurring Transactions E2E", () => {
       test.skip();
     }
 
-    const firstCard = recurringCards.first();
+    const firstCard = page.locator("section").filter({ has: page.getByRole("button", { name: "Run Now", exact: true }) }).first();
 
     page.once("dialog", async (dialog) => {
       expect(dialog.message()).toBe(
