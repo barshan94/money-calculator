@@ -1,3 +1,4 @@
+
 import { beforeAll, describe, expect, it } from "vitest";
 import {
   createClient,
@@ -21,6 +22,7 @@ let supabase: SupabaseClient;
 type Account = {
   id: string;
   account_type: string;
+  currency: string;
   is_system: boolean;
   is_archived: boolean;
 };
@@ -36,7 +38,7 @@ async function getTestAccounts() {
   const { data, error } = await supabase
     .from("accounts")
     .select(
-      "id, account_type, is_system, is_archived",
+      "id, account_type, currency, is_system, is_archived",
     )
     .eq("is_system", false)
     .eq("is_archived", false)
@@ -46,7 +48,33 @@ async function getTestAccounts() {
   expect(data).toBeTruthy();
   expect(data!.length).toBeGreaterThanOrEqual(2);
 
-  return data as Account[];
+  const accounts = data as Account[];
+
+  const accountsByCurrency = new Map<
+    string,
+    Account[]
+  >();
+
+  for (const account of accounts) {
+    const existing =
+      accountsByCurrency.get(account.currency) ?? [];
+
+    existing.push(account);
+    accountsByCurrency.set(
+      account.currency,
+      existing,
+    );
+  }
+
+  const matchingAccounts =
+    Array.from(accountsByCurrency.values()).find(
+      (currencyAccounts) =>
+        currencyAccounts.length >= 2,
+    );
+
+  expect(matchingAccounts).toBeTruthy();
+
+  return matchingAccounts!.slice(0, 2);
 }
 
 async function getExpenseCategory() {
@@ -208,32 +236,34 @@ describe("transaction edge cases", () => {
   it("rejects NaN and infinite amounts when updating a transaction", async () => {
     const accounts = await getTestAccounts();
 
-    const { data: transactionId, error: createError } =
-      await supabase.rpc(
-        "create_transaction",
-        {
-          p_transaction_date:
-            new Date().toISOString(),
-          p_description:
-            "Update special amount regression",
-          p_reference: null,
-          p_notes: null,
-          p_entries: [
-            {
-              account_id: accounts[0].id,
-              category_id: null,
-              amount: 100,
-              entry_type: "debit",
-            },
-            {
-              account_id: accounts[1].id,
-              category_id: null,
-              amount: 100,
-              entry_type: "credit",
-            },
-          ],
-        },
-      );
+    const {
+      data: transactionId,
+      error: createError,
+    } = await supabase.rpc(
+      "create_transaction",
+      {
+        p_transaction_date:
+          new Date().toISOString(),
+        p_description:
+          "Update special amount regression",
+        p_reference: null,
+        p_notes: null,
+        p_entries: [
+          {
+            account_id: accounts[0].id,
+            category_id: null,
+            amount: 100,
+            entry_type: "debit",
+          },
+          {
+            account_id: accounts[1].id,
+            category_id: null,
+            amount: 100,
+            entry_type: "credit",
+          },
+        ],
+      },
+    );
 
     expect(createError).toBeNull();
     expect(transactionId).toBeTruthy();
@@ -278,12 +308,14 @@ describe("transaction edge cases", () => {
       );
     }
 
-    const { data: transaction, error: transactionError } =
-      await supabase
-        .from("transactions")
-        .select("status, description")
-        .eq("id", transactionId)
-        .single();
+    const {
+      data: transaction,
+      error: transactionError,
+    } = await supabase
+      .from("transactions")
+      .select("status, description")
+      .eq("id", transactionId)
+      .single();
 
     expect(transactionError).toBeNull();
     expect(transaction?.status).toBe("posted");
@@ -291,18 +323,24 @@ describe("transaction edge cases", () => {
       "Update special amount regression",
     );
 
-    const { data: entries, error: entriesError } =
-      await supabase
-        .from("transaction_entries")
-        .select("amount, entry_type")
-        .eq("transaction_id", transactionId)
-        .order("entry_type", { ascending: true });
+    const {
+      data: entries,
+      error: entriesError,
+    } = await supabase
+      .from("transaction_entries")
+      .select("amount, entry_type")
+      .eq("transaction_id", transactionId)
+      .order("entry_type", {
+        ascending: true,
+      });
 
     expect(entriesError).toBeNull();
     expect(entries).toHaveLength(2);
-    expect(entries?.every((entry) => entry.amount === 100)).toBe(
-      true,
-    );
+    expect(
+      entries?.every(
+        (entry) => entry.amount === 100,
+      ),
+    ).toBe(true);
 
     const { error: voidError } =
       await supabase.rpc("void_transaction", {
@@ -382,19 +420,21 @@ describe("transaction edge cases", () => {
     const category =
       await getExpenseCategory();
 
-    const { data: archivedAccounts, error } =
-      await supabase
-        .from("accounts")
-        .select(
-          "id, account_type, is_system, is_archived",
-        )
-        .eq("is_system", false)
-        .eq("is_archived", true)
-        .in("account_type", [
-          "asset",
-          "liability",
-        ])
-        .limit(1);
+    const {
+      data: archivedAccounts,
+      error,
+    } = await supabase
+      .from("accounts")
+      .select(
+        "id, account_type, is_system, is_archived",
+      )
+      .eq("is_system", false)
+      .eq("is_archived", true)
+      .in("account_type", [
+        "asset",
+        "liability",
+      ])
+      .limit(1);
 
     expect(error).toBeNull();
 
@@ -402,34 +442,36 @@ describe("transaction edge cases", () => {
       return;
     }
 
-    const { data, error: transactionError } =
-      await supabase.rpc(
-        "create_transaction",
-        {
-          p_transaction_date:
-            new Date().toISOString(),
-          p_description:
-            "Edge case archived account",
-          p_reference: null,
-          p_notes: null,
-          p_entries: [
-            {
-              account_id:
-                category.ledger_account_id,
-              category_id: category.id,
-              amount: 100,
-              entry_type: "debit",
-            },
-            {
-              account_id:
-                archivedAccounts[0].id,
-              category_id: null,
-              amount: 100,
-              entry_type: "credit",
-            },
-          ],
-        },
-      );
+    const {
+      data,
+      error: transactionError,
+    } = await supabase.rpc(
+      "create_transaction",
+      {
+        p_transaction_date:
+          new Date().toISOString(),
+        p_description:
+          "Edge case archived account",
+        p_reference: null,
+        p_notes: null,
+        p_entries: [
+          {
+            account_id:
+              category.ledger_account_id,
+            category_id: category.id,
+            amount: 100,
+            entry_type: "debit",
+          },
+          {
+            account_id:
+              archivedAccounts[0].id,
+            category_id: null,
+            amount: 100,
+            entry_type: "credit",
+          },
+        ],
+      },
+    );
 
     expect(data).toBeNull();
     expect(transactionError).toBeTruthy();
@@ -444,15 +486,17 @@ describe("transaction edge cases", () => {
     const accounts =
       await getTestAccounts();
 
-    const { data: systemAccounts, error } =
-      await supabase
-        .from("accounts")
-        .select(
-          "id, account_type, is_system, is_archived",
-        )
-        .eq("is_system", true)
-        .eq("is_archived", false)
-        .limit(1);
+    const {
+      data: systemAccounts,
+      error,
+    } = await supabase
+      .from("accounts")
+      .select(
+        "id, account_type, is_system, is_archived",
+      )
+      .eq("is_system", true)
+      .eq("is_archived", false)
+      .limit(1);
 
     expect(error).toBeNull();
 
@@ -460,34 +504,35 @@ describe("transaction edge cases", () => {
       return;
     }
 
-    const { data, error: transactionError } =
-      await supabase.rpc(
-        "create_transaction",
-        {
-          p_transaction_date:
-            new Date().toISOString(),
-          p_description:
-            "Edge case system account",
-          p_reference: null,
-          p_notes: null,
-          p_entries: [
-            {
-              account_id:
-                systemAccounts[0].id,
-              category_id: null,
-              amount: 100,
-              entry_type: "debit",
-            },
-            {
-              account_id:
-                accounts[0].id,
-              category_id: null,
-              amount: 100,
-              entry_type: "credit",
-            },
-          ],
-        },
-      );
+    const {
+      data,
+      error: transactionError,
+    } = await supabase.rpc(
+      "create_transaction",
+      {
+        p_transaction_date:
+          new Date().toISOString(),
+        p_description:
+          "Edge case system account",
+        p_reference: null,
+        p_notes: null,
+        p_entries: [
+          {
+            account_id:
+              systemAccounts[0].id,
+            category_id: null,
+            amount: 100,
+            entry_type: "debit",
+          },
+          {
+            account_id: accounts[0].id,
+            category_id: null,
+            amount: 100,
+            entry_type: "credit",
+          },
+        ],
+      },
+    );
 
     expect(data).toBeNull();
     expect(transactionError).toBeTruthy();
@@ -508,8 +553,7 @@ describe("transaction edge cases", () => {
       await supabase.rpc(
         "create_transaction",
         {
-          p_transaction_date:
-            new Date().toISOString(),
+          p_transaction_date: new Date().toISOString(),
           p_description:
             "Edge case invalid category",
           p_reference: null,
