@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+﻿import { test, expect, type Page } from "@playwright/test";
 
 async function createLentLoan(
   page: Page,
@@ -124,6 +124,7 @@ test("open loan detail and verify active loan", async ({
   page,
 }) => {
   const {
+    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -208,6 +209,7 @@ test("record partial repayment and verify remaining balance", async ({
   page,
 }) => {
   const {
+    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -270,6 +272,7 @@ test("fully repay a loan and verify settled status", async ({
   page,
 }) => {
   const {
+    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -406,6 +409,7 @@ test("edit a repayment and recalculate the loan balance", async ({
   page,
 }) => {
   const {
+    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -600,3 +604,4 @@ test("loan reliability page loads", async ({
     }),
   ).toBeVisible();
 });
+
