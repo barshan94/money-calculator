@@ -195,7 +195,7 @@ export default function EditBudgetPage() {
           href="/budgets"
           className="inline-flex min-h-10 items-center text-sm font-medium text-[var(--primary)] hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
         >
-          â† Back to Budgets
+          ← Back to Budgets
         </Link>
       </div>
 

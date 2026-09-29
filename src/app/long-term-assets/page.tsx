@@ -16,7 +16,7 @@ function formatAmount(amount: number, currency: string) {
 }
 
 function formatDate(date: string | null) {
-  if (!date) return "â€”";
+  if (!date) return "—";
 
   return new Date(`${date}T00:00:00`).toLocaleDateString(
     "en-BD",
@@ -357,11 +357,11 @@ export default async function LongTermAssetsPage({
               </option>
 
               <option value="name-az">
-                Name Aâ€“Z
+                Name A–Z
               </option>
 
               <option value="name-za">
-                Name Zâ€“A
+                Name Z–A
               </option>
             </select>
 

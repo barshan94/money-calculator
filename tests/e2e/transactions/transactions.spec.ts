@@ -267,7 +267,7 @@ test("cancel a transaction and keep audit history", async ({
   ).toBeVisible();
 
   await expect(
-    page.getByText("â†© Reversed", {
+    page.getByText("↩ Reversed", {
       exact: true,
     }).first(),
   ).toBeVisible();
