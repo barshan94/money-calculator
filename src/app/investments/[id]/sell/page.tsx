@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Investment = {
@@ -22,6 +22,7 @@ type Account = {
 };
 
 export default function SellInvestmentPage() {
+  const router = useRouter();
   const params = useParams();
   const supabase = createClient();
 
@@ -197,8 +198,7 @@ export default function SellInvestmentPage() {
       return;
     }
 
-    window.location.href =
-      `/investments/${investment.id}`;
+    router.push(`/investments/${investment.id}`);
   }
 
   if (loading) {
@@ -761,4 +761,3 @@ export default function SellInvestmentPage() {
     </main>
   );
 }
-

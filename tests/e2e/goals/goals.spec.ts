@@ -1,7 +1,7 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect, type Page } from "@playwright/test";
 
 async function createGoal(
-  page: any,
+  page: Page,
   goalName: string,
   targetAmount: string,
 ) {
@@ -48,7 +48,7 @@ async function createGoal(
 }
 
 async function openGoalDetail(
-  page: any,
+  page: Page,
   goalName: string,
 ) {
   const goalHeading = page.getByRole("heading", {

@@ -1,6 +1,6 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect, type Page } from "@playwright/test";
 
-async function openAddStudentForm(page: any) {
+async function openAddStudentForm(page: Page) {
   await page.goto("/tuition");
 
   await expect(
@@ -18,7 +18,7 @@ async function openAddStudentForm(page: any) {
   await expect(page.locator("#student-name")).toBeVisible();
 }
 
-async function waitForStudentCreation(page: any) {
+async function waitForStudentCreation(page: Page) {
   const submitButton = page
     .locator('form button[type="submit"]')
     .first();
@@ -37,7 +37,7 @@ async function waitForStudentCreation(page: any) {
   );
 }
 
-async function createStudent(page: any) {
+async function createStudent(page: Page) {
   const timestamp = Date.now();
   const studentName = `E2E Student ${timestamp}`;
   const guardianName = `E2E Guardian ${timestamp}`;
@@ -81,7 +81,7 @@ async function createStudent(page: any) {
   return { studentName, guardianName };
 }
 
-function studentRow(page: any, studentName: string) {
+function studentRow(page: Page, studentName: string) {
   return page
     .getByRole("row")
     .filter({ hasText: studentName })
@@ -94,7 +94,7 @@ function studentRow(page: any, studentName: string) {
     .first();
 }
 
-function tuitionPaymentForm(page: any) {
+function tuitionPaymentForm(page: Page) {
   return page
     .locator("form")
     .filter({
@@ -104,7 +104,7 @@ function tuitionPaymentForm(page: any) {
     });
 }
 
-function paymentHistoryRow(page: any, amount: string) {
+function paymentHistoryRow(page: Page, amount: string) {
   return page
     .locator("table.tuition-table tbody tr")
     .filter({
@@ -446,4 +446,3 @@ test("student history action works", async ({
     exact: true,
   }).click();
 });
-

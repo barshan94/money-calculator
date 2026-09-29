@@ -1,7 +1,7 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect, type Page } from "@playwright/test";
 
 async function createExpenseCategory(
-  page: any,
+  page: Page,
   categoryName: string,
 ) {
   await page.goto("/categories");
@@ -47,7 +47,7 @@ async function createExpenseCategory(
 }
 
 function categoryCard(
-  page: any,
+  page: Page,
   categoryName: string,
 ) {
   const category = page.getByText(
@@ -271,5 +271,3 @@ test.describe("Categories E2E", () => {
     });
   });
 });
-
-

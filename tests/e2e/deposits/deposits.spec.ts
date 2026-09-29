@@ -1,7 +1,7 @@
+﻿
+import { test, expect, type Page } from "@playwright/test";
 
-import { test, expect } from "@playwright/test";
-
-async function openNewDepositPage(page: any) {
+async function openNewDepositPage(page: Page) {
   await page.goto("/deposits");
 
   await expect(
@@ -19,7 +19,7 @@ async function openNewDepositPage(page: any) {
   await expect(page).toHaveURL(/\/deposits\/new$/);
 }
 
-async function createDeposit(page: any) {
+async function createDeposit(page: Page) {
   const timestamp = Date.now();
   const depositName = `E2E Deposit ${timestamp}`;
 
@@ -92,7 +92,7 @@ async function createDeposit(page: any) {
 }
 
 async function openDepositDetail(
-  page: any,
+  page: Page,
   depositName: string,
 ) {
   const depositLink = page

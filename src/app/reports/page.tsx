@@ -1,3 +1,4 @@
+﻿import Link from "next/link";
 import MonthlyNetWorthChart from "@/components/reports/monthly-net-worth-chart";
 import { getMonthlyNetWorth } from "@/lib/finance/get-monthly-net-worth";
 import { getReportsSummary } from "@/lib/finance/get-reports-summary";
@@ -86,9 +87,9 @@ export default async function ReportsPage() {
     <main className="reports-page">
       <header className="reports-header">
         <div>
-          <a className="back-link" href="/dashboard">
-            ← Dashboard
-          </a>
+          <Link className="back-link" href="/dashboard">
+            â† Dashboard
+          </Link>
 
           <h1>Reports</h1>
 
@@ -102,7 +103,7 @@ export default async function ReportsPage() {
       {!hasSummaryData ? (
         <section className="card empty-state">
           <div className="empty-icon" aria-hidden="true">
-            📊
+            ðŸ“Š
           </div>
 
           <h2>No report data yet</h2>
@@ -113,13 +114,13 @@ export default async function ReportsPage() {
           </p>
 
           <div className="empty-actions">
-            <a className="primary-button" href="/transactions/new">
+            <Link className="primary-button" href="/transactions/new">
               Add Transaction
-            </a>
+            </Link>
 
-            <a className="secondary-button" href="/accounts">
+            <Link className="secondary-button" href="/accounts">
               View Accounts
-            </a>
+            </Link>
           </div>
         </section>
       ) : (
@@ -259,7 +260,7 @@ export default async function ReportsPage() {
                 {group.reports.map(([label, href]) => (
                   <a key={href} href={href} className="report-link">
                     <span>{label}</span>
-                    <span aria-hidden="true">→</span>
+                    <span aria-hidden="true">â†’</span>
                   </a>
                 ))}
               </div>
@@ -640,4 +641,3 @@ export default async function ReportsPage() {
     </main>
   );
 }
-

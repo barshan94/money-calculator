@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+﻿import { beforeAll, describe, expect, it } from "vitest";
 import {
   createClient,
   type SupabaseClient,
@@ -142,7 +142,7 @@ describe("Cross-module financial integrity", () => {
     expect(reversalEntriesError).toBeNull();
     expect(reversalEntries).toHaveLength(2);
 
-    const total = (entries: any[]) =>
+    const total = (entries: Array<{ amount: number | string; entry_type: string }>) =>
       entries.reduce(
         (sum, entry) =>
           sum +

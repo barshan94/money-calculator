@@ -1,7 +1,7 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect, type Page } from "@playwright/test";
 
 async function createExpense(
-  page: any,
+  page: Page,
   amount: string,
 ) {
   const description = `E2E Expense ${Date.now()}`;
@@ -102,7 +102,7 @@ async function createExpense(
 }
 
 function amountText(
-  page: any,
+  page: Page,
   amount: string,
 ) {
   return page
@@ -267,10 +267,8 @@ test("cancel a transaction and keep audit history", async ({
   ).toBeVisible();
 
   await expect(
-    page.getByText("↩ Reversed", {
+    page.getByText("â†© Reversed", {
       exact: true,
     }).first(),
   ).toBeVisible();
 });
-
-

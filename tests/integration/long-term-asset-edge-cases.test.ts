@@ -51,8 +51,7 @@ async function getAccount() {
 async function createAsset(
   accountId: string,
   purchasePrice = 10000,
-  currentValue = 10000,
-) {
+  ) {
   const { data, error } =
     await supabase.rpc(
       "create_long_term_asset",

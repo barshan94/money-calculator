@@ -211,7 +211,13 @@ export default function TuitionPage() {
   }
 
   useEffect(() => {
-    loadData();
+    const timeoutId = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
   }, [selectedMonth]);
 
   async function addStudent(

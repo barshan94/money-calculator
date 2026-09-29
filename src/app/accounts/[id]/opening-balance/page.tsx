@@ -138,7 +138,7 @@ export default function OpeningBalancePage() {
                 fontSize: 13,
               }}
             >
-              This will create the account's initial
+              This will create the account&apos;s initial
               opening-balance transaction.
             </p>
           </div>

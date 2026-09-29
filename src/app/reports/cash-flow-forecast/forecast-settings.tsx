@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+
 type Props = {
   lookbackMonths: number;
   forecastMonths: number;
@@ -14,6 +16,7 @@ export default function ForecastSettings({
   forecastMonths,
   basePath = "/reports/cash-flow-forecast",
 }: Props) {
+  const router = useRouter();
   function updateSettings(
     nextLookback: number,
     nextHorizon: number,
@@ -23,8 +26,7 @@ export default function ForecastSettings({
     params.set("lookback", String(nextLookback));
     params.set("horizon", String(nextHorizon));
 
-    window.location.href =
-      `${basePath}?${params.toString()}`;
+    router.push(`${basePath}?${params.toString()}`);
   }
 
   return (
@@ -186,4 +188,3 @@ export default function ForecastSettings({
     </section>
   );
 }
-

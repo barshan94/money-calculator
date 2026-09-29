@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   FormEvent,
@@ -17,14 +17,6 @@ type Category = {
 
 type BudgetPeriod = "weekly" | "monthly" | "yearly";
 
-function getLocalToday() {
-  const now = new Date();
-  const offset = now.getTimezoneOffset();
-
-  return new Date(now.getTime() - offset * 60_000)
-    .toISOString()
-    .slice(0, 10);
-}
 
 export default function EditBudgetPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -203,7 +195,7 @@ export default function EditBudgetPage() {
           href="/budgets"
           className="inline-flex min-h-10 items-center text-sm font-medium text-[var(--primary)] hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)] focus-visible:ring-offset-2"
         >
-          ← Back to Budgets
+          â† Back to Budgets
         </Link>
       </div>
 
@@ -480,4 +472,3 @@ export default function EditBudgetPage() {
     </main>
   );
 }
-

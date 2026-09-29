@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Asset = {
@@ -38,8 +38,8 @@ function formatAssetType(value: string) {
 
 export default function LongTermAssetDetailPage() {
   const params = useParams<{ id: string }>();
-  const router = useRouter();
-  const supabase = createClient();
+
+  const supabase = useMemo(() => createClient(), []);
 
   const id = params.id;
 
@@ -47,47 +47,52 @@ export default function LongTermAssetDetailPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
-  async function loadAsset() {
-    setLoading(true);
-    setMessage("");
+  useEffect(() => {
+    let cancelled = false;
 
-    const { data, error } = await supabase
-      .from("long_term_assets")
-      .select(
-        `
-          id,
-          name,
-          asset_type,
-          currency,
-          purchase_date,
-          purchase_price,
-          acquisition_cost,
-          current_value,
-          description,
-          status,
-          archived_at,
-          created_at,
-          updated_at,
-          purchase_transaction_id
-        `
-      )
-      .eq("id", id)
-      .single();
+    async function loadInitialAsset() {
+      const { data, error } = await supabase
+        .from("long_term_assets")
+        .select(
+          `
+            id,
+            name,
+            asset_type,
+            currency,
+            purchase_date,
+            purchase_price,
+            acquisition_cost,
+            current_value,
+            description,
+            status,
+            archived_at,
+            created_at,
+            updated_at,
+            purchase_transaction_id
+          `
+        )
+        .eq("id", id)
+        .single();
 
-    if (error || !data) {
-      setMessage(error?.message || "Asset not found.");
-      setAsset(null);
+      if (cancelled) return;
+
+      if (error || !data) {
+        setMessage(error?.message || "Asset not found.");
+        setAsset(null);
+        setLoading(false);
+        return;
+      }
+
+      setAsset(data as Asset);
       setLoading(false);
-      return;
     }
 
-    setAsset(data as Asset);
-    setLoading(false);
-  }
+    void loadInitialAsset();
 
-  useEffect(() => {
-    loadAsset();
-  }, [id]);
+    return () => {
+      cancelled = true;
+    };
+  }, [id, supabase]);
 
   const costBasis = useMemo(() => {
     if (!asset) return 0;

@@ -1,7 +1,7 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect, type Page } from "@playwright/test";
 
 async function createAccount(
-  page: any,
+  page: Page,
   type: "asset" | "liability" = "asset",
 ) {
   const accountName =

@@ -1,7 +1,7 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 
 async function createLentLoan(
-  page: any,
+  page: Page,
   amount: string,
 ) {
   const personName = `E2E Loan ${Date.now()}`;
@@ -99,7 +99,6 @@ test("create a lent loan", async ({
   page,
 }) => {
   const {
-    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -125,7 +124,6 @@ test("open loan detail and verify active loan", async ({
   page,
 }) => {
   const {
-    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -168,7 +166,7 @@ test("open loan detail and verify active loan", async ({
 });
 
 async function selectRepaymentAccount(
-  page: any,
+  page: Page,
 ) {
   // Scope this to an actual select element so the UserMenu
   // "Loading user account" label can never be matched.
@@ -196,7 +194,7 @@ async function selectRepaymentAccount(
 }
 
 async function expectNoRepaymentError(
-  page: any,
+  page: Page,
 ) {
   const repaymentError =
     page.locator("main p[role='alert']");
@@ -210,7 +208,6 @@ test("record partial repayment and verify remaining balance", async ({
   page,
 }) => {
   const {
-    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -273,7 +270,6 @@ test("fully repay a loan and verify settled status", async ({
   page,
 }) => {
   const {
-    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -332,7 +328,6 @@ test("cancel a repayment and restore the loan balance", async ({
   page,
 }) => {
   const {
-    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -411,7 +406,6 @@ test("edit a repayment and recalculate the loan balance", async ({
   page,
 }) => {
   const {
-    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -606,5 +600,3 @@ test("loan reliability page loads", async ({
     }),
   ).toBeVisible();
 });
-
-

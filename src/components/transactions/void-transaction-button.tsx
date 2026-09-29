@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 
@@ -12,6 +13,7 @@ export function VoidTransactionButton({
   transactionId,
 }: Props) {
   const supabase = createClient();
+  const router = useRouter();
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -49,7 +51,7 @@ export function VoidTransactionButton({
       return;
     }
 
-    window.location.href = "/transactions";
+    router.push("/transactions");
   }
 
   return (
@@ -87,4 +89,3 @@ export function VoidTransactionButton({
     </div>
   );
 }
-

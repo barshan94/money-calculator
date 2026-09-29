@@ -1,5 +1,5 @@
-import { test, expect } from "@playwright/test";
-async function createRecurringExpenseCategory(page: any) {
+﻿import { test, expect, type Page } from "@playwright/test";
+async function createRecurringExpenseCategory(page: Page) {
   const categoryName = `E2E Recurring Expense ${Date.now()}`;
 
   await page.goto("/categories");
@@ -409,5 +409,3 @@ test.describe("Recurring Transactions E2E", () => {
     });
   });
 });
-
-

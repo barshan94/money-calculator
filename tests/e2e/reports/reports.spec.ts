@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect, type Page } from "@playwright/test";
 
 const reportRoutes: Record<string, string> = {
   "Income vs Expenses": "/reports/income-expense",
@@ -24,7 +24,7 @@ const reportRoutes: Record<string, string> = {
 };
 
 function reportLink(
-  page: any,
+  page: Page,
   name: string,
 ) {
   const href = reportRoutes[name];
@@ -377,4 +377,3 @@ test("financial health report navigation works", async ({
     /\/reports\/financial-health$/,
   );
 });
-

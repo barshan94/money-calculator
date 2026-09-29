@@ -1,8 +1,8 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect, type Page } from "@playwright/test";
 
 test.describe("Investments", () => {
   async function createInvestment(
-    page: any,
+    page: Page,
     amount = "10000",
     quantity = "100",
     purchasePrice = "100",
@@ -563,4 +563,3 @@ test.describe("Investments", () => {
     ).toBeVisible();
   });
 });
-

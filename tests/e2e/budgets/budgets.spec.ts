@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect, type Page } from "@playwright/test";
 
 function escapeRegex(value: string) {
   return value.replace(
@@ -21,7 +21,7 @@ function moneyRegex(amount: string) {
 }
 
 function budgetCard(
-  page: any,
+  page: Page,
   categoryName: string,
   amount: string,
 ) {
@@ -50,7 +50,7 @@ function budgetCard(
     });
 }
 
-async function selectE2EExpenseCategory(page: any) {
+async function selectE2EExpenseCategory(page: Page) {
   const category = page.getByLabel(
     "Expense Category",
     { exact: true },
@@ -101,7 +101,7 @@ async function selectE2EExpenseCategory(page: any) {
   );
 }
 
-async function selectMonthlyBudgetPeriod(page: any) {
+async function selectMonthlyBudgetPeriod(page: Page) {
   const namedPeriod = page.locator(
     'select[name="period"], select[name="budgetPeriod"], select[name="budget_period"], #period, #budget-period',
   ).first();
@@ -144,7 +144,7 @@ async function selectMonthlyBudgetPeriod(page: any) {
 }
 
 async function createBudget(
-  page: any,
+  page: Page,
   amount: string,
   startDate: string,
 ) {
@@ -207,7 +207,7 @@ async function createBudget(
 }
 
 async function archiveBudget(
-  page: any,
+  page: Page,
   categoryName: string,
   amount: string,
 ) {
@@ -554,4 +554,3 @@ test.describe("Budgets", () => {
     });
   });
 });
-

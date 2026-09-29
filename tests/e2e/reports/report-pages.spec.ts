@@ -1,6 +1,6 @@
-import { test, expect } from "@playwright/test";
+﻿import { test, expect, type Page } from "@playwright/test";
 
-async function createExpenseForReport(page: any, amount: string) {
+async function createExpenseForReport(page: Page, amount: string) {
   const categoryName = `E2E Report Expense Category ${Date.now()}`;
   const description = `E2E Report Expense ${Date.now()}`;
 
@@ -339,4 +339,3 @@ test.describe("Individual Reports E2E", () => {
     }
   });
 });
-

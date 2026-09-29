@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
+﻿import { expect, test, type Page } from "@playwright/test";
 
-async function createWhatIfHistory(page: any) {
+async function createWhatIfHistory(page: Page) {
   const suffix = Date.now();
   const incomeCategory = `E2E What If Income ${suffix}`;
   const expenseCategory = `E2E What If Expense ${suffix}`;

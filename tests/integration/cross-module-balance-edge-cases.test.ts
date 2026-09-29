@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from "vitest";
+﻿import { beforeAll, describe, expect, it } from "vitest";
 import {
   createClient,
   type SupabaseClient,
@@ -62,7 +62,7 @@ async function getBalance(
   expect(error).toBeNull();
 
   const account = data?.find(
-    (row: any) =>
+    (row: { id: string; balance: number | string }) =>
       row.id === accountId,
   );
 
@@ -349,4 +349,3 @@ describe("cross-module balance integrity", () => {
     expect(restored).toBe(before);
   });
 });
-

@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 type Props = {
@@ -16,7 +16,7 @@ function formatAmount(amount: number, currency: string) {
 }
 
 function formatDate(date: string | null) {
-  if (!date) return "—";
+  if (!date) return "â€”";
 
   return new Date(`${date}T00:00:00`).toLocaleDateString(
     "en-BD",
@@ -187,9 +187,6 @@ export default async function LongTermAssetsPage({
     (asset) => asset.status === "cancelled",
   );
 
-  const archivedAssets = allAssets.filter(
-    (asset) => asset.archived_at,
-  );
 
   return (
     <main>
@@ -360,11 +357,11 @@ export default async function LongTermAssetsPage({
               </option>
 
               <option value="name-az">
-                Name A–Z
+                Name Aâ€“Z
               </option>
 
               <option value="name-za">
-                Name Z–A
+                Name Zâ€“A
               </option>
             </select>
 
@@ -861,4 +858,3 @@ export default async function LongTermAssetsPage({
     </main>
   );
 }
-

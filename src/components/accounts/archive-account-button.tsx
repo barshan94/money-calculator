@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 
@@ -12,6 +13,7 @@ export function ArchiveAccountButton({
   accountId,
 }: Props) {
   const supabase = createClient();
+  const router = useRouter();
 
 
   const [loading, setLoading] = useState(false);
@@ -56,7 +58,7 @@ export function ArchiveAccountButton({
       return;
     }
 
-    window.location.href = "/accounts";
+    router.push("/accounts");
   }
 
   return (

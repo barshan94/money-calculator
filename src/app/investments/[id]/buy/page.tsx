@@ -6,7 +6,7 @@ import {
   useMemo,
   useState,
 } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 type Investment = {
@@ -29,6 +29,7 @@ type Account = {
 export default function BuyMoreInvestmentPage() {
   const supabase = useMemo(() => createClient(), []);
   const params = useParams();
+  const router = useRouter();
 
   const investmentId = params.id as string;
 
@@ -124,16 +125,6 @@ export default function BuyMoreInvestmentPage() {
     void loadData();
   }, [investmentId, supabase]);
 
-  useEffect(() => {
-    const qty = Number(quantity);
-    const price = Number(purchasePrice);
-
-    if (qty > 0 && price > 0) {
-      setAmount(
-        (qty * price).toFixed(2),
-      );
-    }
-  }, [quantity, purchasePrice]);
 
   async function handleSubmit(
     event: FormEvent<HTMLFormElement>,
@@ -210,8 +201,7 @@ export default function BuyMoreInvestmentPage() {
       return;
     }
 
-    window.location.href =
-      `/investments/${investmentId}`;
+    router.push(`/investments/${investmentId}`);
   }
 
   if (loading) {
@@ -411,9 +401,17 @@ export default function BuyMoreInvestmentPage() {
               min="0.00000001"
               step="0.00000001"
               value={quantity}
-              onChange={(event) =>
-                setQuantity(event.target.value)
-              }
+              onChange={(event) => {
+                const nextQuantity = event.target.value;
+                setQuantity(nextQuantity);
+
+                const qty = Number(nextQuantity);
+                const price = Number(purchasePrice);
+
+                if (qty > 0 && price > 0) {
+                  setAmount((qty * price).toFixed(2));
+                }
+              }}
               placeholder="e.g. 20"
               required
               style={{
@@ -434,11 +432,17 @@ export default function BuyMoreInvestmentPage() {
               min="0.00000001"
               step="0.00000001"
               value={purchasePrice}
-              onChange={(event) =>
-                setPurchasePrice(
-                  event.target.value,
-                )
-              }
+              onChange={(event) => {
+                const nextPrice = event.target.value;
+                setPurchasePrice(nextPrice);
+
+                const qty = Number(quantity);
+                const price = Number(nextPrice);
+
+                if (qty > 0 && price > 0) {
+                  setAmount((qty * price).toFixed(2));
+                }
+              }}
               placeholder="e.g. 110"
               required
               style={{
@@ -584,4 +588,3 @@ export default function BuyMoreInvestmentPage() {
     </main>
   );
 }
-

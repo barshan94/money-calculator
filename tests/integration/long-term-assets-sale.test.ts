@@ -839,8 +839,7 @@ describe(
         const {
           assetId,
           sourceAccount,
-          costBasis,
-        } = await createTestAsset();
+          } = await createTestAsset();
 
         try {
           const salePrice =
@@ -1073,4 +1072,3 @@ describe(
     );
   },
 );
-

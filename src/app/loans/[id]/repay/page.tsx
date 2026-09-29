@@ -197,8 +197,7 @@ export default function RecordLoanRepaymentPage() {
       return;
     }
 
-    window.location.href =
-      `/loans/${loanId}`;
+    router.push(`/loans/${loanId}`);
   }
 
   if (!loan) {
@@ -367,4 +366,3 @@ export default function RecordLoanRepaymentPage() {
     </main>
   );
 }
-

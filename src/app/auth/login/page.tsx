@@ -120,7 +120,7 @@ export default function LoginPage() {
       {message && <p role="alert">{message}</p>}
 
       <p>
-        Don't have an account?{" "}
+        Don&apos;t have an account?{" "}
         <a href="/auth/signup">
           Create Account
         </a>

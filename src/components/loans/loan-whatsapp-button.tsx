@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 type Props = {
   personName: string;
@@ -10,7 +10,7 @@ type Props = {
 function normalizeBangladeshWhatsAppNumber(
   value: string,
 ) {
-  let phone = value.replace(/\D/g, "");
+  const phone = value.replace(/\D/g, "");
 
   // Already international:
   // 8801712345678
