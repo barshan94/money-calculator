@@ -20,9 +20,11 @@ async function getTestAccount() {
     await supabase
       .from("accounts")
       .select(
-        "id, name, currency",
+        "id, name, currency, account_type, is_system, is_archived",
       )
       .eq("is_system", false)
+      .eq("is_archived", false)
+      .eq("account_type", "asset")
       .eq("currency", "BDT")
       .limit(1)
       .maybeSingle();

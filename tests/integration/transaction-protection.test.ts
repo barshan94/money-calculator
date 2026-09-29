@@ -29,14 +29,38 @@ async function getAccounts() {
     .select("id, currency")
     .eq("is_system", false)
     .eq("is_archived", false)
-    .in("account_type", ["asset", "liability"])
-    .limit(3);
+    .in("account_type", ["asset", "liability"]);
 
   expect(error).toBeNull();
   expect(data).toBeTruthy();
   expect(data!.length).toBeGreaterThanOrEqual(2);
 
-  return data as Account[];
+  const accountsByCurrency = new Map<
+    string,
+    Account[]
+  >();
+
+  for (const account of data as Account[]) {
+    const existing =
+      accountsByCurrency.get(account.currency) ?? [];
+
+    existing.push(account);
+    accountsByCurrency.set(
+      account.currency,
+      existing,
+    );
+  }
+
+  const matchingAccounts = Array.from(
+    accountsByCurrency.values(),
+  ).find(
+    (currencyAccounts) =>
+      currencyAccounts.length >= 2,
+  );
+
+  expect(matchingAccounts).toBeTruthy();
+
+  return matchingAccounts!.slice(0, 2);
 }
 
 describe("transaction protection", () => {
@@ -279,7 +303,9 @@ describe("transaction protection", () => {
       error: transactionQueryError,
     } = await supabase
       .from("transactions")
-      .select("id, loan_id, loan_transaction_role")
+      .select(
+        "id, loan_id, loan_transaction_role",
+      )
       .eq("loan_id", loanId)
       .eq("loan_transaction_role", "origin")
       .single();
@@ -517,3 +543,4 @@ describe("transaction protection", () => {
     );
   });
 });
+
