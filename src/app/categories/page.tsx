@@ -54,8 +54,32 @@ export default function CategoriesPage() {
     setLoading(false);
   }
 
-  useEffect(() => {
-    void loadCategories();
+    useEffect(() => {
+    let cancelled = false;
+
+    async function loadInitialCategories() {
+      const { data, error } = await supabase
+        .from("categories")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (cancelled) return;
+
+      if (error) {
+        setError(error.message);
+        setCategories([]);
+      } else {
+        setCategories((data ?? []) as Category[]);
+      }
+
+      setLoading(false);
+    }
+
+    void loadInitialCategories();
+
+    return () => {
+      cancelled = true;
+    };
   }, [supabase]);
 
   async function createCategory() {
