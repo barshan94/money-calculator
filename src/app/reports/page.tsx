@@ -88,7 +88,7 @@ export default async function ReportsPage() {
       <header className="reports-header">
         <div>
           <Link className="back-link" href="/dashboard">
-            â† Dashboard
+            ← Dashboard
           </Link>
 
           <h1>Reports</h1>
@@ -103,7 +103,7 @@ export default async function ReportsPage() {
       {!hasSummaryData ? (
         <section className="card empty-state">
           <div className="empty-icon" aria-hidden="true">
-            ðŸ“Š
+            📊
           </div>
 
           <h2>No report data yet</h2>
@@ -260,7 +260,7 @@ export default async function ReportsPage() {
                 {group.reports.map(([label, href]) => (
                   <a key={href} href={href} className="report-link">
                     <span>{label}</span>
-                    <span aria-hidden="true">â†’</span>
+                    <span aria-hidden="true">→</span>
                   </a>
                 ))}
               </div>
