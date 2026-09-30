@@ -319,7 +319,8 @@ main {
 
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
+  gap: 16px;
 
   padding: 12px 36px;
 
@@ -1070,7 +1071,7 @@ progress::-moz-progress-bar {
 
     padding: 8px 14px;
 
-    justify-content: flex-end;
+    justify-content: space-between;
   }
 
   main {

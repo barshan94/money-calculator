@@ -1,8 +1,10 @@
 "use client";
 
+import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { DashboardNav } from "@/components/layout/dashboard-nav";
 import { UserMenu } from "@/components/layout/user-menu";
+import { SearchBar } from "@/components/layout/search-bar";
 
 export function DashboardShell({
   children,
@@ -32,6 +34,10 @@ export function DashboardShell({
 
       <div className="main-content">
         <header className="topbar">
+          <Suspense fallback={<div className="mc-topbar-search" />}>
+            <SearchBar />
+          </Suspense>
+
           <UserMenu />
         </header>
 
