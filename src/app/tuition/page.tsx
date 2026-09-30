@@ -802,63 +802,123 @@ export default function TuitionPage() {
       {/* MONTHLY OVERVIEW */}
 
       <div className="card">
-        <h2>Monthly Overview</h2>
+        <div className="tuition-overview-header">
+          <h2>Monthly Overview</h2>
 
-        <div className="form-group">
-          <label htmlFor="tuition-month">
-            Month
-          </label>
+          <div className="form-group tuition-month-picker">
+            <label htmlFor="tuition-month">
+              Month
+            </label>
 
-          <input
-            id="tuition-month"
-            type="month"
-            value={selectedMonth.slice(0, 7)}
-            onChange={(e) => {
-              const month =
-                `${e.target.value}-01`;
+            <input
+              id="tuition-month"
+              type="month"
+              value={selectedMonth.slice(0, 7)}
+              onChange={(e) => {
+                const month =
+                  `${e.target.value}-01`;
 
-              setSelectedMonth(month);
-              setPaymentMonth(month);
-            }}
-          />
+                setSelectedMonth(month);
+                setPaymentMonth(month);
+              }}
+            />
+          </div>
         </div>
 
-        <div className="grid-3">
-          <div>
-            <strong>
-              {
-                statuses.filter(
-                  (s) =>
-                    s.payment_status === "paid"
-                ).length
-              }
-            </strong>
-            <p>Paid</p>
-          </div>
+        {/* Amount summary */}
+        {statuses.length > 0 && (() => {
+          const totalExpected = statuses.reduce(
+            (sum, s) => sum + Number(s.monthly_fee ?? 0), 0
+          );
+          const totalReceived = statuses.reduce(
+            (sum, s) => sum + Number(s.paid_amount ?? 0), 0
+          );
+          const totalOutstanding = statuses.reduce(
+            (sum, s) => sum + Number(s.remaining_amount ?? 0), 0
+          );
+          const collectionRate = totalExpected > 0
+            ? (totalReceived / totalExpected) * 100
+            : 0;
 
-          <div>
-            <strong>
-              {
-                statuses.filter(
-                  (s) =>
-                    s.payment_status === "partial"
-                ).length
-              }
-            </strong>
-            <p>Partial</p>
-          </div>
+          return (
+            <div className="tuition-amount-grid">
+              <div className="tuition-amount-card tuition-amount-expected">
+                <span>Expected</span>
+                <strong>
+                  BDT {totalExpected.toLocaleString()}
+                </strong>
+                <p>{statuses.length} students</p>
+              </div>
 
-          <div>
-            <strong>
-              {
-                statuses.filter(
-                  (s) =>
-                    s.payment_status === "unpaid"
-                ).length
-              }
-            </strong>
-            <p>Unpaid</p>
-          </div>
+              <div className="tuition-amount-card tuition-amount-received">
+                <span>Received</span>
+                <strong>
+                  BDT {totalReceived.toLocaleString()}
+                </strong>
+                <p>
+                  {collectionRate.toFixed(0)}% collected
+                </p>
+              </div>
+
+              <div className="tuition-amount-card tuition-amount-outstanding">
+                <span>Outstanding</span>
+                <strong>
+                  BDT {totalOutstanding.toLocaleString()}
+                </strong>
+                <p>
+                  {statuses.filter(
+                    (s) => s.payment_status !== "paid"
+                  ).length} students pending
+                </p>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Collection progress bar */}
+        {statuses.length > 0 && (() => {
+          const totalExpected = statuses.reduce(
+            (sum, s) => sum + Number(s.monthly_fee ?? 0), 0
+          );
+          const totalReceived = statuses.reduce(
+            (sum, s) => sum + Number(s.paid_amount ?? 0), 0
+          );
+          const pct = totalExpected > 0
+            ? Math.min(100, (totalReceived / totalExpected) * 100)
+            : 0;
+
+          return (
+            <div className="tuition-progress-section">
+              <div className="tuition-progress-label">
+                <span>Collection progress</span>
+                <span>{pct.toFixed(0)}%</span>
+              </div>
+              <div
+                className="tuition-progress-track"
+                aria-label={`Tuition collection ${pct.toFixed(0)} percent`}
+              >
+                <div
+                  className="tuition-progress-fill"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Status counts */}
+        <div className="tuition-status-counts">
+          <span className="tuition-status-pill tuition-status-paid">
+            ✓ Paid {statuses.filter((s) => s.payment_status === "paid").length}
+          </span>
+
+          <span className="tuition-status-pill tuition-status-partial">
+            ◑ Partial {statuses.filter((s) => s.payment_status === "partial").length}
+          </span>
+
+          <span className="tuition-status-pill tuition-status-unpaid">
+            ○ Unpaid {statuses.filter((s) => s.payment_status === "unpaid").length}
+          </span>
         </div>
       </div>
 
@@ -2050,7 +2110,147 @@ export default function TuitionPage() {
       </div>
 
       <style jsx>{`
+        .tuition-overview-header {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 16px;
+          flex-wrap: wrap;
+          margin-bottom: 18px;
+        }
+
+        .tuition-overview-header h2 {
+          margin: 0;
+        }
+
+        .tuition-month-picker {
+          margin: 0;
+          min-width: 160px;
+        }
+
+        .tuition-amount-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+          margin-bottom: 18px;
+        }
+
+        .tuition-amount-card {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          padding: 14px 16px;
+          border-radius: 12px;
+          border: 1px solid rgba(127, 127, 127, 0.15);
+        }
+
+        .tuition-amount-card span {
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          opacity: 0.6;
+        }
+
+        .tuition-amount-card strong {
+          font-size: 22px;
+          font-weight: 700;
+          line-height: 1.1;
+        }
+
+        .tuition-amount-card p {
+          margin: 0;
+          font-size: 12px;
+          opacity: 0.6;
+        }
+
+        .tuition-amount-expected {
+          border-color: rgba(37, 99, 235, 0.25);
+        }
+
+        .tuition-amount-received {
+          border-color: rgba(22, 163, 74, 0.25);
+        }
+
+        .tuition-amount-received strong {
+          color: var(--success);
+        }
+
+        .tuition-amount-outstanding {
+          border-color: rgba(217, 119, 6, 0.25);
+        }
+
+        .tuition-amount-outstanding strong {
+          color: var(--warning);
+        }
+
+        .tuition-progress-section {
+          margin-bottom: 16px;
+        }
+
+        .tuition-progress-label {
+          display: flex;
+          justify-content: space-between;
+          font-size: 13px;
+          opacity: 0.65;
+          margin-bottom: 6px;
+        }
+
+        .tuition-progress-track {
+          width: 100%;
+          height: 8px;
+          border-radius: 999px;
+          background: rgba(127, 127, 127, 0.15);
+          overflow: hidden;
+        }
+
+        .tuition-progress-fill {
+          height: 100%;
+          border-radius: inherit;
+          background: var(--success);
+          transition: width 0.3s ease;
+        }
+
+        .tuition-status-counts {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+
+        .tuition-status-pill {
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          padding: 5px 10px;
+          border-radius: 999px;
+          font-size: 13px;
+          font-weight: 500;
+          border: 1px solid transparent;
+        }
+
+        .tuition-status-paid {
+          background: var(--success-soft);
+          color: var(--success);
+          border-color: rgba(22, 163, 74, 0.2);
+        }
+
+        .tuition-status-partial {
+          background: var(--warning-soft);
+          color: var(--warning);
+          border-color: rgba(217, 119, 6, 0.2);
+        }
+
+        .tuition-status-unpaid {
+          background: var(--danger-soft);
+          color: var(--danger);
+          border-color: rgba(220, 38, 38, 0.2);
+        }
+
         @media (max-width: 768px) {
+          .tuition-amount-grid {
+            grid-template-columns: 1fr;
+          }
+
           .tuition-table {
             font-size: 13px;
           }
