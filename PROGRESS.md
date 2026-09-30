@@ -1,11 +1,11 @@
 # Money Calculator — 2027 Development Progress
 
 This file tracks the development status of the Money Calculator 2027 Edition.
-Last updated: 2026-09-30
+Last updated: 2026-10-01
 
 ---
 
-## Overall completion: ~82%
+## Overall completion: ~87%
 
 ---
 
@@ -75,11 +75,6 @@ Last updated: 2026-09-30
 
 ## 🔲 Remaining phases (priority order)
 
-### Phase 17 — Global search
-- No search functionality exists yet
-- Should cover transactions, loans, accounts, students by name/description
-- Approach: server-side full-text search via Supabase
-
 ### Phase 38 — CI/CD pipeline
 - No `.github/workflows` or CI config exists
 - Target: lint → type check → unit tests → integration tests → build → E2E → deploy
@@ -118,12 +113,12 @@ Last updated: 2026-09-30
 
 ---
 
-## 📊 Test counts (as of 2026-09-30)
+## 📊 Test counts (as of 2026-10-01)
 
 | Suite | Count | Status |
 |---|---|---|
 | Integration | 198 | ✅ All passing |
-| Unit | ~48 | ✅ All passing |
+| Unit | 134 | ✅ All passing |
 | E2E (Playwright) | separate run | — |
 
 ---
