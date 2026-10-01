@@ -1,7 +1,7 @@
 # Money Calculator — 2027 Development Progress
 
 This file tracks the development status of the Money Calculator 2027 Edition.
-Last updated: 2026-10-01 (Phase 21 complete)
+Last updated: 2026-10-01 (Phase 28 complete)
 
 ---
 
@@ -19,7 +19,7 @@ Do all three steps at the end of every phase without waiting to be asked.
 
 ---
 
-## Overall completion: ~94%
+## Overall completion: ~96%
 
 ---
 
@@ -85,10 +85,6 @@ Do all three steps at the end of every phase without waiting to be asked.
 - Added styled status pills (Paid / Partial / Unpaid)
 - No database changes — uses existing `get_tuition_monthly_status` RPC
 
----
-
-## 🔲 Remaining phases (priority order)
-
 ### Phase 16 — Receipts/Attachments ✅ (2026-10-01)
 - Created `src/app/api/attachments/upload/route.ts` — POST handler, any file type, 10 MB limit, stores in Supabase Storage under `{user_id}/{entity_type}/{entity_id}/{timestamp}-{filename}`
 - Created `src/app/api/attachments/delete/route.ts` — DELETE handler, calls `delete_attachment` RPC, removes file from Storage
@@ -106,18 +102,24 @@ Do all three steps at the end of every phase without waiting to be asked.
 - Vercel deployment via `vercel pull → vercel build --prod → vercel deploy --prebuilt`
 - Required secrets: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
 
-### Phase 16 — Receipts/attachments ✅ (2026-10-01)
-- See completed section above for full notes
-
 ### Phase 21 — Audit Log UI ✅ (2026-10-01)
 - Created `src/lib/finance/get-audit-log.ts` — queries transactions, loans, assets, tuition payments in parallel; normalises to unified `AuditEvent` type; sorts by timestamp descending; returns top 200
 - Created `src/app/audit/page.tsx` — server component; kind filter tabs (All / Transactions / Loans / Assets / Tuition); event list with coloured badges (green = created, red = cancelled/voided/reversed, amber = sold/opening balance); links to entity detail pages
 - Updated `src/components/layout/dashboard-nav.tsx` — added "Audit Log" nav link (◑ icon)
 - No new DB tables — built entirely from existing data
 
-### Phase 28 — Accessibility pass
-- No dedicated accessibility review done
-- Target: semantic HTML, keyboard navigation, focus states, screen-reader labels, contrast
+### Phase 28 — Accessibility pass ✅ (2026-10-01)
+- `src/app/layout.tsx` — removed `userScalable: false`, set `maximumScale: 5` (WCAG 1.4.4 Resize Text)
+- `src/components/layout/dashboard-shell.tsx` & `src/app/globals.css` — added skip-to-content link targeting `#main-content`
+- `src/app/globals.css` — changed generic `:focus` on inputs to `:focus-visible` to ensure clear keyboard focus rings
+- `src/components/categories/edit-category-button.tsx` — added focus trap on modal dialog (Tab/Shift+Tab cycle) and focus restoration to trigger button on close
+- `src/app/transactions/new/page.tsx` — added `role="group"` with `aria-label="Transaction type"` and `aria-pressed` states on Expense/Income/Transfer toggle buttons; added `role="alert"` on error/status message
+- `src/app/transactions/[id]/edit/page.tsx` & `src/components/transactions/void-transaction-button.tsx` — added `role="alert"` on message elements
+- `src/app/dashboard/page.tsx` — added `role="progressbar"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax` to goals progress bars
+
+---
+
+## 🔲 Remaining phases (priority order)
 
 ### Phase 30-32 — AI assistant (deferred)
 - Deferred until deterministic financial system is complete

@@ -1179,6 +1179,7 @@ export default function EditTransactionPage() {
 
           {message && (
             <p
+              role="alert"
               style={{
                 margin: 0,
                 padding: "11px 12px",

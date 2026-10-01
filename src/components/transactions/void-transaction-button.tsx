@@ -77,6 +77,7 @@ export function VoidTransactionButton({
 
       {message && (
         <p
+          role="alert"
           style={{
             margin: "8px 0 0",
             color: "var(--danger)",

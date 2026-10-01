@@ -665,6 +665,10 @@ export default async function DashboardPage() {
                           </div>
 
                           <div
+                            role="progressbar"
+                            aria-valuenow={Math.round(progress)}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
                             className="dashboard-progress-track"
                             aria-label={`${currency} goal progress ${progress.toFixed(1)} percent`}
                           >

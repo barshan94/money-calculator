@@ -23,6 +23,10 @@ export function DashboardShell({
 
   return (
     <div className="app-shell">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+
       <aside className="sidebar" aria-label="Application sidebar">
         <div className="brand" aria-label="Money Calculator">
           <div>Money</div>
@@ -41,7 +45,7 @@ export function DashboardShell({
           <UserMenu />
         </header>
 
-        <main>{children}</main>
+        <main id="main-content">{children}</main>
       </div>
     </div>
   );

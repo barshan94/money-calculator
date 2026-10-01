@@ -474,6 +474,8 @@ export default function NewTransactionPage() {
 
       <section>
         <div
+          role="group"
+          aria-label="Transaction type"
           style={{
             display: "grid",
             gridTemplateColumns:
@@ -484,6 +486,7 @@ export default function NewTransactionPage() {
         >
           <button
             type="button"
+            aria-pressed={type === "expense"}
             onClick={() =>
               changeType("expense")
             }
@@ -510,6 +513,7 @@ export default function NewTransactionPage() {
 
           <button
             type="button"
+            aria-pressed={type === "income"}
             onClick={() =>
               changeType("income")
             }
@@ -536,6 +540,7 @@ export default function NewTransactionPage() {
 
           <button
             type="button"
+            aria-pressed={type === "transfer"}
             onClick={() =>
               changeType("transfer")
             }
@@ -966,6 +971,7 @@ export default function NewTransactionPage() {
 
           {message && (
             <p
+              role="alert"
               style={{
                 margin: 0,
                 padding: "11px 12px",
