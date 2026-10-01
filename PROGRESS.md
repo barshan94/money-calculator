@@ -1,11 +1,11 @@
 # Money Calculator — 2027 Development Progress
 
 This file tracks the development status of the Money Calculator 2027 Edition.
-Last updated: 2026-10-01
+Last updated: 2026-10-01 (Phase 38 complete)
 
 ---
 
-## Overall completion: ~87%
+## Overall completion: ~90%
 
 ---
 
@@ -75,10 +75,15 @@ Last updated: 2026-10-01
 
 ## 🔲 Remaining phases (priority order)
 
-### Phase 38 — CI/CD pipeline
-- No `.github/workflows` or CI config exists
-- Target: lint → type check → unit tests → integration tests → build → E2E → deploy
-- Deployment should not proceed if critical checks fail
+### Phase 38 — CI/CD pipeline ✅ (2026-10-01)
+- Created `.github/workflows/ci.yml` — 7-stage pipeline
+- Stages: lint → type-check → unit → integration → build → E2E → deploy
+- Integration and E2E skipped on fork PRs (secrets unavailable)
+- Build artifact cached between build/E2E/deploy jobs (avoids double build)
+- Deploy stage gated on all checks passing, runs only on `master` push
+- Playwright report uploaded as artifact on E2E failure
+- Vercel deployment via `vercel pull → vercel build --prod → vercel deploy --prebuilt`
+- Required secrets: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
 
 ### Phase 16 — Receipts/attachments
 - No file upload or Supabase Storage integration exists
