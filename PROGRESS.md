@@ -1,11 +1,25 @@
 # Money Calculator — 2027 Development Progress
 
 This file tracks the development status of the Money Calculator 2027 Edition.
-Last updated: 2026-10-01 (Phase 38 complete)
+Last updated: 2026-10-01 (Phase 16 complete)
 
 ---
 
-## Overall completion: ~90%
+## 🤖 AI agent workflow instructions
+
+These rules apply automatically after every phase — no need to remind the agent:
+
+1. **Update PROGRESS.md** — move the completed phase from "Remaining" to "Completed", add bullet points summarising what was built, update `Last updated` date and overall completion %.
+2. **Update memory** — write or update the phase memory file at `/public/.claude/projects/-public-money-calculator/memory/phase-XX-name.md` and add/update its line in `MEMORY.md`.
+3. **Git commit and push** — stage all changed files, write a commit message in the format `Phase XX: <short title> — <one-line summary>`, append the standard attribution line, then `git push origin master`.
+
+Do all three steps at the end of every phase without waiting to be asked.
+
+---
+
+---
+
+## Overall completion: ~92%
 
 ---
 
@@ -75,6 +89,13 @@ Last updated: 2026-10-01 (Phase 38 complete)
 
 ## 🔲 Remaining phases (priority order)
 
+### Phase 16 — Receipts/Attachments ✅ (2026-10-01)
+- Created `src/app/api/attachments/upload/route.ts` — POST handler, any file type, 10 MB limit, stores in Supabase Storage under `{user_id}/{entity_type}/{entity_id}/{timestamp}-{filename}`
+- Created `src/app/api/attachments/delete/route.ts` — DELETE handler, calls `delete_attachment` RPC, removes file from Storage
+- Created `src/components/attachments/attachments-section.tsx` — client component: upload button, file list with download (signed URL) and delete
+- Wired into `transactions/[id]/page.tsx`, `loans/[id]/page.tsx`, `long-term-assets/[id]/page.tsx`
+- **Manual setup required in Supabase dashboard** (see Phase 16 notes below)
+
 ### Phase 38 — CI/CD pipeline ✅ (2026-10-01)
 - Created `.github/workflows/ci.yml` — 7-stage pipeline
 - Stages: lint → type-check → unit → integration → build → E2E → deploy
@@ -85,10 +106,8 @@ Last updated: 2026-10-01 (Phase 38 complete)
 - Vercel deployment via `vercel pull → vercel build --prod → vercel deploy --prebuilt`
 - Required secrets: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `TEST_USER_EMAIL`, `TEST_USER_PASSWORD`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
 
-### Phase 16 — Receipts/attachments
-- No file upload or Supabase Storage integration exists
-- Target: attach receipts/invoices to transactions, loans, assets
-- Requires: file type validation, size limits, secure ownership, safe deletion
+### Phase 16 — Receipts/attachments ✅ (2026-10-01)
+- See completed section above for full notes
 
 ### Phase 21 — Audit log UI
 - Financial audit trail exists implicitly via transactions/reversals

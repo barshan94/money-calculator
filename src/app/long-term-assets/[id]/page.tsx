@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { AttachmentsSection, type Attachment } from "@/components/attachments/attachments-section";
 
 type Asset = {
   id: string;
@@ -46,6 +47,7 @@ export default function LongTermAssetDetailPage() {
   const [asset, setAsset] = useState<Asset | null>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,6 +87,20 @@ export default function LongTermAssetDetailPage() {
 
       setAsset(data as Asset);
       setLoading(false);
+
+      // Fetch attachments for this asset
+      const { data: attachmentData } = await supabase
+        .from("attachments")
+        .select(
+          "id, storage_path, file_name, file_size, mime_type, created_at",
+        )
+        .eq("entity_type", "long_term_asset")
+        .eq("entity_id", id)
+        .order("created_at", { ascending: false });
+
+      if (!cancelled) {
+        setAttachments(attachmentData ?? []);
+      }
     }
 
     void loadInitialAsset();
@@ -364,6 +380,12 @@ export default function LongTermAssetDetailPage() {
       )}
 
       {message && <div className="error">{message}</div>}
+
+      <AttachmentsSection
+        entityType="long_term_asset"
+        entityId={id}
+        initialAttachments={attachments}
+      />
 
       <style jsx>{`
         .page {
