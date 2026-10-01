@@ -1,7 +1,7 @@
 # Money Calculator — 2027 Development Progress
 
 This file tracks the development status of the Money Calculator 2027 Edition.
-Last updated: 2026-10-01 (Phase 16 complete)
+Last updated: 2026-10-01 (Phase 21 complete)
 
 ---
 
@@ -19,7 +19,7 @@ Do all three steps at the end of every phase without waiting to be asked.
 
 ---
 
-## Overall completion: ~92%
+## Overall completion: ~94%
 
 ---
 
@@ -109,10 +109,11 @@ Do all three steps at the end of every phase without waiting to be asked.
 ### Phase 16 — Receipts/attachments ✅ (2026-10-01)
 - See completed section above for full notes
 
-### Phase 21 — Audit log UI
-- Financial audit trail exists implicitly via transactions/reversals
-- Missing: dedicated audit log page showing what happened, when, and why
-- Important actions: loan repayment created/reversed, asset sold, transaction cancelled
+### Phase 21 — Audit Log UI ✅ (2026-10-01)
+- Created `src/lib/finance/get-audit-log.ts` — queries transactions, loans, assets, tuition payments in parallel; normalises to unified `AuditEvent` type; sorts by timestamp descending; returns top 200
+- Created `src/app/audit/page.tsx` — server component; kind filter tabs (All / Transactions / Loans / Assets / Tuition); event list with coloured badges (green = created, red = cancelled/voided/reversed, amber = sold/opening balance); links to entity detail pages
+- Updated `src/components/layout/dashboard-nav.tsx` — added "Audit Log" nav link (◑ icon)
+- No new DB tables — built entirely from existing data
 
 ### Phase 28 — Accessibility pass
 - No dedicated accessibility review done

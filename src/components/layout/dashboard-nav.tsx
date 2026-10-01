@@ -22,6 +22,7 @@ const navigation = [
   { href: "/reports", label: "Reports", icon: "▥" },
   { href: "/tuition", label: "Tuition", icon: "🎓" },
   { href: "/search", label: "Search", icon: "⌕" },
+  { href: "/audit", label: "Audit Log", icon: "◑" },
 ];
 
 export function DashboardNav() {
