@@ -75,7 +75,7 @@ Do all three steps at the end of every phase without waiting to be asked.
 
 ### Phase 27 — PWA ✅ (2026-09-30)
 - `public/manifest.json` — name, theme color, start URL `/dashboard`, display standalone
-- `public/icons/icon-192.svg` and `public/icons/icon-512.svg` — ৳ on blue background
+- `public/icons/icon-192.svg`, `public/icons/icon-512.svg`, `public/icons/icon-192.png`, and `public/icons/icon-512.png` — ৳ on blue background (SVG + PNG for older Android/iOS compatibility)
 - `src/app/layout.tsx` — manifest link, Apple PWA meta, theme color, viewport meta
 
 ### Phase 13 — Tuition 2.0 ✅ (2026-09-30)
@@ -135,7 +135,7 @@ Do all three steps at the end of every phase without waiting to be asked.
 - **No SQL migration files** — all RPCs and schema live in Supabase dashboard directly
 - **PostgREST 1000-row limit** — always paginate `transaction_entries` bulk fetches
 - **Test artifacts** — integration tests may leave "Asset Edge" / "Sale Test Asset" named assets in DB with sold status; these are excluded from invariant checks
-- **PWA icons** — currently SVG; convert to PNG for older Android compatibility if needed
+- **PWA icons** — both SVG and PNG (192px & 512px) configured in manifest and layout
 - **`close_investment` RPC** is SECURITY INVOKER (not DEFINER) — worth verifying it behaves correctly with deny-all write policies
 
 ---
