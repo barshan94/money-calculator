@@ -5,7 +5,7 @@ Last updated: 2026-09-30
 
 ---
 
-## Overall completion: ~82%
+## Overall completion: ~90%
 
 ---
 
@@ -75,10 +75,14 @@ Last updated: 2026-09-30
 
 ## 🔲 Remaining phases (priority order)
 
-### Phase 17 — Global search
-- No search functionality exists yet
-- Should cover transactions, loans, accounts, students by name/description
-- Approach: server-side full-text search via Supabase
+### Phase 17 — Global search ✅ (2026-10-04)
+- `/api/search` route with Per-category parallel querying (transactions, loans, accounts, students, deposits, investments, long-term assets)
+- 5-result cap per category with graceful degradation
+- Security-hardened: OR-filter grammar escaping, ilike wildcard escaping, 100-char cap, whitespace collapse
+- `partial` flag returned when some categories fail; 502 only when all fail
+- 13 unit tests covering all hardening cases
+- `GlobalSearch` React component with Cmd+K trigger, keyboard nav, debounced fetch, status banners
+- Wired into DashboardShell topbar
 
 ### Phase 38 — CI/CD pipeline
 - No `.github/workflows` or CI config exists

@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { DashboardNav } from "@/components/layout/dashboard-nav";
+import { GlobalSearch } from "@/components/layout/global-search";
 import { UserMenu } from "@/components/layout/user-menu";
 
 export function DashboardShell({
@@ -32,6 +33,7 @@ export function DashboardShell({
 
       <div className="main-content">
         <header className="topbar">
+          <GlobalSearch />
           <UserMenu />
         </header>
 
