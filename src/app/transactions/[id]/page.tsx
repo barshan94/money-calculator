@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { VoidTransactionButton } from "@/components/transactions/void-transaction-button";
+import { ReceiptsSection } from "@/components/receipts/receipts-section";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/finance/format-money";
 
@@ -549,6 +550,11 @@ export default async function TransactionDetailPage({
           </div>
         </section>
       )}
+
+      <ReceiptsSection
+        resourceId={transaction.id}
+        resourceType="transaction"
+      />
     </div>
   );
 }
