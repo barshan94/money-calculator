@@ -1,9 +1,11 @@
 "use client";
 
+import { Suspense } from "react";
 import { usePathname } from "next/navigation";
 import { DashboardNav } from "@/components/layout/dashboard-nav";
 import { GlobalSearch } from "@/components/layout/global-search";
 import { UserMenu } from "@/components/layout/user-menu";
+import { SearchBar } from "@/components/layout/search-bar";
 
 export function DashboardShell({
   children,
@@ -22,6 +24,10 @@ export function DashboardShell({
 
   return (
     <div className="app-shell">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
+
       <aside className="sidebar" aria-label="Application sidebar">
         <div className="brand" aria-label="Money Calculator">
           <div>Money</div>
@@ -33,11 +39,14 @@ export function DashboardShell({
 
       <div className="main-content">
         <header className="topbar">
-          <GlobalSearch />
+          <Suspense fallback={<div className="mc-topbar-search" />}>
+            <SearchBar />
+          </Suspense>
+
           <UserMenu />
         </header>
 
-        <main>{children}</main>
+        <main id="main-content">{children}</main>
       </div>
     </div>
   );

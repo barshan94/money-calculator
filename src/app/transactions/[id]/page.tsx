@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { VoidTransactionButton } from "@/components/transactions/void-transaction-button";
-import { ReceiptsSection } from "@/components/receipts/receipts-section";
+import { AttachmentsSection } from "@/components/attachments/attachments-section";
 import { createClient } from "@/lib/supabase/server";
 import { formatMoney } from "@/lib/finance/format-money";
 
@@ -140,7 +140,7 @@ export default async function TransactionDetailPage({
     ),
   ];
 
-  const [accountsResult, categoriesResult] =
+  const [accountsResult, categoriesResult, attachmentsResult] =
     await Promise.all([
       accountIds.length > 0
         ? supabase
@@ -167,6 +167,16 @@ export default async function TransactionDetailPage({
             data: [],
             error: null,
           }),
+
+      supabase
+        .from("attachments")
+        .select(
+          "id, storage_path, file_name, file_size, mime_type, created_at",
+        )
+        .eq("entity_type", "transaction")
+        .eq("entity_id", id)
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false }),
     ]);
 
   if (accountsResult.error) {
@@ -179,6 +189,7 @@ export default async function TransactionDetailPage({
 
   const accounts = accountsResult.data ?? [];
   const categories = categoriesResult.data ?? [];
+  const attachments = attachmentsResult.data ?? [];
 
   function getAccount(accountId: string) {
     return accounts.find(
@@ -551,9 +562,10 @@ export default async function TransactionDetailPage({
         </section>
       )}
 
-      <ReceiptsSection
-        resourceId={transaction.id}
-        resourceType="transaction"
+<AttachmentsSection
+        entityType="transaction"
+        entityId={id}
+        initialAttachments={attachments}
       />
     </div>
   );

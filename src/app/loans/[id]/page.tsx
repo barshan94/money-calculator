@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import CancelLoanButton from "@/components/loans/cancel-loan-button";
 import LoanWhatsAppButton from "@/components/loans/loan-whatsapp-button";
 import CancelRepaymentButton from "./repayments/CancelRepaymentButton";
+import { AttachmentsSection } from "@/components/attachments/attachments-section";
 
 import { createClient } from "@/lib/supabase/server";
 import { getLoanBalances } from "@/lib/finance/get-loan-balances";
@@ -134,6 +135,18 @@ export default async function LoanDetailPage({ params }: Props) {
   const repayments: Repayment[] = repaymentError
     ? []
     : ((repaymentData as Repayment[]) ?? []);
+
+  const { data: attachmentsData } = await supabase
+    .from("attachments")
+    .select(
+      "id, storage_path, file_name, file_size, mime_type, created_at",
+    )
+    .eq("entity_type", "loan")
+    .eq("entity_id", id)
+    .eq("user_id", user.id)
+    .order("created_at", { ascending: false });
+
+  const attachments = attachmentsData ?? [];
 
   const principal = Number(balance.principal_amount);
   const repaid = Number(balance.repaid_amount);
@@ -402,6 +415,12 @@ export default async function LoanDetailPage({ params }: Props) {
           </div>
         )}
       </section>
+
+      <AttachmentsSection
+        entityType="loan"
+        entityId={id}
+        initialAttachments={attachments}
+      />
 
       <style>{`
         .loan-detail-header {

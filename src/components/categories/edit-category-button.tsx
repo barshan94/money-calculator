@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 type Props = {
@@ -20,10 +20,12 @@ export function EditCategoryButton({
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState(initialName);
-  const [type, setType] =
-    useState<"income" | "expense">(initialType);
+  const [type, setType] = useState<"income" | "expense">(initialType);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   function openModal() {
     if (saving) return;
@@ -39,6 +41,8 @@ export function EditCategoryButton({
 
     setOpen(false);
     setError("");
+    // Restore focus to the trigger button
+    triggerRef.current?.focus();
   }
 
   useEffect(() => {
@@ -47,6 +51,31 @@ export function EditCategoryButton({
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape" && !saving) {
         closeModal();
+        return;
+      }
+
+      // Focus trap: cycle Tab/Shift+Tab within the dialog
+      if (event.key === "Tab" && dialogRef.current) {
+        const focusable = dialogRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
+        );
+        const elements = Array.from(focusable);
+        if (elements.length === 0) return;
+
+        const first = elements[0];
+        const last = elements[elements.length - 1];
+
+        if (event.shiftKey) {
+          if (document.activeElement === first) {
+            event.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            event.preventDefault();
+            first.focus();
+          }
+        }
       }
     }
 
@@ -87,14 +116,15 @@ export function EditCategoryButton({
       return;
     }
 
-      setOpen(false);
-      setSaving(false);
-      await onChanged();
+    setOpen(false);
+    setSaving(false);
+    await onChanged();
   }
 
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={openModal}
         disabled={saving}
@@ -110,6 +140,7 @@ export function EditCategoryButton({
           role="presentation"
         >
           <div
+            ref={dialogRef}
             className="w-full max-w-md rounded-xl border border-[var(--border)] bg-[var(--card)] p-5 shadow-xl"
             role="dialog"
             aria-modal="true"
@@ -156,9 +187,7 @@ export function EditCategoryButton({
                   value={type}
                   onChange={(event) =>
                     setType(
-                      event.target.value as
-                        | "income"
-                        | "expense",
+                      event.target.value as "income" | "expense",
                     )
                   }
                   disabled={saving}

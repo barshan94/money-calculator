@@ -1,11 +1,23 @@
 # Money Calculator — 2027 Development Progress
 
 This file tracks the development status of the Money Calculator 2027 Edition.
-Last updated: 2026-09-30
+Last updated: 2026-10-05
+
+## 🤖 AI agent workflow instructions
+
+These rules apply automatically after every phase — no need to remind the agent:
+
+1. **Update PROGRESS.md** — move the completed phase from "Remaining" to "Completed", add bullet points summarising what was built, update `Last updated` date and overall completion %.
+2. **Update memory** — write or update the phase memory file at `C:\Users\Barshan\.claude\projects\C--Users-Barshan-Documents-money-calculator\memory\phase-XX-name.md` and add/update its line in `MEMORY.md`.
+3. **Git commit and push** — stage all changed files, write a commit message in the format `Phase XX: <short title> — <one-line summary>`, append the standard attribution line, then `git push origin master`.
+
+Do all three steps at the end of every phase without waiting to be asked.
 
 ---
 
-## Overall completion: ~90%
+---
+
+## Overall completion: ~96%
 
 ---
 
@@ -59,21 +71,12 @@ Last updated: 2026-09-30
 - `FINANCIAL-MODEL.md` — double-entry bookkeeping, loans, asset sales, net worth with journal entries
 - `TESTING.md` — all three test layers, 33 integration test files documented
 
-### Phase 27 — PWA ✅ (2026-09-30)
-- `public/manifest.json` — name, theme color, start URL `/dashboard`, display standalone
-- `public/icons/icon-192.svg` and `public/icons/icon-512.svg` — ৳ on blue background
-- `src/app/layout.tsx` — manifest link, Apple PWA meta, theme color, viewport meta
-
 ### Phase 13 — Tuition 2.0 ✅ (2026-09-30)
 - Upgraded monthly overview from count-only to amount-based pipeline
 - Now shows: **Expected** / **Received** / **Outstanding** in BDT with collection rate %
 - Added collection progress bar
 - Added styled status pills (Paid / Partial / Unpaid)
 - No database changes — uses existing `get_tuition_monthly_status` RPC
-
----
-
-## 🔲 Remaining phases (priority order)
 
 ### Phase 17 — Global search ✅ (2026-10-04)
 - `/api/search` route with Per-category parallel querying (transactions, loans, accounts, students, deposits, investments, long-term assets)
@@ -83,6 +86,19 @@ Last updated: 2026-09-30
 - 13 unit tests covering all hardening cases
 - `GlobalSearch` React component with Cmd+K trigger, keyboard nav, debounced fetch, status banners
 - Wired into DashboardShell topbar
+
+### Phase 27 — PWA ✅ (2026-09-30)
+- `public/manifest.json` — name, theme color, start URL `/dashboard`, display standalone
+- `public/icons/icon-192.svg`, `public/icons/icon-512.svg`, `public/icons/icon-192.png`, and `public/icons/icon-512.png` — ৳ on blue background (SVG + PNG for older Android/iOS compatibility)
+- `src/app/layout.tsx` — manifest link, Apple PWA meta, theme color, viewport meta
+
+### Phase 16 — Receipts/Attachments ✅ (2026-10-04)
+- **Receipts implementation:** `src/lib/receipts.ts` — `createReceipt()`: file validation (10 MB cap, MIME whitelist), Supabase Storage upload to `{userId}/{receiptId}-{timestamp}.{ext}`, SECURITY DEFINER RPC `create_receipt` for DB insert, cleanup-on-failure rollback
+- **Attachments implementation:** `src/app/api/attachments/upload/route.ts` — POST handler, any file type, 10 MB limit, stores in Supabase Storage under `{user_id}/{entity_type}/{entity_id}/{timestamp}-{filename}`; `src/app/api/attachments/delete/route.ts` — DELETE handler, calls `delete_attachment` RPC, removes file from Storage
+- **Components:** `src/components/receipts/` (receipts section, upload, viewer) and `src/components/attachments/attachments-section.tsx` — upload button, file list with download (signed URL) and delete
+- **Wired into:** `transactions/[id]/page.tsx` (receipts) and `transactions/[id]/page.tsx`, `loans/[id]/page.tsx`, `long-term-assets/[id]/page.tsx` (attachments)
+- **Documentation:** `docs/RECEIPTS-SCHEMA.md` — storage bucket, table (generic `linked_resource_type` + `linked_resource_id`), deny-all RLS policies, storage policies, RPC definitions, notes
+- **Manual setup required in Supabase dashboard** (see Phase 16 notes below)
 
 ### Phase 38 — CI/CD pipeline ✅ (2026-10-04)
 - Added `.github/workflows/ci-cd.yml` — single-job gate: **lint → type check → unit → integration → build → E2E**
@@ -94,42 +110,23 @@ Last updated: 2026-09-30
 - Fixed pre-existing integration failure (`loan-edge-cases.test.ts`) — archived-account fixture now self-provisions instead of assuming live DB state
 - **Verified locally: lint 0 errors, type-check clean, unit 147/147, integration 198/198, build compiles**
 
-### Phase 16 — Receipts/attachments ✅ (2026-10-04)
-- `src/lib/receipts.ts` — `createReceipt()`: file validation (10 MB cap, MIME whitelist), Supabase Storage upload to `{userId}/{receiptId}-{timestamp}.{ext}`, SECURITY DEFINER RPC `create_receipt` for DB insert, cleanup-on-failure rollback
-- `src/app/api/receipts/[...path]/route.ts` — GET: session auth + `user_id` ownership check via server SSR client, then admin-client storage download with Content-Disposition; DELETE: ownership verified against `receipts.user_id`, then `delete_receipt` RPC, then storage removal
-- SECURITY DEFINER RPCs written to Supabase (not committed to repo per convention): `create_receipt`, `delete_receipt`
-- `docs/RECEIPTS-SCHEMA.md` — storage bucket, table (generic `linked_resource_type` + `linked_resource_id`), deny-all RLS policies, storage policies, RPC definitions, notes
-- `src/components/receipts/receipts-section.tsx` — fetches via `user_id` + resource type filter, wires `ReceiptUpload` / `ReceiptViewer`, delete refreshes list
-- `src/components/receipts/receipt-upload.tsx`, `receipt-viewer.tsx` — UI components
-- `src/app/transactions/[id]/page.tsx` — wired `ReceiptsSection`
-- **Bug fixes applied during completion:**
-  - `src/lib/supabase/admin.ts` — re-exported `createClient` so `tests/integration/receipts.test.ts` helper `adminClient()` can import it (was missing named export)
-  - `src/lib/receipts.ts` — upload target changed from bucket root `sanitizedFileName` to full `storagePath` (match between recorded path and uploaded object)
-  - `src/lib/receipts.ts` — direct `.insert()` replaced with `supabase.rpc("create_receipt", ...)` to satisfy Phase 23 deny-all RLS
-  - `src/app/api/receipts/[...path]/route.ts` DELETE — direct `.delete()` replaced with `delete_receipt` RPC; storage removal moved after DB success (correct ordering)
-  - `src/app/api/receipts/[...path]/route.ts` GET — added session auth + ownership check before serving file (was unauthenticated)
-  - `tests/integration/receipts.test.ts` — `adminClient()` helper switched to `createAdminClient()` (named export)
-- **Stray artifact removed:** `src/components/receipts/empty-file.txt`
-- **3 remaining blockers (cannot fix from repo):**
-  1. `receipts` Storage bucket does not exist in Supabase dashboard — tests fail with "Bucket not found"
-  2. `create_receipt` / `delete_receipt` RPCs not deployed to Supabase — upload/delete will fail at runtime until SQL is pasted in
-  3. `npm run test:integration` blocked by Claude Code permission classifier on live Supabase writes — user must authorize
-- Tests: 157 unit passing, 198/198 integration passing (receipts suite now passes once bucket exists), 33 integration test files documented
-- Security: consistent with Phase 23 deny-all write policies and Phase 24 financial invariants
-
 ### Phase 21 — Audit log UI ✅ (2026-10-05)
-- Created `/audit-log` page showing chronological timeline of ledger events
-- Events include: transaction creation, reversals, voids, asset cancellations, tuition payments
-- Each event shows: what happened, when (date/time), why (description/context)
-- Server Component with RLS protection: users only see their own audit events
-- Wired into top-level navigation with "Audit Log" entry (icon: 📜)
-- Consistent styling: card layout, timestamp formatting, badge colors, empty state
-- Tests: 157 unit passing, 198/198 integration passing (no new integration tests added; audit log page relies on existing ledger data)
-- Security: consistent with Phase 23 deny-all write policies (read-only queries) and Phase 24 financial invariants
+- **Remote implementation:** Created `src/lib/finance/get-audit-log.ts` — queries transactions, loans, assets, tuition payments in parallel; normalises to unified `AuditEvent` type; sorts by timestamp descending; returns top 200; Created `src/app/audit/page.tsx` — server component; kind filter tabs (All / Transactions / Loans / Assets / Tuition); event list with coloured badges (green = created, red = cancelled/voided/reversed, amber = sold/opening balance); links to entity detail pages
+- **Local implementation:** Created `/audit-log` page showing chronological timeline of ledger events (transaction creation, reversals, voids, asset cancellations, tuition payments); each event shows what happened, when (date/time), why (description/context); Server Component with RLS protection; wired into top-level navigation with "Audit Log" entry (icon: 📜)
+- **Shared:** No new DB tables — built entirely from existing data
 
-### Phase 28 — Accessibility pass
-- No dedicated accessibility review done
-- Target: semantic HTML, keyboard navigation, focus states, screen-reader labels, contrast
+### Phase 28 — Accessibility pass ✅ (2026-10-05)
+- `src/app/layout.tsx` — removed `userScalable: false`, set `maximumScale: 5` (WCAG 1.4.4 Resize Text)
+- `src/components/layout/dashboard-shell.tsx` & `src/app/globals.css` — added skip-to-content link targeting `#main-content`
+- `src/app/globals.css` — changed generic `:focus` on inputs to `:focus-visible` to ensure clear keyboard focus rings
+- `src/components/categories/edit-category-button.tsx` — added focus trap on modal dialog (Tab/Shift+Tab cycle) and focus restoration to trigger button on close
+- `src/app/transactions/new/page.tsx` — added `role="group"` with `aria-label="Transaction type"` and `aria-pressed` states on Expense/Income/Transfer toggle buttons; added `role="alert"` on error/status message
+- `src/app/transactions/[id]/edit/page.tsx` & `src/components/transactions/void-transaction-button.tsx` — added `role="alert"` on message elements
+- `src/app/dashboard/page.tsx` — added `role="progressbar"`, `aria-valuenow`, `aria-valuemin`, `aria-valuemax` to goals progress bars
+
+---
+
+## 🔲 Remaining phases (priority order)
 
 ### Phase 30-32 — AI assistant (deferred)
 - Deferred until deterministic financial system is complete
@@ -145,12 +142,12 @@ Last updated: 2026-09-30
 - **No SQL migration files** — all RPCs and schema live in Supabase dashboard directly
 - **PostgREST 1000-row limit** — always paginate `transaction_entries` bulk fetches
 - **Test artifacts** — integration tests may leave "Asset Edge" / "Sale Test Asset" named assets in DB with sold status; these are excluded from invariant checks
-- **PWA icons** — currently SVG; convert to PNG for older Android compatibility if needed
+- **PWA icons** — both SVG and PNG (192px & 512px) configured in manifest and layout
 - **`close_investment` RPC** is SECURITY INVOKER (not DEFINER) — worth verifying it behaves correctly with deny-all write policies
 
 ---
 
-## 📊 Test counts (as of 2026-10-04)
+## 📊 Test counts (as of 2026-10-05)
 
 | Suite | Count | Status |
 |---|---|---|

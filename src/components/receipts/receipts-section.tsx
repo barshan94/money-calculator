@@ -127,12 +127,8 @@ export function ReceiptsSection({
     [],
   );
 
-  useEffect(() => {
-    if (needsFetch) {
-      void fetchReceipts();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // No useEffect: receipts section is now superseded by attachments.
+  // The fetchReceipts function is kept for reference but not called.
 
   return (
     <section style={{ marginTop: 24 }}>

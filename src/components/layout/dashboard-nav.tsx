@@ -21,7 +21,8 @@ const navigation = [
   { href: "/goals", label: "Goals", icon: "◎" },
   { href: "/reports", label: "Reports", icon: "▥" },
   { href: "/tuition", label: "Tuition", icon: "🎓" },
-  { href: "/audit-log", label: "Audit Log", icon: "📜" },
+  { href: "/search", label: "Search", icon: "⌕" },
+  { href: "/audit", label: "Audit Log", icon: "◑" },
 ];
 
 export function DashboardNav() {
