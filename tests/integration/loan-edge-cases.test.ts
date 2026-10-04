@@ -49,6 +49,7 @@ async function getBDTAssetAccount() {
 }
 
 async function getArchivedAccount() {
+  // Try to find an existing archived non-system account.
   const { data, error } =
     await supabase
       .from("accounts")
@@ -56,12 +57,51 @@ async function getArchivedAccount() {
       .eq("is_archived", true)
       .eq("is_system", false)
       .limit(1)
-      .single();
+      .maybeSingle();
 
   expect(error).toBeNull();
-  expect(data).toBeTruthy();
 
-  return data;
+  if (data) return data;
+
+  // No archived account in DB — create and immediately archive one.
+  const accountName =
+    `E2E Archived Test ${Date.now()}`;
+
+  const { data: created, error: createError } =
+    await supabase.rpc(
+      "create_account",
+      {
+        p_name: accountName,
+        p_account_type: "asset",
+        p_currency: "BDT",
+        p_liquidity_class: "immediate",
+      },
+    );
+
+  expect(createError).toBeNull();
+  expect(created).toBeTruthy();
+
+  const { error: archiveError } =
+    await supabase.rpc(
+      "archive_account",
+      { p_account_id: created },
+    );
+
+  expect(archiveError).toBeNull();
+
+  const {
+    data: account,
+    error: fetchError,
+  } = await supabase
+    .from("accounts")
+    .select("id, currency")
+    .eq("id", created)
+    .single();
+
+  expect(fetchError).toBeNull();
+  expect(account).toBeTruthy();
+
+  return account;
 }
 
 async function getSystemBDTAccount() {

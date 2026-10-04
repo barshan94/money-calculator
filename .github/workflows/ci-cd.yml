@@ -1,0 +1,55 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}"
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}"
+      SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint code
+        run: npm run lint
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+      - name: Build application
+        run: npm run build
+
+      - name: Run E2E tests (Playwright)
+        run: npm run test
+        env:
+          PLAYWRIGHT_TEST_EMAIL: "${{ secrets.PLAYWRIGHT_TEST_EMAIL }}"
+          PLAYWRIGHT_TEST_PASSWORD: "${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}"
+
+  # Deploy job would go here - but only if all above steps succeed
+  # For now, we're focusing on the CI part as specified in Phase 38
+  # Deployment would require additional secrets and configuration

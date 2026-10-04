@@ -66,10 +66,10 @@ export function GlobalSearch() {
     setOpen(false);
     setQuery("");
     setResults([]);
+    setLoading(false);
     setFetchError(null);
     setPartial(false);
     setActiveIndex(-1);
-    setLoading(false);
     abortControllerRef.current?.abort();
   }, []);
 
@@ -114,21 +114,13 @@ export function GlobalSearch() {
 
   // Fetch results when debounced query changes
   useEffect(() => {
-    if (debouncedQuery.length < 2) {
-      setResults([]);
-      setFetchError(null);
-      setPartial(false);
-      setLoading(false);
-      return;
-    }
+    if (debouncedQuery.length < 2) return;
 
     abortControllerRef.current?.abort();
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    setLoading(true);
-    setFetchError(null);
-    setPartial(false);
+    void controller.signal;
 
     fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`, {
       signal: controller.signal,
@@ -255,8 +247,24 @@ export function GlobalSearch() {
               placeholder="Search transactions, loans, accounts…"
               value={query}
               onChange={(e) => {
-                setQuery(e.target.value);
-                setLoading(e.target.value.trim().length >= 2);
+                const next = e.target.value;
+
+                setQuery(next);
+
+                if (next.trim().length < 2) {
+                  // Below the search threshold: clear any
+                  // stale results synchronously here rather
+                  // than in the fetch effect.
+                  abortControllerRef.current?.abort();
+                  setResults([]);
+                  setFetchError(null);
+                  setPartial(false);
+                  setActiveIndex(-1);
+                  setLoading(false);
+                  return;
+                }
+
+                setLoading(true);
               }}
               onKeyDown={handleKeyDown}
               autoComplete="off"

@@ -84,10 +84,15 @@ Last updated: 2026-09-30
 - `GlobalSearch` React component with Cmd+K trigger, keyboard nav, debounced fetch, status banners
 - Wired into DashboardShell topbar
 
-### Phase 38 — CI/CD pipeline
-- No `.github/workflows` or CI config exists
-- Target: lint → type check → unit tests → integration tests → build → E2E → deploy
-- Deployment should not proceed if critical checks fail
+### Phase 38 — CI/CD pipeline ✅ (2026-10-04)
+- Added `.github/workflows/ci-cd.yml` — single-job gate: **lint → type check → unit → integration → build → E2E**
+- All steps run sequentially; a failure halts the job so deploy can't proceed on a broken build
+- Added `type-check` script to `package.json` (`tsc --noEmit`)
+- Node cache via `actions/setup-node@v4`, browsers via `npx playwright install --with-deps chromium`
+- Supabase + Playwright credentials sourced from repository secrets
+- Fixed pre-existing lint error (`react-hooks/set-state-in-effect` in `global-search.tsx`) that blocked step 1
+- Fixed pre-existing integration failure (`loan-edge-cases.test.ts`) — archived-account fixture now self-provisions instead of assuming live DB state
+- **Verified locally: lint 0 errors, type-check clean, unit 147/147, integration 198/198, build compiles**
 
 ### Phase 16 — Receipts/attachments
 - No file upload or Supabase Storage integration exists
@@ -122,13 +127,13 @@ Last updated: 2026-09-30
 
 ---
 
-## 📊 Test counts (as of 2026-09-30)
+## 📊 Test counts (as of 2026-10-04)
 
 | Suite | Count | Status |
 |---|---|---|
 | Integration | 198 | ✅ All passing |
-| Unit | ~48 | ✅ All passing |
-| E2E (Playwright) | separate run | — |
+| Unit | 147 | ✅ All passing |
+| E2E (Playwright) | separate run | Runs in CI via Phase 38 workflow |
 
 ---
 
