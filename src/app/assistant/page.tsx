@@ -60,7 +60,7 @@ export default function AssistantPage() {
         {messages.length === 0 && (
           <div className="text-center text-gray-500 py-8">
             <p className="font-medium">Ask me about your finances</p>
-            <p className="text-sm mt-2">Try: "What is my net worth?", "Show my loans", "How are my budgets?"</p>
+            <p className="text-sm mt-2">Try: &quot;What is my net worth?&quot;, &quot;Show my loans&quot;, &quot;How are my budgets?&quot;</p>
           </div>
         )}
         {messages.map((msg, i) => (
