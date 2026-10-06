@@ -136,7 +136,7 @@ test("open loan detail and verify active loan", async ({
 
   await expect(
     page.getByRole("heading", {
-      name: _personName,
+      name: personName,
       exact: true,
     }),
   ).toBeVisible();
@@ -216,7 +216,7 @@ test("record partial repayment and verify remaining balance", async ({
 
   await expect(
     page.getByRole("heading", {
-      name: _personName,
+      name: personName,
       exact: true,
     }),
   ).toBeVisible();
@@ -302,7 +302,7 @@ test("fully repay a loan and verify settled status", async ({
 
   await expect(
     page.getByRole("heading", {
-      name: _personName,
+      name: personName,
       exact: true,
     }),
   ).toBeVisible();
