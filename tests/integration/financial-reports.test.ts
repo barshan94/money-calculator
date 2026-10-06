@@ -47,6 +47,22 @@ type AssetAccount = {
   currency: string;
 };
 
+type CategoryRow = {
+  id: string;
+  name: string;
+  ledger_account_id: string;
+  accounts: {
+    currency: string;
+  };
+};
+
+type BudgetProgressRow = {
+  id: string;
+  spent: number | string;
+  remaining: number | string;
+  percentage: number | string;
+};
+
 function currentDate(): string {
   return new Date().toISOString();
 }
@@ -66,15 +82,18 @@ function uniqueBudgetStartDate(): string {
     (epochSeconds % 700);
 
   const month =
-    ((Math.floor(epochSeconds / 60) % 12) + 1);
+    (Math.floor(epochSeconds / 60) % 12) + 1;
 
   const day =
-    ((Math.floor(epochSeconds / 7200) % 28) + 1);
+    (Math.floor(epochSeconds / 7200) % 28) + 1;
 
   return `${year}-${String(month).padStart(
     2,
     "0",
-  )}-${String(day).padStart(2, "0")}`;
+  )}-${String(day).padStart(
+    2,
+    "0",
+  )}`;
 }
 
 function budgetTransactionDate(
@@ -88,6 +107,19 @@ function budgetTransactionDate(
 
 function monthKey(value: unknown): string {
   return String(value).slice(0, 7);
+}
+
+function toCategory(
+  row: CategoryRow,
+): Category {
+  return {
+    id: row.id,
+    name: row.name,
+    ledger_account_id:
+      row.ledger_account_id,
+    currency:
+      row.accounts.currency,
+  };
 }
 
 async function getExpenseCategory(): Promise<Category> {
@@ -110,54 +142,59 @@ async function getExpenseCategory(): Promise<Category> {
   expect(error).toBeNull();
 
   if (data && data.length > 0) {
-    const row = data[0] as unknown as {
-      id: string;
-      name: string;
-      ledger_account_id: string;
-      accounts: {
-        currency: string;
-      };
-    };
-
-    return {
-      id: row.id,
-      name: row.name,
-      ledger_account_id:
-        row.ledger_account_id,
-      currency:
-        row.accounts.currency,
-    };
+    return toCategory(
+      data[0] as unknown as CategoryRow,
+    );
   }
 
-  // Auto-create category if none exists
-  const pName = `Test Rep Expense ${Date.now()}`;
-  const { data: newId } = await supabase.rpc("create_category", {
-    p_name: pName,
-    p_category_type: "expense",
-  });
+  const categoryName =
+    `Test Report Expense ${Date.now()}`;
 
-  const { data: createdCategory } = await supabase
+  const {
+    data: newId,
+    error: createError,
+  } = await supabase.rpc(
+    "create_category",
+    {
+      p_name: categoryName,
+      p_category_type: "expense",
+    },
+  );
+
+  expect(createError).toBeNull();
+  expect(newId).toBeTruthy();
+
+  const {
+    data: createdCategory,
+    error: fetchError,
+  } = await supabase
     .from("categories")
-    .select(`id, name, ledger_account_id, accounts!inner(currency)`)
+    .select(`
+      id,
+      name,
+      ledger_account_id,
+      accounts!inner(currency)
+    `)
     .eq("id", newId)
     .single();
 
-  const row = createdCategory as unknown as {
-    id: string;
-    name: string;
-    ledger_account_id: string;
-    accounts: { currency: string };
-  };
+  expect(fetchError).toBeNull();
+  expect(createdCategory).toBeTruthy();
 
-  return {
-    id: row.id,
-    name: row.name,
-    ledger_account_id: row.ledger_account_id,
-    currency: row.accounts.currency,
-  };
+  return toCategory(
+    createdCategory as unknown as CategoryRow,
+  );
 }
 
 async function getIncomeCategory(): Promise<Category> {
+  /*
+   * First try to reuse an existing active BDT
+   * income category with a valid ledger account.
+   *
+   * Do NOT use .single() here because a fresh
+   * test database may legitimately contain zero
+   * income categories.
+   */
   const {
     data,
     error,
@@ -173,29 +210,71 @@ async function getIncomeCategory(): Promise<Category> {
     .eq("is_archived", false)
     .not("ledger_account_id", "is", null)
     .eq("accounts.currency", "BDT")
-    .limit(1)
-    .single();
+    .limit(1);
 
   expect(error).toBeNull();
-  expect(data).toBeTruthy();
 
-  const row = data as unknown as {
-    id: string;
-    name: string;
-    ledger_account_id: string;
-    accounts: {
-      currency: string;
-    };
-  };
+  if (data && data.length > 0) {
+    return toCategory(
+      data[0] as unknown as CategoryRow,
+    );
+  }
 
-  return {
-    id: row.id,
-    name: row.name,
-    ledger_account_id:
-      row.ledger_account_id,
-    currency:
-      row.accounts.currency,
-  };
+  /*
+   * No suitable BDT income category exists.
+   *
+   * create_category is responsible for creating
+   * the appropriate system ledger account/category
+   * relationship. We create a unique test category,
+   * then verify that its ledger account is actually
+   * BDT before using it.
+   */
+  const categoryName =
+    `Test Report Income ${Date.now()}`;
+
+  const {
+    data: newId,
+    error: createError,
+  } = await supabase.rpc(
+    "create_category",
+    {
+      p_name: categoryName,
+      p_category_type: "income",
+    },
+  );
+
+  expect(createError).toBeNull();
+  expect(newId).toBeTruthy();
+
+  const {
+    data: createdCategory,
+    error: fetchError,
+  } = await supabase
+    .from("categories")
+    .select(`
+      id,
+      name,
+      ledger_account_id,
+      accounts!inner(currency)
+    `)
+    .eq("id", newId)
+    .single();
+
+  expect(fetchError).toBeNull();
+  expect(createdCategory).toBeTruthy();
+
+  const category =
+    toCategory(
+      createdCategory as unknown as CategoryRow,
+    );
+
+  /*
+   * The financial-report tests explicitly operate
+   * in BDT. Never silently use another currency.
+   */
+  expect(category.currency).toBe("BDT");
+
+  return category;
 }
 
 async function getBdtAssetAccount(): Promise<AssetAccount> {
@@ -224,6 +303,8 @@ async function createExpenseTransaction(
   amount: number,
   transactionDate: string,
 ) {
+  expect(category.currency).toBe("BDT");
+
   const {
     data,
     error,
@@ -266,6 +347,8 @@ async function createIncomeTransaction(
   amount: number,
   transactionDate: string,
 ) {
+  expect(category.currency).toBe("BDT");
+
   const {
     data,
     error,
@@ -792,12 +875,7 @@ describe("financial report calculations", () => {
       expect(beforeError).toBeNull();
 
       const before = (
-        (beforeData ?? []) as Array<{
-          id: string;
-          spent: number | string;
-          remaining: number | string;
-          percentage: number | string;
-        }>
+        (beforeData ?? []) as BudgetProgressRow[]
       ).find(
         (row) => row.id === budgetId,
       );
@@ -849,12 +927,7 @@ describe("financial report calculations", () => {
       expect(afterError).toBeNull();
 
       const after = (
-        (afterData ?? []) as Array<{
-          id: string;
-          spent: number | string;
-          remaining: number | string;
-          percentage: number | string;
-        }>
+        (afterData ?? []) as BudgetProgressRow[]
       ).find(
         (row) => row.id === budgetId,
       );
@@ -884,12 +957,7 @@ describe("financial report calculations", () => {
       expect(restoredError).toBeNull();
 
       const restored = (
-        (restoredData ?? []) as Array<{
-          id: string;
-          spent: number | string;
-          remaining: number | string;
-          percentage: number | string;
-        }>
+        (restoredData ?? []) as BudgetProgressRow[]
       ).find(
         (row) => row.id === budgetId,
       );
