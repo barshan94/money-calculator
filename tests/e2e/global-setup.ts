@@ -3,48 +3,55 @@ import { createClient } from "@supabase/supabase-js";
 /**
  * Runs once before the whole Playwright suite.
  *
- * The CI Supabase project's only purpose is running this E2E suite against
- * one fixed test account (PLAYWRIGHT_TEST_EMAIL). Every spec — tuition,
- * investments, budgets, transactions, accounts, categories, deposits,
- * loans, goals, recurring transactions — creates timestamped rows and
- * never deletes them. Over hundreds of CI runs this left tens of thousands
- * of leftover rows (visible directly in dropdown option counts in the app
- * itself), which slowed every list/reload query enough to blow past the
- * 15-30s timeouts used throughout the specs — producing failures that
- * looked like feature bugs but were actually data-volume/performance
- * issues unrelated to the code under test.
+ * The CI Supabase project is used only for automated E2E testing
+ * against one dedicated test account.
  *
- * Since this account holds no real data (CI-only, confirmed), the fix is
- * a full wipe of every row belonging to this one user before each run,
- * rather than pattern-matching "E2E ..." prefixes table by table (which
- * only ever covers the specs someone remembered to handle).
+ * Every E2E spec creates user-owned rows. To prevent data from
+ * accumulating across CI runs, this setup removes all rows belonging
+ * to the dedicated Playwright test user before the suite starts.
  *
- * Delete order is dictated by ON DELETE RESTRICT foreign keys uncovered
- * via information_schema (see PR history) — CASCADE/SET NULL relationships
- * are left to the database:
+ * IMPORTANT:
+ * - Only the user identified by PLAYWRIGHT_TEST_EMAIL is affected.
+ * - The service-role key is required.
+ * - No production/other-user data is touched.
  *
- *   1. long_term_assets      (RESTRICTs transactions)
- *   2. tuition_students      (cascades tuition_payments, which RESTRICTs accounts)
- *   3. investments           (cascades investment_activity)
- *   4. recurring_transactions, loans, deposits, goals, investment_performance
- *      (no blocking FKs among this set — order-independent)
- *   5. transactions          (cascades transaction_entries; safe now that
- *                             long_term_assets is gone)
- *   6. budgets               (RESTRICTs categories)
- *   7. categories            (RESTRICTs accounts; safe now that budgets is gone)
- *   8. accounts              (last — every RESTRICT source above is cleared)
+ * Delete order follows the database's foreign-key dependencies:
+ *
+ *   1. long_term_assets
+ *   2. tuition_students
+ *      └─ cascades tuition_payments
+ *   3. investments
+ *      └─ cascades investment_activity
+ *   4. recurring_transactions
+ *   5. loans
+ *   6. deposits
+ *   7. goals
+ *   8. investment_performance
+ *   9. transactions
+ *      └─ cascades transaction_entries
+ *  10. budgets
+ *  11. categories
+ *  12. accounts
+ *
+ * transaction_entries has no user_id column and is therefore removed
+ * through the transaction cascade.
  */
 
-const TEST_USER_EMAIL = process.env.PLAYWRIGHT_TEST_EMAIL;
+const TEST_USER_EMAIL =
+  process.env.PLAYWRIGHT_TEST_EMAIL;
 
 export default async function globalSetup() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const url =
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+  const serviceRoleKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!url || !serviceRoleKey) {
     console.warn(
       "[global-setup] Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY — skipping E2E data cleanup.",
     );
+
     return;
   }
 
@@ -52,42 +59,70 @@ export default async function globalSetup() {
     console.warn(
       "[global-setup] Missing PLAYWRIGHT_TEST_EMAIL — skipping E2E data cleanup.",
     );
+
     return;
   }
 
-  const supabase = createClient(url, serviceRoleKey, {
-    auth: { persistSession: false },
-  });
+  const supabase = createClient(
+    url,
+    serviceRoleKey,
+    {
+      auth: {
+        persistSession: false,
+      },
+    },
+  );
 
-  // Resolve the test user's id from their email rather than hardcoding it,
-  // so this keeps working if the CI test account is ever rotated.
-  const { data: usersPage, error: userLookupError } =
-    await supabase.auth.admin.listUsers({ perPage: 1000 });
+  /*
+   * Resolve the dedicated E2E user's auth ID
+   * from their email instead of hardcoding the UUID.
+   *
+   * This allows the CI test account to be rotated
+   * without changing this file.
+   */
+  const {
+    data: usersPage,
+    error: userLookupError,
+  } =
+    await supabase.auth.admin.listUsers({
+      perPage: 1000,
+    });
 
   if (userLookupError) {
     console.error(
       "[global-setup] Failed to look up test user:",
       userLookupError.message,
     );
+
     return;
   }
 
-  const testUser = usersPage.users.find(
-    (u) => u.email === TEST_USER_EMAIL,
-  );
+  const testUser =
+    usersPage.users.find(
+      (user) =>
+        user.email === TEST_USER_EMAIL,
+    );
 
   if (!testUser) {
     console.warn(
       `[global-setup] No auth user found for ${TEST_USER_EMAIL} — skipping E2E data cleanup.`,
     );
+
     return;
   }
 
   const userId = testUser.id;
 
-  // Ordered per the FK dependency analysis above. Each entry is a table
-  // with a user_id column; transaction_entries has no user_id and is
-  // cleaned up purely via CASCADE from the transactions delete.
+  console.log(
+    `[global-setup] Cleaning E2E data for ${TEST_USER_EMAIL}...`,
+  );
+
+  /*
+   * Tables containing user-owned data.
+   *
+   * The order is intentional because several tables
+   * participate in ON DELETE RESTRICT relationships.
+   */
   const deletionOrder = [
     "long_term_assets",
     "tuition_students",
@@ -101,74 +136,44 @@ export default async function globalSetup() {
     "budgets",
     "categories",
     "accounts",
-  ];
+  ] as const;
+
+  let totalDeleted = 0;
 
   for (const table of deletionOrder) {
-    const { error, count } = await supabase
+    const {
+      error,
+      count,
+    } = await supabase
       .from(table)
-      .delete({ count: "exact" })
+      .delete({
+        count: "exact",
+      })
       .eq("user_id", userId);
 
     if (error) {
       console.error(
-        `[global-setup] Failed to clean up ${table}:`,
+        `[global-setup] Failed to clean ${table}:`,
         error.message,
       );
-      // Continue with remaining tables rather than aborting the whole
-      // suite — a partial cleanup is still better than none, and the
-      // specific error will point at whichever FK assumption was wrong.
-    } else {
+
+      throw new Error(
+        `E2E cleanup failed for ${table}: ${error.message}`,
+      );
+    }
+
+    const deletedCount = count ?? 0;
+
+    totalDeleted += deletedCount;
+
+    if (deletedCount > 0) {
       console.log(
-        `[global-setup] Deleted ${count ?? 0} row(s) from ${table}.`,
+        `[global-setup] ${table}: deleted ${deletedCount} row(s).`,
       );
     }
   }
 
-  // Re-seed baseline funding accounts.
-  //
-  // These are NOT created by any spec — `is_system = false` accounts like
-  // "Cash" and "Bank" were one-time manual fixtures that every other spec
-  // has quietly depended on ever since (via "select an account, pick the
-  // first option" logic in transactions/investments/deposits/loans/tuition
-  // specs). The full wipe above deletes them along with everything else,
-  // and nothing recreates them automatically — unlike `is_system = true`
-  // accounts (Investments, Deposits, Tuition Income, etc.), which the RPCs
-  // themselves lazily create on demand. So we seed a small, fixed set here
-  // every run instead of relying on fragile one-time manual setup.
-  {
-    const { error } = await supabase.from("accounts").insert([
-      {
-        user_id: userId,
-        name: "Cash",
-        account_type: "asset",
-        currency: "BDT",
-        is_system: false,
-        is_archived: false,
-        liquidity_class: "immediate",
-      },
-      {
-        user_id: userId,
-        name: "Bank",
-        account_type: "asset",
-        currency: "BDT",
-        is_system: false,
-        is_archived: false,
-        liquidity_class: "immediate",
-      },
-    ]);
-
-    if (error) {
-      console.error(
-        "[global-setup] Failed to seed baseline accounts:",
-        error.message,
-      );
-    } else {
-      console.log(
-        "[global-setup] Seeded baseline accounts: Cash, Bank.",
-      );
-    }
-  }
+  console.log(
+    `[global-setup] E2E cleanup complete. Deleted ${totalDeleted} row(s).`,
+  );
 }
-
-
-
