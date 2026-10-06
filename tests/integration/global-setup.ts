@@ -101,7 +101,6 @@ export default async function globalSetup() {
    * investments, etc. They do not depend on named
    * Cash/Bank seed accounts.
    */
-
   const tablesInDeletionOrder = [
     "long_term_assets",
     "tuition_students",
@@ -128,3 +127,4 @@ export default async function globalSetup() {
     "[integration-global-setup] Cleaned dedicated integration test user.",
   );
 }
+
