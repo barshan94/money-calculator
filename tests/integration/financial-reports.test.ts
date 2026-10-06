@@ -105,28 +105,55 @@ async function getExpenseCategory(): Promise<Category> {
     .eq("category_type", "expense")
     .eq("is_archived", false)
     .not("ledger_account_id", "is", null)
-    .limit(1)
-    .single();
+    .limit(1);
 
   expect(error).toBeNull();
-  expect(data).toBeTruthy();
 
-  const row = data as unknown as {
+  if (data && data.length > 0) {
+    const row = data[0] as unknown as {
+      id: string;
+      name: string;
+      ledger_account_id: string;
+      accounts: {
+        currency: string;
+      };
+    };
+
+    return {
+      id: row.id,
+      name: row.name,
+      ledger_account_id:
+        row.ledger_account_id,
+      currency:
+        row.accounts.currency,
+    };
+  }
+
+  // Auto-create category if none exists
+  const pName = `Test Rep Expense ${Date.now()}`;
+  const { data: newId } = await supabase.rpc("create_category", {
+    p_name: pName,
+    p_category_type: "expense",
+  });
+
+  const { data: createdCategory } = await supabase
+    .from("categories")
+    .select(`id, name, ledger_account_id, accounts!inner(currency)`)
+    .eq("id", newId)
+    .single();
+
+  const row = createdCategory as unknown as {
     id: string;
     name: string;
     ledger_account_id: string;
-    accounts: {
-      currency: string;
-    };
+    accounts: { currency: string };
   };
 
   return {
     id: row.id,
     name: row.name,
-    ledger_account_id:
-      row.ledger_account_id,
-    currency:
-      row.accounts.currency,
+    ledger_account_id: row.ledger_account_id,
+    currency: row.accounts.currency,
   };
 }
 

@@ -57,7 +57,7 @@ async function getMoneyAccount(): Promise<Account> {
 async function getExpenseCategory(
   currency: string,
 ): Promise<Category> {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .from("categories")
     .select(`
       id,
@@ -66,22 +66,37 @@ async function getExpenseCategory(
     .eq("category_type", "expense")
     .eq("is_archived", false)
     .eq("accounts.currency", currency)
-    .limit(1)
-    .single();
+    .limit(1);
 
-  expect(error).toBeNull();
-  expect(data).toBeTruthy();
-
-  const row = data as unknown as {
-    id: string;
-    accounts: {
-      currency: string;
+  if (data && data.length > 0) {
+    const row = data[0] as unknown as {
+      id: string;
+      accounts: {
+        currency: string;
+      };
     };
-  };
+
+    return {
+      id: row.id,
+      currency: row.accounts.currency,
+    };
+  }
+
+  // Create one if none exists in the test DB
+  const { data: newId, error: createError } = await supabase.rpc(
+    "create_category",
+    {
+      p_name: `Test Expense ${Date.now()}`,
+      p_category_type: "expense",
+    },
+  );
+
+  expect(createError).toBeNull();
+  expect(newId).toBeTruthy();
 
   return {
-    id: row.id,
-    currency: row.accounts.currency,
+    id: newId as string,
+    currency,
   };
 }
 

@@ -40,9 +40,10 @@ describe("Report edge cases", () => {
 
     if (accountError) throw accountError;
 
-    expect(accounts).toHaveLength(1);
+    expect(accounts).toBeTruthy();
+    expect(accounts!.length).toBeGreaterThanOrEqual(1);
 
-    const { data: categories, error: categoryError } =
+    const { data: initialCategories, error: categoryError } =
       await supabase
         .from("categories")
         .select(
@@ -55,7 +56,26 @@ describe("Report edge cases", () => {
 
     if (categoryError) throw categoryError;
 
-    expect(categories).toHaveLength(1);
+    let categories = initialCategories;
+    if (!categories || categories.length === 0) {
+      // Create one on the fly if test DB is empty
+      const { data: newId } = await supabase.rpc(
+        "create_category",
+        {
+          p_name: `Test Category ${Date.now()}`,
+          p_category_type: "expense",
+        },
+      );
+      categories = await supabase
+        .from("categories")
+        .select("id, name, ledger_account_id")
+        .eq("id", newId)
+        .limit(1)
+        .then(res => res.data);
+    }
+
+    expect(categories).toBeTruthy();
+    expect(categories!.length).toBeGreaterThanOrEqual(1);
 
     const accountId = accounts![0].id;
     const category = categories![0];

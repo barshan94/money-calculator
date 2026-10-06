@@ -47,7 +47,7 @@ describe("Receipt upload / download / delete lifecycle", () => {
         filename: "test-receipt.jpg",
         storage_path: storagePath,
         mime_type: "image/jpeg",
-        file_size_bytes: size,
+        file_size_bytes: file.size,
         alt_text: "Test receipt",
       })
       .select()

@@ -89,9 +89,27 @@ async function getExpenseCategory() {
     .limit(1);
 
   expect(error).toBeNull();
-  expect(data).toHaveLength(1);
 
-  return data![0] as Category;
+  if (data && data.length > 0) {
+    return data[0] as Category;
+  }
+
+  // Fallback to creating one
+  const { data: newId } = await supabase.rpc(
+    "create_category",
+    {
+      p_name: `Test Tx Expense ${Date.now()}`,
+      p_category_type: "expense",
+    },
+  );
+
+  const { data: category } = await supabase
+    .from("categories")
+    .select("id, category_type, ledger_account_id, is_archived")
+    .eq("id", newId)
+    .single();
+
+  return category as Category;
 }
 
 describe("transaction edge cases", () => {
