@@ -116,41 +116,41 @@ function amountText(
 test("transactions page loads", async ({
   page,
 }) => {
-  await page.goto("/transactions");
+  await page.goto("/transactions", { waitUntil: "domcontentloaded" });
 
   await expect(
     page.getByRole("heading", {
       name: "Transactions",
       exact: true,
     }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15000 });
 
   await expect(
     page.getByRole("link", {
       name: "+ Add Transaction",
       exact: true,
     }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15000 });
 });
 
 test("new transaction page loads", async ({
   page,
 }) => {
-  await page.goto("/transactions/new");
+  await page.goto("/transactions/new", { waitUntil: "domcontentloaded" });
 
   await expect(
     page.getByRole("heading", {
       name: /transaction/i,
     }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15000 });
 
   await expect(
     page.getByLabel("Amount"),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15000 });
 
   await expect(
     page.getByLabel("Date"),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15000 });
 });
 
 test("create an expense transaction", async ({

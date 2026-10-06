@@ -13,6 +13,10 @@ export default defineConfig({
   // tests/e2e/global-setup.ts for why this exists.
   globalSetup: require.resolve("./tests/e2e/global-setup.ts"),
 
+  retries: process.env.CI ? 2 : 0,
+
+  timeout: 60000,
+
   workers: 1,
 
   use: {

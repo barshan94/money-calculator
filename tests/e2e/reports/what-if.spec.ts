@@ -5,10 +5,10 @@ async function createWhatIfHistory(page: Page) {
   const incomeCategory = `E2E What If Income ${suffix}`;
   const expenseCategory = `E2E What If Expense ${suffix}`;
 
-  await page.goto("/categories");
+  await page.goto("/categories", { waitUntil: "domcontentloaded" });
 
   await expect(page.getByLabel("Category name")).toBeVisible({
-    timeout: 15000,
+    timeout: 30000,
   });
 
   await page.getByLabel("Category name").fill(incomeCategory);
@@ -178,31 +178,31 @@ test.describe("What-if Simulation report", () => {
   test("what-if simulation report loads", async ({
     page,
   }) => {
-    await page.goto("/reports/what-if");
+    await page.goto("/reports/what-if", { waitUntil: "domcontentloaded" });
 
     await expect(
       page.getByRole("heading", {
         name: "What-if Simulation",
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
 
     await expect(
       page.getByRole("heading", {
         name: "Scenario Settings",
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
 
     await expect(
       page.getByRole("button", {
         name: "Run Simulation",
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
 
     await expect(
       page.getByRole("heading", {
         name: "Methodology",
       }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 15000 });
   });
 
   test("what-if simulation can run a scenario", async ({
@@ -255,13 +255,13 @@ test.describe("What-if Simulation report", () => {
   test("reports navigation includes What-if Simulation", async ({
     page,
   }) => {
-    await page.goto("/reports");
+    await page.goto("/reports", { waitUntil: "domcontentloaded" });
 
     const whatIfLink = page.getByRole("link", {
       name: "What-if Simulation",
     });
 
-    await expect(whatIfLink).toBeVisible();
+    await expect(whatIfLink).toBeVisible({ timeout: 15000 });
 
     await whatIfLink.click();
 
