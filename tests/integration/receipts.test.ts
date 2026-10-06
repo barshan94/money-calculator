@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it } from "vitest";
 
 /**
  * Integration-style tests for the receipts API route.
@@ -9,8 +9,6 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
  * full create → list → fetch → delete lifecycle for receipts.
  */
 
-const ADMIN_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // Use the admin client wrapper that handles env vars
 async function adminClient() {

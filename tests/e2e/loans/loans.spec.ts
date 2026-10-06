@@ -4,8 +4,6 @@ async function createLentLoan(
   page: Page,
   amount: string,
 ) {
-  const personName = `E2E Loan ${Date.now()}`;
-
   await page.goto("/loans/new");
 
   await expect(
@@ -14,7 +12,7 @@ async function createLentLoan(
     }),
   ).toBeVisible();
 
-  await page.getByLabel("Person").fill(personName);
+  await page.getByLabel("Person").fill(`E2E Loan ${Date.now()}`);
   await page.getByLabel("Amount").fill(amount);
   await page.getByLabel("Currency").selectOption("BDT");
   const accountSelect = page.locator("#loan-account");
@@ -36,14 +34,13 @@ async function createLentLoan(
   await expect(page).toHaveURL(/\/loans$/);
 
   const loanLink = page.getByRole("link", {
-    name: personName,
+    name: `E2E Loan ${Date.now()}`,
     exact: true,
   });
 
   await expect(loanLink).toBeVisible();
 
   return {
-    personName,
     loanLink,
   };
 }
@@ -124,7 +121,6 @@ test("open loan detail and verify active loan", async ({
   page,
 }) => {
   const {
-    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -139,7 +135,7 @@ test("open loan detail and verify active loan", async ({
 
   await expect(
     page.getByRole("heading", {
-      name: personName,
+      name: _personName,
       exact: true,
     }),
   ).toBeVisible();
@@ -209,7 +205,6 @@ test("record partial repayment and verify remaining balance", async ({
   page,
 }) => {
   const {
-    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -220,7 +215,7 @@ test("record partial repayment and verify remaining balance", async ({
 
   await expect(
     page.getByRole("heading", {
-      name: personName,
+      name: _personName,
       exact: true,
     }),
   ).toBeVisible();
@@ -272,7 +267,6 @@ test("fully repay a loan and verify settled status", async ({
   page,
 }) => {
   const {
-    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -307,7 +301,7 @@ test("fully repay a loan and verify settled status", async ({
 
   await expect(
     page.getByRole("heading", {
-      name: personName,
+      name: _personName,
       exact: true,
     }),
   ).toBeVisible();
@@ -409,7 +403,6 @@ test("edit a repayment and recalculate the loan balance", async ({
   page,
 }) => {
   const {
-    personName,
     loanLink,
   } = await createLentLoan(
     page,
@@ -520,7 +513,7 @@ test("borrow money page can be opened", async ({
 test("borrowed loan can be created", async ({
   page,
 }) => {
-  const personName = `E2E Borrowed ${Date.now()}`;
+  const _personName = `E2E Borrowed ${Date.now()}`;
 
   await page.goto("/loans/new");
 
@@ -535,7 +528,7 @@ test("borrowed loan can be created", async ({
   ).toBeVisible();
 
   await page.getByLabel("Person").fill(
-    personName,
+    `E2E Borrowed ${Date.now()}`,
   );
 
   await page.getByLabel("Amount").fill(
@@ -564,7 +557,7 @@ test("borrowed loan can be created", async ({
   );
 
   const loanLink = page.getByRole("link", {
-    name: personName,
+    name: _personName,
     exact: true,
   });
 
