@@ -16,6 +16,8 @@ jobs:
       NEXT_PUBLIC_SUPABASE_URL: "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}"
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}"
       SUPABASE_SERVICE_ROLE_KEY: "${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}"
+      PLAYWRIGHT_TEST_EMAIL: "${{ secrets.PLAYWRIGHT_TEST_EMAIL }}"
+      PLAYWRIGHT_TEST_PASSWORD: "${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}"
 
     steps:
       - uses: actions/checkout@v4
@@ -46,9 +48,6 @@ jobs:
 
       - name: Run E2E tests (Playwright)
         run: npm run test
-        env:
-          PLAYWRIGHT_TEST_EMAIL: "${{ secrets.PLAYWRIGHT_TEST_EMAIL }}"
-          PLAYWRIGHT_TEST_PASSWORD: "${{ secrets.PLAYWRIGHT_TEST_PASSWORD }}"
 
   # Deploy job would go here - but only if all above steps succeed
   # For now, we're focusing on the CI part as specified in Phase 38
