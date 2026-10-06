@@ -89,18 +89,31 @@ async function deleteUserRows(
   }
 }
 
+async function createBaselineAccount(
+  userId: string,
+) {
+  const { error } = await supabase
+    .from("accounts")
+    .insert({
+      user_id: userId,
+      name: "Integration Test Account",
+      account_type: "asset",
+      currency: "BDT",
+      is_system: false,
+      is_archived: false,
+      liquidity_class: "immediate",
+    });
+
+  if (error) {
+    throw new Error(
+      `[integration-global-setup] Failed to create baseline account: ${error.message}`,
+    );
+  }
+}
+
 export default async function globalSetup() {
   const userId = await getTestUserId();
 
-  /*
-   * Clean the dedicated integration-test user's
-   * financial data in FK-safe order.
-   *
-   * Integration tests create their own accounts,
-   * categories, transactions, loans, tuition records,
-   * investments, etc. They do not depend on named
-   * Cash/Bank seed accounts.
-   */
   const tablesInDeletionOrder = [
     "long_term_assets",
     "tuition_students",
@@ -123,8 +136,12 @@ export default async function globalSetup() {
     );
   }
 
+  await createBaselineAccount(
+    userId,
+  );
+
   console.log(
-    "[integration-global-setup] Cleaned dedicated integration test user.",
+    "[integration-global-setup] Cleaned dedicated integration test user and created baseline BDT asset account.",
   );
 }
 
