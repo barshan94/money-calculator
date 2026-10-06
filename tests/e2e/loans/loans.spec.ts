@@ -12,7 +12,8 @@ async function createLentLoan(
     }),
   ).toBeVisible();
 
-  await page.getByLabel("Person").fill(`E2E Loan ${Date.now()}`);
+  const personName = `E2E Loan ${Date.now()}`;
+  await page.getByLabel("Person").fill(personName);
   await page.getByLabel("Amount").fill(amount);
   await page.getByLabel("Currency").selectOption("BDT");
   const accountSelect = page.locator("#loan-account");
@@ -34,7 +35,7 @@ async function createLentLoan(
   await expect(page).toHaveURL(/\/loans$/);
 
   const loanLink = page.getByRole("link", {
-    name: `E2E Loan ${Date.now()}`,
+    name: personName,
     exact: true,
   });
 
@@ -513,7 +514,7 @@ test("borrow money page can be opened", async ({
 test("borrowed loan can be created", async ({
   page,
 }) => {
-  const _personName = `E2E Borrowed ${Date.now()}`;
+  const personName = `E2E Borrowed ${Date.now()}`;
 
   await page.goto("/loans/new");
 
@@ -527,9 +528,7 @@ test("borrowed loan can be created", async ({
     }),
   ).toBeVisible();
 
-  await page.getByLabel("Person").fill(
-    `E2E Borrowed ${Date.now()}`,
-  );
+  await page.getByLabel("Person").fill(personName);
 
   await page.getByLabel("Amount").fill(
     "250",
@@ -557,7 +556,7 @@ test("borrowed loan can be created", async ({
   );
 
   const loanLink = page.getByRole("link", {
-    name: _personName,
+    name: personName,
     exact: true,
   });
 
