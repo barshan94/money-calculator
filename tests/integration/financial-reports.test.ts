@@ -71,38 +71,28 @@ function currentMonth(): string {
   return currentDate().slice(0, 7);
 }
 
-function uniqueBudgetStartDate(): string {
+/*
+ * The budget must start in the current month so that
+ * get_budget_progress can include the transaction created
+ * by this test.
+ *
+ * The previous fixture deliberately generated dates in
+ * the year 2200+, which made the budget inactive from
+ * the perspective of the current reporting period.
+ */
+function budgetStartDate(): string {
   const now = new Date();
 
-  const epochSeconds =
-    Math.floor(now.getTime() / 1000);
-
-  const year =
-    2200 +
-    (epochSeconds % 700);
-
-  const month =
-    (Math.floor(epochSeconds / 60) % 12) + 1;
-
-  const day =
-    (Math.floor(epochSeconds / 7200) % 28) + 1;
-
-  return `${year}-${String(month).padStart(
+  return `${now.getUTCFullYear()}-${String(
+    now.getUTCMonth() + 1,
+  ).padStart(
     2,
     "0",
-  )}-${String(day).padStart(
-    2,
-    "0",
-  )}`;
+  )}-01`;
 }
 
-function budgetTransactionDate(
-  budgetStart: string,
-): string {
-  return `${budgetStart.slice(
-    0,
-    7,
-  )}-15T12:00:00.000Z`;
+function budgetTransactionDate(): string {
+  return new Date().toISOString();
 }
 
 function monthKey(value: unknown): string {
@@ -837,12 +827,10 @@ describe("financial report calculations", () => {
         await getExpenseCategory();
 
       const budgetStart =
-        uniqueBudgetStartDate();
+        budgetStartDate();
 
       const transactionDate =
-        budgetTransactionDate(
-          budgetStart,
-        );
+        budgetTransactionDate();
 
       const {
         data: budgetId,
