@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 
 dotenv.config({
   path: ".env.local",
+  quiet: true,
 });
 
 const supabaseUrl =
@@ -132,12 +133,22 @@ export default async function globalSetup() {
   const userId = await getTestUserId();
 
   /*
-   * Delete child/dependent records before their
-   * referenced transactions and accounts.
+   * Delete dependent records before their referenced
+   * parent records.
    *
-   * long_term_assets MUST be deleted before
-   * transactions because purchase_transaction_id
-   * references transactions.id.
+   * Important foreign-key relationships:
+   *
+   * long_term_assets.purchase_transaction_id
+   *     -> transactions.id
+   *
+   * transaction_entries.account_id
+   *     -> accounts.id
+   *
+   * Therefore:
+   *
+   * 1. long_term_assets must be deleted before transactions.
+   * 2. transaction_entries must be deleted before accounts.
+   * 3. transactions must be deleted before accounts.
    */
   const tablesInDeletionOrder = [
     "long_term_assets",
@@ -148,6 +159,7 @@ export default async function globalSetup() {
     "deposits",
     "goals",
     "investment_performance",
+    "transaction_entries",
     "transactions",
     "budgets",
     "categories",
@@ -165,8 +177,8 @@ export default async function globalSetup() {
    * Transaction integration tests require at least
    * two real user-owned accounts.
    *
-   * Keep both in BDT so tests that group accounts
-   * by currency have a deterministic fixture.
+   * Keep both accounts in BDT so tests that group
+   * accounts by currency have a deterministic fixture.
    */
   await createBaselineAccounts(userId);
 
