@@ -96,6 +96,57 @@ async function deleteUserRows(
   }
 }
 
+/**
+ * transaction_entries does not contain user_id.
+ *
+ * It belongs to transactions through transaction_id,
+ * while transaction_entries.account_id references accounts.id.
+ *
+ * Therefore we must first find this user's transactions,
+ * delete their entries, and only then delete the
+ * transactions and accounts.
+ */
+async function deleteUserTransactionEntries(
+  userId: string,
+) {
+  const {
+    data: transactions,
+    error: transactionLookupError,
+  } = await supabase
+    .from("transactions")
+    .select("id")
+    .eq("user_id", userId);
+
+  if (transactionLookupError) {
+    throw new Error(
+      `[integration-global-setup] Failed to find transactions for transaction_entries cleanup: ${transactionLookupError.message}`,
+    );
+  }
+
+  const transactionIds =
+    transactions?.map(
+      (transaction) => transaction.id,
+    ) ?? [];
+
+  if (transactionIds.length === 0) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("transaction_entries")
+    .delete()
+    .in(
+      "transaction_id",
+      transactionIds,
+    );
+
+  if (error) {
+    throw new Error(
+      `[integration-global-setup] Failed to clean transaction_entries: ${error.message}`,
+    );
+  }
+}
+
 async function createBaselineAccounts(
   userId: string,
 ) {
@@ -136,9 +187,12 @@ export default async function globalSetup() {
    * Delete dependent records before their referenced
    * parent records.
    *
-   * Important foreign-key relationships:
+   * Important relationships:
    *
    * long_term_assets.purchase_transaction_id
+   *     -> transactions.id
+   *
+   * transaction_entries.transaction_id
    *     -> transactions.id
    *
    * transaction_entries.account_id
@@ -146,10 +200,15 @@ export default async function globalSetup() {
    *
    * Therefore:
    *
-   * 1. long_term_assets must be deleted before transactions.
-   * 2. transaction_entries must be deleted before accounts.
-   * 3. transactions must be deleted before accounts.
+   * long_term_assets
+   *     ↓
+   * transaction_entries
+   *     ↓
+   * transactions
+   *     ↓
+   * accounts
    */
+
   const tablesInDeletionOrder = [
     "long_term_assets",
     "tuition_students",
@@ -159,11 +218,6 @@ export default async function globalSetup() {
     "deposits",
     "goals",
     "investment_performance",
-    "transaction_entries",
-    "transactions",
-    "budgets",
-    "categories",
-    "accounts",
   ];
 
   for (const table of tablesInDeletionOrder) {
@@ -174,13 +228,57 @@ export default async function globalSetup() {
   }
 
   /*
+   * transaction_entries has no user_id.
+   * Delete the entries belonging to this user's
+   * transactions before deleting the transactions.
+   */
+  await deleteUserTransactionEntries(
+    userId,
+  );
+
+  /*
+   * Now the user's transactions can safely be
+   * deleted because their entries are gone.
+   */
+  await deleteUserRows(
+    "transactions",
+    userId,
+  );
+
+  /*
+   * Budgets and categories can now be removed.
+   */
+  await deleteUserRows(
+    "budgets",
+    userId,
+  );
+
+  await deleteUserRows(
+    "categories",
+    userId,
+  );
+
+  /*
+   * Accounts are now safe to delete because:
+   *
+   * - transaction_entries are gone
+   * - transactions are gone
+   */
+  await deleteUserRows(
+    "accounts",
+    userId,
+  );
+
+  /*
    * Transaction integration tests require at least
    * two real user-owned accounts.
    *
-   * Keep both accounts in BDT so tests that group
-   * accounts by currency have a deterministic fixture.
+   * Both are BDT assets so currency-grouping tests
+   * have a deterministic fixture.
    */
-  await createBaselineAccounts(userId);
+  await createBaselineAccounts(
+    userId,
+  );
 
   console.log(
     "[integration-global-setup] Cleaned dedicated integration test user and created baseline BDT Cash and Bank accounts.",
