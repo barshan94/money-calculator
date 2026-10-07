@@ -280,66 +280,84 @@ async function deleteUserLongTermAssets(
   /*
    * Also remove assets referenced by this user's
    * transactions, regardless of their user_id value.
+   *
+   * IMPORTANT:
+   * Process transaction IDs in bounded batches.
+   * Passing every transaction UUID in one .in()
+   * request can create an oversized HTTP request
+   * and surface as "TypeError: fetch failed".
    */
   for (
-    let offset = 0;
-    ;
-    offset += PAGE_SIZE
+    let index = 0;
+    index < userTransactionIds.length;
+    index += PAGE_SIZE
   ) {
-    const {
-      data,
-      error,
-    } =
-      await supabase
-        .from("long_term_assets")
-        .select(
-          "id, purchase_transaction_id",
-        )
-        .in(
-          "purchase_transaction_id",
-          userTransactionIds,
-        )
-        .range(
-          offset,
-          offset + PAGE_SIZE - 1,
+    const transactionIdBatch =
+      userTransactionIds.slice(
+        index,
+        index + PAGE_SIZE,
+      );
+
+    for (
+      let offset = 0;
+      ;
+      offset += PAGE_SIZE
+    ) {
+      const {
+        data,
+        error,
+      } =
+        await supabase
+          .from("long_term_assets")
+          .select(
+            "id, purchase_transaction_id",
+          )
+          .in(
+            "purchase_transaction_id",
+            transactionIdBatch,
+          )
+          .range(
+            offset,
+            offset + PAGE_SIZE - 1,
+          );
+
+      if (error) {
+        throw new Error(
+          `[integration-global-setup] Failed to find transaction-linked long-term assets: ${error.message}`,
+        );
+      }
+
+      const rows = data ?? [];
+
+      if (rows.length === 0) {
+        break;
+      }
+
+      const assetIds =
+        rows.map(
+          (asset) => asset.id,
         );
 
-    if (error) {
-      throw new Error(
-        `[integration-global-setup] Failed to find transaction-linked long-term assets: ${error.message}`,
-      );
-    }
+      const {
+        error: deleteError,
+      } =
+        await supabase
+          .from("long_term_assets")
+          .delete()
+          .in(
+            "id",
+            assetIds,
+          );
 
-    const rows = data ?? [];
-
-    if (rows.length === 0) {
-      break;
-    }
-
-    const assetIds =
-      rows.map(
-        (asset) => asset.id,
-      );
-
-    const {
-      error: deleteError,
-    } =
-      await supabase
-        .from("long_term_assets")
-        .delete()
-        .in(
-          "id",
-          assetIds,
+      if (deleteError) {
+        throw new Error(
+          `[integration-global-setup] Failed to clean transaction-linked long-term assets: ${deleteError.message}`,
         );
+      }
 
-    if (deleteError) {
-      throw new Error(
-        `[integration-global-setup] Failed to clean transaction-linked long-term assets: ${deleteError.message}`,
-      );
-    }
-
-    if (rows.length < PAGE_SIZE) {
-      break;
+      if (rows.length < PAGE_SIZE) {
+        break;
+      }
     }
   }
 }
@@ -656,5 +674,4 @@ export default async function globalSetup() {
   console.log(
     "[integration-global-setup] Cleaned dedicated integration test user and created baseline BDT Cash and Bank accounts.",
   );
-}
-
+      }
