@@ -146,6 +146,85 @@ async function getUserTransactionIds(
 }
 
 /**
+ * long_term_assets normally belongs to the user
+ * through user_id.
+ *
+ * However, purchase_transaction_id also creates a
+ * direct FK dependency on transactions.
+ *
+ * Therefore we clean it through BOTH ownership paths
+ * before transactions are deleted.
+ */
+async function deleteUserLongTermAssets(
+  userId: string,
+  userTransactionIds: string[],
+) {
+  /*
+   * First remove normally user-owned long-term assets.
+   */
+  await deleteUserRows(
+    "long_term_assets",
+    userId,
+  );
+
+  /*
+   * Some rows may have a NULL/different user_id while
+   * still referencing a transaction owned by this user.
+   *
+   * Remove those rows through purchase_transaction_id.
+   */
+  if (
+    userTransactionIds.length === 0
+  ) {
+    return;
+  }
+
+  const {
+    data: referencedAssets,
+    error: lookupError,
+  } = await supabase
+    .from("long_term_assets")
+    .select(
+      "id, purchase_transaction_id",
+    )
+    .in(
+      "purchase_transaction_id",
+      userTransactionIds,
+    );
+
+  if (lookupError) {
+    throw new Error(
+      `[integration-global-setup] Failed to find transaction-linked long-term assets: ${lookupError.message}`,
+    );
+  }
+
+  const assetIds =
+    referencedAssets?.map(
+      (asset) => asset.id,
+    ) ?? [];
+
+  if (assetIds.length === 0) {
+    return;
+  }
+
+  const {
+    error: deleteError,
+  } = await supabase
+    .from("long_term_assets")
+    .delete()
+    .in(
+      "id",
+      assetIds,
+    );
+
+  if (deleteError) {
+    throw new Error(
+      `[integration-global-setup] Failed to clean transaction-linked long-term assets: ${deleteError.message}`,
+    );
+  }
+}
+
+/**
  * transaction_entries has no user_id.
  *
  * Entries are owned through:
@@ -167,13 +246,14 @@ async function deleteUserTransactionEntries(
   userAccountIds: string[],
 ) {
   /*
-   * First collect entries attached to the user's
+   * Collect entry IDs attached to the user's
    * transactions.
    */
   const transactionEntryIds: string[] = [];
-  
 
-  if (userTransactionIds.length > 0) {
+  if (
+    userTransactionIds.length > 0
+  ) {
     const {
       data,
       error,
@@ -201,15 +281,12 @@ async function deleteUserTransactionEntries(
   }
 
   /*
-   * Now collect entries attached directly to the
-   * user's accounts.
-   *
-   * This is the important FK cleanup path:
-   *
-   * transaction_entries.account_id
-   *     -> accounts.id
+   * Also collect entries attached directly to
+   * the user's accounts.
    */
-  if (userAccountIds.length > 0) {
+  if (
+    userAccountIds.length > 0
+  ) {
     const {
       data,
       error,
@@ -234,11 +311,9 @@ async function deleteUserTransactionEntries(
 
     /*
      * Verify that every transaction referenced by
-     * a user-owned account entry is also owned by
-     * the test user.
+     * these account entries belongs to this test user.
      *
-     * Never silently delete another user's transaction
-     * data.
+     * Never delete another user's financial data.
      */
     const referencedTransactionIds =
       Array.from(
@@ -302,24 +377,23 @@ async function deleteUserTransactionEntries(
   }
 
   /*
-   * Deduplicate entry IDs because an entry can be
-   * discovered through both ownership paths.
+   * An entry may be discovered through both paths,
+   * so deduplicate before deleting.
    */
   const uniqueEntryIds =
     Array.from(
       new Set(transactionEntryIds),
     );
 
-  if (uniqueEntryIds.length === 0) {
+  if (
+    uniqueEntryIds.length === 0
+  ) {
     return;
   }
 
   /*
-   * Delete by PRIMARY KEY rather than relying on
-   * transaction_id alone.
-   *
-   * This guarantees that entries discovered through
-   * account_id are also removed.
+   * Delete by primary key so entries discovered
+   * through account_id are also removed.
    */
   const {
     error,
@@ -377,7 +451,8 @@ export default async function globalSetup() {
     await getTestUserId();
 
   /*
-   * Capture the ownership graph BEFORE cleanup.
+   * Capture the complete ownership graph BEFORE
+   * deleting anything.
    */
   const userAccountIds =
     await getUserAccountIds(
@@ -390,13 +465,19 @@ export default async function globalSetup() {
     );
 
   /*
-   * Remove module records first.
-   *
-   * long_term_assets can reference transactions,
-   * so it must be removed before transaction cleanup.
+   * long_term_assets must be handled specially
+   * because purchase_transaction_id can reference
+   * transactions even when user_id does not match.
+   */
+  await deleteUserLongTermAssets(
+    userId,
+    userTransactionIds,
+  );
+
+  /*
+   * Remove the remaining module records first.
    */
   const moduleTables = [
-    "long_term_assets",
     "tuition_students",
     "investments",
     "recurring_transactions",
@@ -416,8 +497,9 @@ export default async function globalSetup() {
   }
 
   /*
-   * Remove every transaction_entry belonging to
-   * the user's transaction/account ownership graph.
+   * transaction_entries has no user_id, so clean
+   * every entry reachable through this user's
+   * transactions or accounts.
    */
   await deleteUserTransactionEntries(
     userId,
@@ -426,7 +508,7 @@ export default async function globalSetup() {
   );
 
   /*
-   * Now transactions can safely be deleted.
+   * Now transactions can safely be removed.
    */
   await deleteUserRows(
     "transactions",
@@ -434,9 +516,9 @@ export default async function globalSetup() {
   );
 
   /*
-   * Categories can reference accounts through
-   * ledger_account_id, so categories must disappear
-   * before accounts.
+   * Budgets and categories must disappear before
+   * accounts because categories can reference
+   * ledger accounts.
    */
   await deleteUserRows(
     "budgets",
@@ -455,7 +537,7 @@ export default async function globalSetup() {
    * transactions         -> deleted
    * categories           -> deleted
    *
-   * Therefore user-owned accounts are safe to remove.
+   * User-owned accounts can now be removed safely.
    */
   await deleteUserRows(
     "accounts",
