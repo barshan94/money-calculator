@@ -97,17 +97,57 @@ async function deleteUserRows(
 }
 
 /**
- * transaction_entries does not contain user_id.
+ * Find all accounts owned by the integration test user.
  *
- * It belongs to transactions through transaction_id,
- * while transaction_entries.account_id references accounts.id.
+ * We need the IDs because transaction_entries does not
+ * contain user_id directly.
+ */
+async function getUserAccountIds(
+  userId: string,
+) {
+  const {
+    data,
+    error,
+  } = await supabase
+    .from("accounts")
+    .select("id")
+    .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(
+      `[integration-global-setup] Failed to find test-user accounts: ${error.message}`,
+    );
+  }
+
+  return (
+    data?.map((account) => account.id) ?? []
+  );
+}
+
+/**
+ * transaction_entries has no user_id.
  *
- * Therefore we must first find this user's transactions,
- * delete their entries, and only then delete the
- * transactions and accounts.
+ * It references both:
+ *
+ * transaction_entries.transaction_id
+ *     -> transactions.id
+ *
+ * transaction_entries.account_id
+ *     -> accounts.id
+ *
+ * We therefore clean entries through BOTH known
+ * ownership paths:
+ *
+ * 1. entries belonging to this user's transactions
+ * 2. entries attached to this user's accounts
+ *
+ * The second path is especially important because an
+ * account cannot be deleted while any entry still
+ * references it.
  */
 async function deleteUserTransactionEntries(
   userId: string,
+  accountIds: string[],
 ) {
   const {
     data: transactions,
@@ -128,21 +168,80 @@ async function deleteUserTransactionEntries(
       (transaction) => transaction.id,
     ) ?? [];
 
-  if (transactionIds.length === 0) {
+  if (transactionIds.length > 0) {
+    const {
+      error: transactionEntryError,
+    } = await supabase
+      .from("transaction_entries")
+      .delete()
+      .in(
+        "transaction_id",
+        transactionIds,
+      );
+
+    if (transactionEntryError) {
+      throw new Error(
+        `[integration-global-setup] Failed to clean transaction_entries by transaction: ${transactionEntryError.message}`,
+      );
+    }
+  }
+
+  if (accountIds.length > 0) {
+    const {
+      error: accountEntryError,
+    } = await supabase
+      .from("transaction_entries")
+      .delete()
+      .in(
+        "account_id",
+        accountIds,
+      );
+
+    if (accountEntryError) {
+      throw new Error(
+        `[integration-global-setup] Failed to clean transaction_entries by account: ${accountEntryError.message}`,
+      );
+    }
+  }
+}
+
+/**
+ * Categories have a ledger_account_id foreign key to
+ * accounts.id.
+ *
+ * User-owned categories should already be removed by
+ * deleteUserRows("categories", userId).
+ *
+ * This additional cleanup handles any user-owned
+ * account references that may survive through a
+ * category relationship.
+ *
+ * We only touch categories whose ledger account belongs
+ * to this test user. System ledger accounts are never
+ * modified.
+ */
+async function detachUserCategoryLedgerAccounts(
+  accountIds: string[],
+) {
+  if (accountIds.length === 0) {
     return;
   }
 
-  const { error } = await supabase
-    .from("transaction_entries")
-    .delete()
+  const {
+    error,
+  } = await supabase
+    .from("categories")
+    .update({
+      ledger_account_id: null,
+    })
     .in(
-      "transaction_id",
-      transactionIds,
+      "ledger_account_id",
+      accountIds,
     );
 
   if (error) {
     throw new Error(
-      `[integration-global-setup] Failed to clean transaction_entries: ${error.message}`,
+      `[integration-global-setup] Failed to detach category ledger accounts: ${error.message}`,
     );
   }
 }
@@ -184,31 +283,22 @@ export default async function globalSetup() {
   const userId = await getTestUserId();
 
   /*
-   * Delete dependent records before their referenced
-   * parent records.
-   *
-   * Important relationships:
+   * Get the user's existing accounts BEFORE deleting
+   * anything. Their IDs are required to clean the
+   * transaction_entries.account_id foreign key.
+   */
+  const accountIds =
+    await getUserAccountIds(userId);
+
+  /*
+   * Remove module-level records first.
    *
    * long_term_assets.purchase_transaction_id
    *     -> transactions.id
    *
-   * transaction_entries.transaction_id
-   *     -> transactions.id
-   *
-   * transaction_entries.account_id
-   *     -> accounts.id
-   *
-   * Therefore:
-   *
-   * long_term_assets
-   *     ↓
-   * transaction_entries
-   *     ↓
-   * transactions
-   *     ↓
-   * accounts
+   * Other modules reference transactions and/or
+   * accounts through their own relationships.
    */
-
   const tablesInDeletionOrder = [
     "long_term_assets",
     "tuition_students",
@@ -229,16 +319,18 @@ export default async function globalSetup() {
 
   /*
    * transaction_entries has no user_id.
-   * Delete the entries belonging to this user's
-   * transactions before deleting the transactions.
+   *
+   * Clean entries through both transaction ownership
+   * and account ownership.
    */
   await deleteUserTransactionEntries(
     userId,
+    accountIds,
   );
 
   /*
-   * Now the user's transactions can safely be
-   * deleted because their entries are gone.
+   * Transactions can now be removed because their
+   * transaction_entries are gone.
    */
   await deleteUserRows(
     "transactions",
@@ -246,8 +338,18 @@ export default async function globalSetup() {
   );
 
   /*
-   * Budgets and categories can now be removed.
+   * Categories may reference accounts through
+   * ledger_account_id.
+   *
+   * Detach only references pointing to accounts
+   * owned by this integration user.
+   *
+   * System ledger accounts remain untouched.
    */
+  await detachUserCategoryLedgerAccounts(
+    accountIds,
+  );
+
   await deleteUserRows(
     "budgets",
     userId,
@@ -259,10 +361,11 @@ export default async function globalSetup() {
   );
 
   /*
-   * Accounts are now safe to delete because:
+   * Accounts are now safe to remove:
    *
-   * - transaction_entries are gone
-   * - transactions are gone
+   * - transaction_entries were removed by transaction ID
+   * - transaction_entries were also removed by account ID
+   * - user-owned category ledger references were detached
    */
   await deleteUserRows(
     "accounts",
@@ -273,8 +376,8 @@ export default async function globalSetup() {
    * Transaction integration tests require at least
    * two real user-owned accounts.
    *
-   * Both are BDT assets so currency-grouping tests
-   * have a deterministic fixture.
+   * Both are BDT assets so currency-dependent tests
+   * have a deterministic baseline.
    */
   await createBaselineAccounts(
     userId,
