@@ -170,7 +170,8 @@ async function deleteUserTransactionEntries(
    * First collect entries attached to the user's
    * transactions.
    */
-  let transactionEntryIds: string[] = [];
+  const transactionEntryIds: string[] = [];
+  
 
   if (userTransactionIds.length > 0) {
     const {
