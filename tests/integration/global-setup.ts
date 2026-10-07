@@ -101,13 +101,6 @@ async function deleteUserRows(
   }
 }
 
-/**
- * Collect all account IDs owned by the integration user.
- *
- * transaction_entries.account_id references accounts.id,
- * so account ownership is another path by which an entry
- * can belong to the integration user's financial dataset.
- */
 async function getUserAccountIds(
   userId: string,
 ) {
@@ -130,9 +123,6 @@ async function getUserAccountIds(
   );
 }
 
-/**
- * Collect transaction IDs directly owned by the user.
- */
 async function getUserTransactionIds(
   userId: string,
 ) {
@@ -158,60 +148,101 @@ async function getUserTransactionIds(
 /**
  * transaction_entries has no user_id.
  *
- * An entry can therefore be connected to the user's
- * financial data through either:
+ * Entries are owned through:
  *
  *   transaction_entries.transaction_id
  *       -> transactions.user_id
  *
- * or:
+ * and:
  *
  *   transaction_entries.account_id
  *       -> accounts.user_id
  *
- * We collect both sets of transaction IDs before
- * deleting entries.
- *
- * If an entry attached to one of the user's accounts
- * points to a transaction owned by another user, we stop
- * instead of silently deleting another user's financial
- * data.
+ * We therefore remove entries through BOTH foreign-key
+ * paths before deleting transactions or accounts.
  */
 async function deleteUserTransactionEntries(
   userId: string,
   userTransactionIds: string[],
   userAccountIds: string[],
 ) {
-  const transactionIds =
-    new Set(userTransactionIds);
+  /*
+   * First collect entries attached to the user's
+   * transactions.
+   */
+  let transactionEntryIds: string[] = [];
 
-  if (userAccountIds.length > 0) {
+  if (userTransactionIds.length > 0) {
     const {
-      data: accountEntries,
-      error: accountEntryError,
-    } =
-      await supabase
-        .from("transaction_entries")
-        .select(
-          "id, transaction_id, account_id",
-        )
-        .in(
-          "account_id",
-          userAccountIds,
-        );
+      data,
+      error,
+    } = await supabase
+      .from("transaction_entries")
+      .select(
+        "id, transaction_id, account_id",
+      )
+      .in(
+        "transaction_id",
+        userTransactionIds,
+      );
 
-    if (accountEntryError) {
+    if (error) {
       throw new Error(
-        `[integration-global-setup] Failed to find account transaction entries: ${accountEntryError.message}`,
+        `[integration-global-setup] Failed to find transaction-owned entries: ${error.message}`,
       );
     }
 
-    const accountEntryTransactionIds =
+    transactionEntryIds.push(
+      ...(data ?? []).map(
+        (entry) => entry.id,
+      ),
+    );
+  }
+
+  /*
+   * Now collect entries attached directly to the
+   * user's accounts.
+   *
+   * This is the important FK cleanup path:
+   *
+   * transaction_entries.account_id
+   *     -> accounts.id
+   */
+  if (userAccountIds.length > 0) {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("transaction_entries")
+      .select(
+        "id, transaction_id, account_id",
+      )
+      .in(
+        "account_id",
+        userAccountIds,
+      );
+
+    if (error) {
+      throw new Error(
+        `[integration-global-setup] Failed to find account-owned entries: ${error.message}`,
+      );
+    }
+
+    const accountEntries =
+      data ?? [];
+
+    /*
+     * Verify that every transaction referenced by
+     * a user-owned account entry is also owned by
+     * the test user.
+     *
+     * Never silently delete another user's transaction
+     * data.
+     */
+    const referencedTransactionIds =
       Array.from(
         new Set(
-          (
-            accountEntries ?? []
-          ).map(
+          accountEntries.map(
             (entry) =>
               entry.transaction_id,
           ),
@@ -219,13 +250,13 @@ async function deleteUserTransactionEntries(
       );
 
     if (
-      accountEntryTransactionIds.length >
+      referencedTransactionIds.length >
       0
     ) {
       const {
-        data: relatedTransactions,
+        data: transactions,
         error:
-          relatedTransactionError,
+          transactionError,
       } =
         await supabase
           .from("transactions")
@@ -234,18 +265,18 @@ async function deleteUserTransactionEntries(
           )
           .in(
             "id",
-            accountEntryTransactionIds,
+            referencedTransactionIds,
           );
 
-      if (relatedTransactionError) {
+      if (transactionError) {
         throw new Error(
-          `[integration-global-setup] Failed to verify transaction ownership: ${relatedTransactionError.message}`,
+          `[integration-global-setup] Failed to verify account entry transaction ownership: ${transactionError.message}`,
         );
       }
 
       const foreignTransactions =
         (
-          relatedTransactions ?? []
+          transactions ?? []
         ).filter(
           (transaction) =>
             transaction.user_id !==
@@ -253,39 +284,50 @@ async function deleteUserTransactionEntries(
         );
 
       if (
-        foreignTransactions.length > 0
+        foreignTransactions.length >
+        0
       ) {
         throw new Error(
-          `[integration-global-setup] Refusing to delete transaction entries belonging to another user. Found ${foreignTransactions.length} foreign transaction(s) referenced by integration-test account(s).`,
-        );
-      }
-
-      for (
-        const transactionId of
-          accountEntryTransactionIds
-      ) {
-        transactionIds.add(
-          transactionId,
+          `[integration-global-setup] Refusing to delete transaction entries referencing ${foreignTransactions.length} transaction(s) owned by another user.`,
         );
       }
     }
+
+    transactionEntryIds.push(
+      ...accountEntries.map(
+        (entry) => entry.id,
+      ),
+    );
   }
 
-  const ids =
-    Array.from(transactionIds);
+  /*
+   * Deduplicate entry IDs because an entry can be
+   * discovered through both ownership paths.
+   */
+  const uniqueEntryIds =
+    Array.from(
+      new Set(transactionEntryIds),
+    );
 
-  if (ids.length === 0) {
+  if (uniqueEntryIds.length === 0) {
     return;
   }
 
+  /*
+   * Delete by PRIMARY KEY rather than relying on
+   * transaction_id alone.
+   *
+   * This guarantees that entries discovered through
+   * account_id are also removed.
+   */
   const {
     error,
   } = await supabase
     .from("transaction_entries")
     .delete()
     .in(
-      "transaction_id",
-      ids,
+      "id",
+      uniqueEntryIds,
     );
 
   if (error) {
@@ -334,8 +376,7 @@ export default async function globalSetup() {
     await getTestUserId();
 
   /*
-   * Capture the existing ownership graph
-   * BEFORE deleting anything.
+   * Capture the ownership graph BEFORE cleanup.
    */
   const userAccountIds =
     await getUserAccountIds(
@@ -348,11 +389,10 @@ export default async function globalSetup() {
     );
 
   /*
-   * Delete module records that can reference
-   * transactions or other financial objects.
+   * Remove module records first.
    *
-   * Long-term assets must be removed before their
-   * purchase transactions.
+   * long_term_assets can reference transactions,
+   * so it must be removed before transaction cleanup.
    */
   const moduleTables = [
     "long_term_assets",
@@ -375,10 +415,8 @@ export default async function globalSetup() {
   }
 
   /*
-   * transaction_entries has no user_id.
-   *
-   * Remove every entry belonging to the user's
-   * transaction/account ownership graph.
+   * Remove every transaction_entry belonging to
+   * the user's transaction/account ownership graph.
    */
   await deleteUserTransactionEntries(
     userId,
@@ -387,8 +425,7 @@ export default async function globalSetup() {
   );
 
   /*
-   * All transaction entries belonging to the
-   * integration user's financial graph are now gone.
+   * Now transactions can safely be deleted.
    */
   await deleteUserRows(
     "transactions",
@@ -396,8 +433,8 @@ export default async function globalSetup() {
   );
 
   /*
-   * Categories may reference user accounts through
-   * categories.ledger_account_id, so remove them
+   * Categories can reference accounts through
+   * ledger_account_id, so categories must disappear
    * before accounts.
    */
   await deleteUserRows(
@@ -411,11 +448,13 @@ export default async function globalSetup() {
   );
 
   /*
-   * Accounts are now safe:
+   * At this point:
    *
-   * - transaction_entries were removed
-   * - transactions were removed
-   * - categories were removed
+   * transaction_entries -> deleted
+   * transactions         -> deleted
+   * categories           -> deleted
+   *
+   * Therefore user-owned accounts are safe to remove.
    */
   await deleteUserRows(
     "accounts",
@@ -423,8 +462,8 @@ export default async function globalSetup() {
   );
 
   /*
-   * Transaction tests require at least two
-   * user-owned, non-system, non-archived accounts.
+   * Transaction integration tests require at least
+   * two non-system, non-archived accounts.
    */
   await createBaselineAccounts(
     userId,
