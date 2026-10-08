@@ -27,22 +27,6 @@ type LongTermAssetRow = {
     | null;
 };
 
-/**
- * Runs once before the whole Playwright suite.
- *
- * Only the dedicated test user is affected.
- *
- * IMPORTANT:
- *
- * transaction_entries does NOT have user_id.
- * Therefore ownership is resolved through the
- * referenced transaction/account relationships.
- *
- * This file intentionally avoids `.in()` queries.
- * Large PostgREST `.in()` requests have repeatedly
- * caused `TypeError: fetch failed` in GitHub Actions.
- */
-
 async function getTestUser(
   supabase: SupabaseClient,
 ) {
@@ -88,66 +72,6 @@ async function getTestUser(
   return undefined;
 }
 
-async function getUserIds(
-  supabase: SupabaseClient,
-  table:
-    | "accounts"
-    | "transactions",
-  userId: string,
-) {
-  const {
-    data,
-    error,
-  } =
-    await supabase
-      .from(table)
-      .select("id")
-      .eq("user_id", userId);
-
-  if (error) {
-    throw new Error(
-      `[global-setup] Failed to find ${table}: ${error.message}`,
-    );
-  }
-
-  return (
-    data?.map((row) => row.id) ?? []
-  );
-}
-
-async function deleteUserRows(
-  supabase: SupabaseClient,
-  table: string,
-  userId: string,
-) {
-  const {
-    error,
-    count,
-  } =
-    await supabase
-      .from(table)
-      .delete({
-        count: "exact",
-      })
-      .eq("user_id", userId);
-
-  if (error) {
-    throw new Error(
-      `[global-setup] E2E cleanup failed for ${table}: ${error.message}`,
-    );
-  }
-
-  if (
-    (count ?? 0) > 0
-  ) {
-    console.log(
-      `[global-setup] ${table}: deleted ${count} row(s).`,
-    );
-  }
-
-  return count ?? 0;
-}
-
 async function getAllTransactions(
   supabase: SupabaseClient,
 ) {
@@ -184,9 +108,7 @@ async function getAllTransactions(
       (data as TransactionRow[] | null) ??
       [];
 
-    transactions.push(
-      ...rows,
-    );
+    transactions.push(...rows);
 
     if (
       rows.length < PAGE_SIZE
@@ -196,6 +118,63 @@ async function getAllTransactions(
   }
 
   return transactions;
+}
+
+async function getUserAccountIds(
+  supabase: SupabaseClient,
+  userId: string,
+) {
+  const {
+    data,
+    error,
+  } =
+    await supabase
+      .from("accounts")
+      .select("id")
+      .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(
+      `[global-setup] Failed to find accounts: ${error.message}`,
+    );
+  }
+
+  return (
+    data?.map((row) => row.id) ?? []
+  );
+}
+
+async function deleteUserRows(
+  supabase: SupabaseClient,
+  table: string,
+  userId: string,
+) {
+  const {
+    error,
+    count,
+  } =
+    await supabase
+      .from(table)
+      .delete({
+        count: "exact",
+      })
+      .eq("user_id", userId);
+
+  if (error) {
+    throw new Error(
+      `[global-setup] Failed to clean ${table}: ${error.message}`,
+    );
+  }
+
+  if (
+    (count ?? 0) > 0
+  ) {
+    console.log(
+      `[global-setup] ${table}: deleted ${count} row(s).`,
+    );
+  }
+
+  return count ?? 0;
 }
 
 async function getAllTransactionEntries(
@@ -236,9 +215,7 @@ async function getAllTransactionEntries(
       (data as TransactionEntryRow[] | null) ??
       [];
 
-    entries.push(
-      ...rows,
-    );
+    entries.push(...rows);
 
     if (
       rows.length < PAGE_SIZE
@@ -252,26 +229,17 @@ async function getAllTransactionEntries(
 
 async function getTransactionLinkedLongTermAssetIds(
   supabase: SupabaseClient,
-  transactionIds: string[],
+  userTransactionIds: Set<string>,
 ) {
   if (
-    transactionIds.length === 0
+    userTransactionIds.size === 0
   ) {
     return [];
   }
 
-  const transactionIdSet =
-    new Set(transactionIds);
-
   const matchingAssetIds: string[] =
     [];
 
-  /*
-   * Scan first, delete afterward.
-   *
-   * Deleting while using offset pagination could
-   * shift later rows and accidentally skip assets.
-   */
   for (
     let offset = 0;
     ;
@@ -301,7 +269,7 @@ async function getTransactionLinkedLongTermAssetIds(
 
     if (error) {
       throw new Error(
-        `[global-setup] Failed to scan transaction-linked long-term assets: ${error.message}`,
+        `[global-setup] Failed to scan long-term assets: ${error.message}`,
       );
     }
 
@@ -312,7 +280,7 @@ async function getTransactionLinkedLongTermAssetIds(
     for (const asset of rows) {
       if (
         asset.purchase_transaction_id &&
-        transactionIdSet.has(
+        userTransactionIds.has(
           asset.purchase_transaction_id,
         )
       ) {
@@ -357,11 +325,24 @@ async function deleteRowsById(
 async function deleteLongTermAssets(
   supabase: SupabaseClient,
   userId: string,
-  transactionIds: string[],
+  allTransactions: TransactionRow[],
 ) {
+  const userTransactionIds =
+    new Set(
+      allTransactions
+        .filter(
+          (transaction) =>
+            transaction.user_id ===
+            userId,
+        )
+        .map(
+          (transaction) =>
+            transaction.id,
+        ),
+    );
+
   /*
-   * First remove assets directly owned by
-   * the test user.
+   * Directly-owned assets.
    */
   await deleteUserRows(
     supabase,
@@ -369,20 +350,13 @@ async function deleteLongTermAssets(
     userId,
   );
 
-  if (
-    transactionIds.length === 0
-  ) {
-    return;
-  }
-
   /*
-   * Find transaction-linked assets without
-   * `.in("purchase_transaction_id", ...)`.
+   * Assets linked through purchase_transaction_id.
    */
   const assetIds =
     await getTransactionLinkedLongTermAssetIds(
       supabase,
-      transactionIds,
+      userTransactionIds,
     );
 
   if (
@@ -405,18 +379,30 @@ async function deleteLongTermAssets(
 async function deleteTransactionEntries(
   supabase: SupabaseClient,
   userId: string,
-  transactionIds: string[],
-  accountIds: string[],
+  userAccountIds: string[],
+  allTransactions: TransactionRow[],
 ) {
   const allEntries =
     await getAllTransactionEntries(
       supabase,
     );
 
-  const allTransactions =
-    await getAllTransactions(
-      supabase,
+  const userTransactionIds =
+    new Set(
+      allTransactions
+        .filter(
+          (transaction) =>
+            transaction.user_id ===
+            userId,
+        )
+        .map(
+          (transaction) =>
+            transaction.id,
+        ),
     );
+
+  const userAccountIdSet =
+    new Set(userAccountIds);
 
   const transactionOwners =
     new Map<string, string>();
@@ -431,29 +417,17 @@ async function deleteTransactionEntries(
     );
   }
 
-  const transactionIdSet =
-    new Set(transactionIds);
-
-  const accountIdSet =
-    new Set(accountIds);
-
-  /*
-   * Select candidate entries locally.
-   */
   const candidateEntries =
     allEntries.filter(
       (entry) =>
-        transactionIdSet.has(
+        userTransactionIds.has(
           entry.transaction_id,
         ) ||
-        accountIdSet.has(
+        userAccountIdSet.has(
           entry.account_id,
         ),
     );
 
-  /*
-   * Never delete another user's transaction entries.
-   */
   const foreignEntries =
     candidateEntries.filter(
       (entry) => {
@@ -477,9 +451,6 @@ async function deleteTransactionEntries(
     );
   }
 
-  /*
-   * An unresolved transaction is also unsafe.
-   */
   const unresolvedEntries =
     candidateEntries.filter(
       (entry) =>
@@ -511,10 +482,6 @@ async function deleteTransactionEntries(
     return;
   }
 
-  /*
-   * Delete individually so there is no `.in()`
-   * request at all.
-   */
   await deleteRowsById(
     supabase,
     "transaction_entries",
@@ -525,9 +492,6 @@ async function deleteTransactionEntries(
     `[global-setup] transaction_entries: deleted ${uniqueEntryIds.length} row(s).`,
   );
 
-  /*
-   * Final verification.
-   */
   const remainingEntries =
     await getAllTransactionEntries(
       supabase,
@@ -536,10 +500,10 @@ async function deleteTransactionEntries(
   const remainingUserEntries =
     remainingEntries.filter(
       (entry) =>
-        transactionIdSet.has(
+        userTransactionIds.has(
           entry.transaction_id,
         ) ||
-        accountIdSet.has(
+        userAccountIdSet.has(
           entry.account_id,
         ),
     );
@@ -562,7 +526,7 @@ export default async function globalSetup() {
 
   if (!url || !serviceRoleKey) {
     console.warn(
-      "[global-setup] Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY — skipping E2E data cleanup.",
+      "[global-setup] Missing Supabase environment variables — skipping cleanup.",
     );
 
     return;
@@ -570,7 +534,7 @@ export default async function globalSetup() {
 
   if (!TEST_USER_EMAIL) {
     console.warn(
-      "[global-setup] Missing PLAYWRIGHT_TEST_EMAIL — skipping E2E data cleanup.",
+      "[global-setup] Missing PLAYWRIGHT_TEST_EMAIL — skipping cleanup.",
     );
 
     return;
@@ -595,7 +559,7 @@ export default async function globalSetup() {
 
   if (!testUser) {
     console.warn(
-      `[global-setup] No auth user found for ${TEST_USER_EMAIL} — skipping E2E data cleanup.`,
+      `[global-setup] Test user ${TEST_USER_EMAIL} was not found — skipping cleanup.`,
     );
 
     return;
@@ -609,23 +573,19 @@ export default async function globalSetup() {
   );
 
   /*
-   * Capture IDs BEFORE cleanup.
+   * One complete transaction scan becomes the
+   * source of truth for transaction ownership.
    */
-  const accountIds =
-    await getUserIds(
+  const allTransactions =
+    await getAllTransactions(
       supabase,
-      "accounts",
-      userId,
     );
 
-  const transactionIds =
-    await getUserIds(
+  const userAccountIds =
+    await getUserAccountIds(
       supabase,
-      "transactions",
       userId,
     );
-
-  let totalDeleted = 0;
 
   /*
    * 1. Long-term assets.
@@ -633,7 +593,7 @@ export default async function globalSetup() {
   await deleteLongTermAssets(
     supabase,
     userId,
-    transactionIds,
+    allTransactions,
   );
 
   /*
@@ -649,6 +609,8 @@ export default async function globalSetup() {
     "investment_performance",
   ] as const;
 
+  let totalDeleted = 0;
+
   for (
     const table of moduleTables
   ) {
@@ -661,13 +623,13 @@ export default async function globalSetup() {
   }
 
   /*
-   * 3. Ledger entries.
+   * 3. Transaction entries.
    */
   await deleteTransactionEntries(
     supabase,
     userId,
-    transactionIds,
-    accountIds,
+    userAccountIds,
+    allTransactions,
   );
 
   /*
