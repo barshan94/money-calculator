@@ -264,7 +264,7 @@ async function deleteUserLongTermAssets(
   userTransactionIds: string[],
 ) {
   /*
-   * Remove normally user-owned long-term assets first.
+   * First remove normally user-owned long-term assets.
    */
   await deleteUserRows(
     "long_term_assets",
@@ -278,64 +278,86 @@ async function deleteUserLongTermAssets(
   }
 
   /*
-   * Also remove assets referenced by this user's
-   * transactions, regardless of their user_id value.
+   * Some historical rows may reference one of the
+   * user's transactions while having a different or
+   * missing user_id.
    *
-   * IMPORTANT:
-   * Process transaction IDs in bounded batches.
-   * Passing every transaction UUID in one .in()
-   * request can create an oversized HTTP request
-   * and surface as "TypeError: fetch failed".
+   * Do NOT use:
+   *
+   *   .in("purchase_transaction_id", userTransactionIds)
+   *
+   * because that can create a very large HTTP query
+   * and has repeatedly produced "TypeError: fetch failed"
+   * in GitHub Actions.
+   *
+   * Instead, scan long_term_assets in bounded pages and
+   * compare transaction IDs locally.
    */
+  const userTransactionIdSet =
+    new Set(userTransactionIds);
+
   for (
-    let index = 0;
-    index < userTransactionIds.length;
-    index += PAGE_SIZE
+    let offset = 0;
+    ;
+    offset += PAGE_SIZE
   ) {
-    const transactionIdBatch =
-      userTransactionIds.slice(
-        index,
-        index + PAGE_SIZE,
-      );
-
-    for (
-      let offset = 0;
-      ;
-      offset += PAGE_SIZE
-    ) {
-      const {
-        data,
-        error,
-      } =
-        await supabase
-          .from("long_term_assets")
-          .select(
-            "id, purchase_transaction_id",
-          )
-          .in(
-            "purchase_transaction_id",
-            transactionIdBatch,
-          )
-          .range(
-            offset,
-            offset + PAGE_SIZE - 1,
-          );
-
-      if (error) {
-        throw new Error(
-          `[integration-global-setup] Failed to find transaction-linked long-term assets: ${error.message}`,
+    const {
+      data,
+      error,
+    } =
+      await supabase
+        .from("long_term_assets")
+        .select(
+          "id, purchase_transaction_id",
+        )
+        .not(
+          "purchase_transaction_id",
+          "is",
+          null,
+        )
+        .range(
+          offset,
+          offset + PAGE_SIZE - 1,
         );
-      }
 
-      const rows = data ?? [];
+    if (error) {
+      throw new Error(
+        `[integration-global-setup] Failed to scan long-term assets: ${error.message}`,
+      );
+    }
 
-      if (rows.length === 0) {
-        break;
-      }
+    const rows = data ?? [];
 
-      const assetIds =
-        rows.map(
+    if (rows.length === 0) {
+      break;
+    }
+
+    const matchingAssetIds =
+      rows
+        .filter(
+          (asset) =>
+            asset.purchase_transaction_id &&
+            userTransactionIdSet.has(
+              asset.purchase_transaction_id,
+            ),
+        )
+        .map(
           (asset) => asset.id,
+        );
+
+    /*
+     * Delete only assets whose purchase transaction
+     * belongs to the dedicated integration user.
+     */
+    for (
+      let index = 0;
+      index < matchingAssetIds.length;
+      index += PAGE_SIZE
+    ) {
+      const batch =
+        matchingAssetIds.slice(
+          index,
+          index + PAGE_SIZE,
         );
 
       const {
@@ -346,7 +368,7 @@ async function deleteUserLongTermAssets(
           .delete()
           .in(
             "id",
-            assetIds,
+            batch,
           );
 
       if (deleteError) {
@@ -354,10 +376,10 @@ async function deleteUserLongTermAssets(
           `[integration-global-setup] Failed to clean transaction-linked long-term assets: ${deleteError.message}`,
         );
       }
+    }
 
-      if (rows.length < PAGE_SIZE) {
-        break;
-      }
+    if (rows.length < PAGE_SIZE) {
+      break;
     }
   }
 }
@@ -405,11 +427,23 @@ async function deleteUserTransactionEntries(
     referencedTransactionIds.length >
     0
   ) {
+    /*
+     * Process referenced transaction IDs in bounded
+     * batches rather than sending the entire list
+     * in one HTTP request.
+     */
     for (
-      let offset = 0;
-      ;
-      offset += PAGE_SIZE
+      let index = 0;
+      index <
+      referencedTransactionIds.length;
+      index += PAGE_SIZE
     ) {
+      const transactionIdBatch =
+        referencedTransactionIds.slice(
+          index,
+          index + PAGE_SIZE,
+        );
+
       const {
         data,
         error,
@@ -421,11 +455,7 @@ async function deleteUserTransactionEntries(
           )
           .in(
             "id",
-            referencedTransactionIds,
-          )
-          .range(
-            offset,
-            offset + PAGE_SIZE - 1,
+            transactionIdBatch,
           );
 
       if (error) {
@@ -450,13 +480,6 @@ async function deleteUserTransactionEntries(
         throw new Error(
           `[integration-global-setup] Refusing to delete transaction entries referencing another user's transaction.`,
         );
-      }
-
-      if (
-        (data ?? []).length <
-        PAGE_SIZE
-      ) {
-        break;
       }
     }
   }
@@ -516,9 +539,9 @@ async function deleteUserTransactionEntries(
   /*
    * Final verification.
    *
-   * This is intentionally strict: if even one entry
-   * remains attached to the user's accounts or
-   * transactions, account deletion must not proceed.
+   * If even one entry remains attached to the user's
+   * accounts or transactions, account deletion must
+   * not proceed.
    */
   const remainingByTransaction =
     await getAllTransactionEntriesByTransactionIds(
@@ -674,4 +697,5 @@ export default async function globalSetup() {
   console.log(
     "[integration-global-setup] Cleaned dedicated integration test user and created baseline BDT Cash and Bank accounts.",
   );
-      }
+}
+
