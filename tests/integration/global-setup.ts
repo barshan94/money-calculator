@@ -340,11 +340,8 @@ async function deleteUserLongTermAssets(
   allTransactions: TransactionRow[],
 ) {
   /*
-   * Build ownership directly from the complete
-   * transaction scan.
-   *
-   * This avoids relying on a potentially truncated
-   * single Supabase response.
+   * Build the complete set of transactions
+   * belonging to the integration test user.
    */
   const userTransactionIds =
     new Set(
@@ -361,7 +358,8 @@ async function deleteUserLongTermAssets(
     );
 
   /*
-   * Delete assets directly owned by the user.
+   * First remove assets directly owned by
+   * the test user.
    */
   await deleteUserRows(
     "long_term_assets",
@@ -369,27 +367,59 @@ async function deleteUserLongTermAssets(
   );
 
   /*
-   * Also delete assets owned indirectly through
-   * purchase_transaction_id.
+   * There may be historical/test rows where
+   * user_id is missing or incorrect while
+   * purchase_transaction_id still points to
+   * one of this user's transactions.
+   *
+   * Scan the entire table and remove those
+   * rows explicitly.
    */
-  const assetIds =
+  const linkedAssetIds =
     await getTransactionLinkedLongTermAssetIds(
       userTransactionIds,
     );
 
   if (
-    assetIds.length === 0
+    linkedAssetIds.length > 0
   ) {
-    return;
+    await deleteRowsById(
+      "long_term_assets",
+      linkedAssetIds,
+    );
+
+    console.log(
+      `[integration-global-setup] Deleted ${linkedAssetIds.length} transaction-linked long-term asset(s).`,
+    );
   }
 
-  await deleteRowsById(
-    "long_term_assets",
-    assetIds,
-  );
+  /*
+   * HARD FOREIGN-KEY VERIFICATION
+   *
+   * The database constraint is:
+   *
+   * long_term_assets.purchase_transaction_id
+   *       -> transactions.id
+   *
+   * Never allow transaction deletion to begin
+   * until this query confirms there are zero
+   * remaining references.
+   */
+  const remainingLinkedAssetIds =
+    await getTransactionLinkedLongTermAssetIds(
+      userTransactionIds,
+    );
+
+  if (
+    remainingLinkedAssetIds.length > 0
+  ) {
+    throw new Error(
+      `[integration-global-setup] Refusing to delete transactions: ${remainingLinkedAssetIds.length} long-term asset purchase reference(s) still remain.`,
+    );
+  }
 
   console.log(
-    `[integration-global-setup] Deleted ${assetIds.length} transaction-linked long-term asset(s).`,
+    "[integration-global-setup] Verified zero long-term asset purchase references remain for test-user transactions.",
   );
 }
 
@@ -569,12 +599,12 @@ export default async function globalSetup() {
     await getTestUserId();
 
   /*
-   * Scan the complete transaction table ONCE.
+   * Scan the complete transaction table once.
    *
-   * This is now the source of truth for:
+   * This becomes the source of truth for:
    * - transaction ownership
-   * - long-term-asset ownership
    * - transaction-entry ownership
+   * - long-term-asset purchase ownership
    */
   const allTransactions =
     await getAllTransactions();
@@ -585,12 +615,11 @@ export default async function globalSetup() {
     );
 
   /*
-   * 1. Long-term assets must be removed before
-   *    transactions because of:
+   * 1. LONG-TERM ASSETS
    *
-   * long_term_assets.purchase_transaction_id
-   *        ↓
-   * transactions.id
+   * Must be deleted before transactions
+   * because purchase_transaction_id references
+   * transactions.id.
    */
   await deleteUserLongTermAssets(
     userId,
@@ -598,7 +627,7 @@ export default async function globalSetup() {
   );
 
   /*
-   * 2. Module-owned records.
+   * 2. MODULE-OWNED RECORDS
    */
   const moduleTables = [
     "tuition_students",
@@ -620,9 +649,9 @@ export default async function globalSetup() {
   }
 
   /*
-   * 3. Transaction entries.
+   * 3. TRANSACTION ENTRIES
    *
-   * These must disappear before transactions.
+   * Must disappear before transactions.
    */
   await deleteUserTransactionEntries(
     userId,
@@ -631,7 +660,11 @@ export default async function globalSetup() {
   );
 
   /*
-   * 4. Transactions.
+   * 4. TRANSACTIONS
+   *
+   * At this point long_term_assets and
+   * transaction_entries have both been
+   * explicitly cleaned and verified.
    */
   await deleteUserRows(
     "transactions",
@@ -639,7 +672,7 @@ export default async function globalSetup() {
   );
 
   /*
-   * 5. Budgets.
+   * 5. BUDGETS
    */
   await deleteUserRows(
     "budgets",
@@ -647,10 +680,7 @@ export default async function globalSetup() {
   );
 
   /*
-   * 6. Categories.
-   *
-   * Categories are removed before accounts
-   * because categories may reference ledger accounts.
+   * 6. CATEGORIES
    */
   await deleteUserRows(
     "categories",
@@ -658,7 +688,7 @@ export default async function globalSetup() {
   );
 
   /*
-   * 7. Accounts.
+   * 7. ACCOUNTS
    */
   await deleteUserRows(
     "accounts",
@@ -666,7 +696,7 @@ export default async function globalSetup() {
   );
 
   /*
-   * 8. Deterministic baseline.
+   * 8. CREATE DETERMINISTIC BASELINE
    */
   await createBaselineAccounts(
     userId,
@@ -676,5 +706,4 @@ export default async function globalSetup() {
     "[integration-global-setup] Cleanup complete. Baseline BDT Cash and Bank accounts created.",
   );
 }
-
 
