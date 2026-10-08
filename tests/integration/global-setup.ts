@@ -151,70 +151,12 @@ async function getUserTransactionIds(
   );
 }
 
-async function getAllTransactionEntriesByTransactionIds(
-  transactionIds: string[],
-) {
-  const entryIds: string[] = [];
-
-  if (transactionIds.length === 0) {
-    return entryIds;
-  }
-
-  for (
-    let offset = 0;
-    ;
-    offset += PAGE_SIZE
-  ) {
-    const {
-      data,
-      error,
-    } =
-      await supabase
-        .from("transaction_entries")
-        .select("id")
-        .in(
-          "transaction_id",
-          transactionIds,
-        )
-        .range(
-          offset,
-          offset + PAGE_SIZE - 1,
-        );
-
-    if (error) {
-      throw new Error(
-        `[integration-global-setup] Failed to find transaction-owned entries: ${error.message}`,
-      );
-    }
-
-    const rows = data ?? [];
-
-    entryIds.push(
-      ...rows.map(
-        (entry) => entry.id,
-      ),
-    );
-
-    if (rows.length < PAGE_SIZE) {
-      break;
-    }
-  }
-
-  return entryIds;
-}
-
-async function getAllTransactionEntriesByAccountIds(
-  accountIds: string[],
-) {
+async function getAllTransactionEntries() {
   const entries: Array<{
     id: string;
     transaction_id: string;
     account_id: string;
   }> = [];
-
-  if (accountIds.length === 0) {
-    return entries;
-  }
 
   for (
     let offset = 0;
@@ -230,9 +172,11 @@ async function getAllTransactionEntriesByAccountIds(
         .select(
           "id, transaction_id, account_id",
         )
-        .in(
-          "account_id",
-          accountIds,
+        .order(
+          "id",
+          {
+            ascending: true,
+          },
         )
         .range(
           offset,
@@ -241,7 +185,7 @@ async function getAllTransactionEntriesByAccountIds(
 
     if (error) {
       throw new Error(
-        `[integration-global-setup] Failed to find account-owned entries: ${error.message}`,
+        `[integration-global-setup] Failed to scan transaction entries: ${error.message}`,
       );
     }
 
@@ -264,7 +208,7 @@ async function deleteUserLongTermAssets(
   userTransactionIds: string[],
 ) {
   /*
-   * First remove normally user-owned long-term assets.
+   * Remove normally user-owned long-term assets first.
    */
   await deleteUserRows(
     "long_term_assets",
@@ -278,20 +222,11 @@ async function deleteUserLongTermAssets(
   }
 
   /*
-   * Some historical rows may reference one of the
-   * user's transactions while having a different or
-   * missing user_id.
+   * Never send the complete transaction ID list to
+   * PostgREST through .in().
    *
-   * Do NOT use:
-   *
-   *   .in("purchase_transaction_id", userTransactionIds)
-   *
-   * because that can create a very large HTTP query
-   * and has repeatedly produced "TypeError: fetch failed"
-   * in GitHub Actions.
-   *
-   * Instead, scan long_term_assets in bounded pages and
-   * compare transaction IDs locally.
+   * Scan long_term_assets in bounded pages and match
+   * purchase_transaction_id locally.
    */
   const userTransactionIdSet =
     new Set(userTransactionIds);
@@ -314,6 +249,12 @@ async function deleteUserLongTermAssets(
           "purchase_transaction_id",
           "is",
           null,
+        )
+        .order(
+          "id",
+          {
+            ascending: true,
+          },
         )
         .range(
           offset,
@@ -345,21 +286,9 @@ async function deleteUserLongTermAssets(
           (asset) => asset.id,
         );
 
-    /*
-     * Delete only assets whose purchase transaction
-     * belongs to the dedicated integration user.
-     */
-    for (
-      let index = 0;
-      index < matchingAssetIds.length;
-      index += PAGE_SIZE
+    if (
+      matchingAssetIds.length > 0
     ) {
-      const batch =
-        matchingAssetIds.slice(
-          index,
-          index + PAGE_SIZE,
-        );
-
       const {
         error: deleteError,
       } =
@@ -368,7 +297,7 @@ async function deleteUserLongTermAssets(
           .delete()
           .in(
             "id",
-            batch,
+            matchingAssetIds,
           );
 
       if (deleteError) {
@@ -390,33 +319,53 @@ async function deleteUserTransactionEntries(
   userAccountIds: string[],
 ) {
   /*
-   * Find every entry reachable through the user's
-   * transactions.
-   */
-  const transactionEntryIds =
-    await getAllTransactionEntriesByTransactionIds(
-      userTransactionIds,
-    );
-
-  /*
-   * Find every entry reachable through the user's
-   * accounts.
-   */
-  const accountEntries =
-    await getAllTransactionEntriesByAccountIds(
-      userAccountIds,
-    );
-
-  /*
-   * Verify that account-linked entries do not point
-   * to another user's transaction.
+   * Read transaction_entries without filtering by a
+   * potentially huge list of transaction IDs.
    *
-   * We never silently delete another user's ledger data.
+   * This avoids the CI "TypeError: fetch failed"
+   * caused by large PostgREST .in() requests.
    */
-  const referencedTransactionIds =
+  const allEntries =
+    await getAllTransactionEntries();
+
+  const userTransactionIdSet =
+    new Set(userTransactionIds);
+
+  const userAccountIdSet =
+    new Set(userAccountIds);
+
+  /*
+   * An entry belongs to this cleanup when either:
+   *
+   * 1. its transaction belongs to the test user, OR
+   * 2. its account belongs to the test user.
+   *
+   * This is important because double-entry transactions
+   * may contain entries against system accounts.
+   */
+  const userEntries =
+    allEntries.filter(
+      (entry) =>
+        userTransactionIdSet.has(
+          entry.transaction_id,
+        ) ||
+        userAccountIdSet.has(
+          entry.account_id,
+        ),
+    );
+
+  /*
+   * Never silently delete an entry belonging to another
+   * user's transaction merely because it touches one of
+   * the test user's accounts.
+   *
+   * Because we already loaded the complete transaction
+   * entry set, verify ownership locally.
+   */
+  const transactionIdsToVerify =
     Array.from(
       new Set(
-        accountEntries.map(
+        userEntries.map(
           (entry) =>
             entry.transaction_id,
         ),
@@ -424,22 +373,28 @@ async function deleteUserTransactionEntries(
     );
 
   if (
-    referencedTransactionIds.length >
-    0
+    transactionIdsToVerify.length > 0
   ) {
     /*
-     * Process referenced transaction IDs in bounded
-     * batches rather than sending the entire list
-     * in one HTTP request.
+     * Fetch transactions in bounded batches.
+     * This list is now bounded by the entries actually
+     * selected for cleanup rather than every transaction
+     * in the database.
      */
+    const transactionOwnership =
+      new Map<
+        string,
+        string
+      >();
+
     for (
       let index = 0;
       index <
-      referencedTransactionIds.length;
+      transactionIdsToVerify.length;
       index += PAGE_SIZE
     ) {
-      const transactionIdBatch =
-        referencedTransactionIds.slice(
+      const batch =
+        transactionIdsToVerify.slice(
           index,
           index + PAGE_SIZE,
         );
@@ -455,7 +410,7 @@ async function deleteUserTransactionEntries(
           )
           .in(
             "id",
-            transactionIdBatch,
+            batch,
           );
 
       if (error) {
@@ -464,37 +419,48 @@ async function deleteUserTransactionEntries(
         );
       }
 
-      const foreignTransactions =
-        (
+      for (
+        const transaction of
           data ?? []
-        ).filter(
-          (transaction) =>
-            transaction.user_id !==
-            userId,
-        );
-
-      if (
-        foreignTransactions.length >
-        0
       ) {
-        throw new Error(
-          `[integration-global-setup] Refusing to delete transaction entries referencing another user's transaction.`,
+        transactionOwnership.set(
+          transaction.id,
+          transaction.user_id,
         );
       }
     }
+
+    const foreignEntries =
+      userEntries.filter(
+        (entry) => {
+          const owner =
+            transactionOwnership.get(
+              entry.transaction_id,
+            );
+
+          return (
+            owner !== undefined &&
+            owner !== userId
+          );
+        },
+      );
+
+    if (
+      foreignEntries.length > 0
+    ) {
+      throw new Error(
+        `[integration-global-setup] Refusing to delete transaction entries referencing another user's transaction.`,
+      );
+    }
   }
 
-  /*
-   * Merge both discovery paths and deduplicate.
-   */
   const uniqueEntryIds =
     Array.from(
-      new Set([
-        ...transactionEntryIds,
-        ...accountEntries.map(
+      new Set(
+        userEntries.map(
           (entry) => entry.id,
         ),
-      ]),
+      ),
     );
 
   if (
@@ -504,8 +470,7 @@ async function deleteUserTransactionEntries(
   }
 
   /*
-   * Delete in chunks so the request remains safe
-   * even when a test account has many ledger entries.
+   * Delete entry IDs in small bounded batches.
    */
   for (
     let index = 0;
@@ -537,28 +502,28 @@ async function deleteUserTransactionEntries(
   }
 
   /*
-   * Final verification.
-   *
-   * If even one entry remains attached to the user's
-   * accounts or transactions, account deletion must
-   * not proceed.
+   * Final verification uses the same bounded full scan.
+   * No large .in() query is needed.
    */
-  const remainingByTransaction =
-    await getAllTransactionEntriesByTransactionIds(
-      userTransactionIds,
-    );
+  const remainingEntries =
+    await getAllTransactionEntries();
 
-  const remainingByAccount =
-    await getAllTransactionEntriesByAccountIds(
-      userAccountIds,
+  const remainingUserEntries =
+    remainingEntries.filter(
+      (entry) =>
+        userTransactionIdSet.has(
+          entry.transaction_id,
+        ) ||
+        userAccountIdSet.has(
+          entry.account_id,
+        ),
     );
 
   if (
-    remainingByTransaction.length > 0 ||
-    remainingByAccount.length > 0
+    remainingUserEntries.length > 0
   ) {
     throw new Error(
-      `[integration-global-setup] Transaction-entry cleanup incomplete: ${remainingByTransaction.length + remainingByAccount.length} entry reference(s) remain.`,
+      `[integration-global-setup] Transaction-entry cleanup incomplete: ${remainingUserEntries.length} entry reference(s) remain.`,
     );
   }
 }
@@ -698,4 +663,5 @@ export default async function globalSetup() {
     "[integration-global-setup] Cleaned dedicated integration test user and created baseline BDT Cash and Bank accounts.",
   );
 }
+
 
