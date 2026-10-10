@@ -486,46 +486,35 @@ async function deleteUserAccounts(
 async function createBaselineAccounts(
   userId: string,
 ) {
-  /*
-   * Verify the authenticated test user matches
-   * the user whose baseline accounts are created.
-   */
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.admin.getUserById(
-    userId,
-  );
-
-  if (userError || !user) {
-    throw new Error(
-      `[integration-global-setup] Could not verify test user: ${
-        userError?.message ?? "User not found"
-      }`,
-    );
-  }
-
   const baselineAccounts = [
-    "Cash",
-    "Bank",
+    {
+      user_id: userId,
+      name: "Cash",
+      account_type: "asset",
+      currency: "BDT",
+      liquidity_class: "immediate",
+      is_system: false,
+      is_archived: false,
+    },
+    {
+      user_id: userId,
+      name: "Bank",
+      account_type: "asset",
+      currency: "BDT",
+      liquidity_class: "immediate",
+      is_system: false,
+      is_archived: false,
+    },
   ];
 
-  for (const name of baselineAccounts) {
-    const { error } = await supabase.rpc(
-      "create_account",
-      {
-        p_name: name,
-        p_account_type: "asset",
-        p_currency: "BDT",
-        p_liquidity_class: "immediate",
-      },
-    );
+  const { error } = await supabase
+    .from("accounts")
+    .insert(baselineAccounts);
 
-    if (error) {
-      throw new Error(
-        `[integration-global-setup] Failed creating baseline account "${name}": ${error.message}`,
-      );
-    }
+  if (error) {
+    throw new Error(
+      `[integration-global-setup] Failed creating baseline accounts: ${error.message}`,
+    );
   }
 
   console.log(
