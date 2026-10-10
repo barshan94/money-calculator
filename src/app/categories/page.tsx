@@ -728,6 +728,8 @@ export default function CategoriesPage() {
           border: 1px solid var(--border);
           border-radius: 9px;
           padding: 12px;
+          min-width: 0;
+          overflow: hidden;
         }
 
         .category-info {
@@ -771,6 +773,7 @@ export default function CategoriesPage() {
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 8px;
           margin-top: 10px;
+          width: 100%;
           align-items: start;
         }
 
