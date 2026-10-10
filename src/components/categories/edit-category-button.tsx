@@ -128,7 +128,7 @@ export function EditCategoryButton({
         type="button"
         onClick={openModal}
         disabled={saving}
-        className="w-full rounded-lg px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+        className="inline-flex min-h-10 w-full items-center justify-center rounded-lg px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
         style={{ backgroundColor: "var(--primary)" }}
       >
         Edit

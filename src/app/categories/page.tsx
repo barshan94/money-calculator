@@ -771,6 +771,13 @@ export default function CategoriesPage() {
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 8px;
           margin-top: 10px;
+          align-items: start;
+        }
+
+        @media (max-width: 640px) {
+          .category-actions {
+            grid-template-columns: 1fr;
+          }
         }
 
         .archived-section {
@@ -806,7 +813,9 @@ export default function CategoriesPage() {
         }
 
         @media (max-width: 640px) {
-          .create-grid,
+          .create-grid {
+            grid-template-columns: 1fr;
+          }
           .filter-grid {
             grid-template-columns: 1fr;
           }
