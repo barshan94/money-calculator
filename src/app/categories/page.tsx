@@ -794,11 +794,6 @@ export default function CategoriesPage() {
             padding: 18px 12px 40px;
           }
 
-          .create-grid,
-          .filter-grid {
-            grid-template-columns: 1fr;
-          }
-
           .category-columns {
             grid-template-columns: 1fr;
           }
@@ -807,6 +802,13 @@ export default function CategoriesPage() {
           .filter-grid .primary-button,
           .filter-grid .secondary-button {
             width: 100%;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .create-grid,
+          .filter-grid {
+            grid-template-columns: 1fr;
           }
         }
 
