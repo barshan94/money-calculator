@@ -269,10 +269,51 @@ export default async function AuditLogPage({ searchParams }: Props) {
           color: var(--muted);
         }
 
+        @media (max-width: 760px) {
+          .kind-tabs {
+            gap: 4px;
+          }
+
+          .kind-tab {
+            padding: 5px 10px;
+            font-size: 12px;
+          }
+        }
+
         @media (max-width: 600px) {
+          .audit-row {
+            padding: 12px;
+          }
+
           .audit-row > div {
-            flex-wrap: wrap;
+            flex-direction: column;
+            align-items: flex-start;
             gap: 8px;
+          }
+
+          .audit-row .badge {
+            align-self: flex-start;
+          }
+
+          .audit-row > div > div:last-child {
+            width: 100%;
+            text-align: left;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .audit-row {
+            padding: 10px 8px;
+          }
+
+          .kind-tab {
+            padding: 4px 8px;
+            font-size: 11px;
+          }
+
+          .badge {
+            padding: 2px 6px;
+            font-size: 10px;
           }
         }
       `}</style>
