@@ -774,7 +774,7 @@ export default function CategoriesPage() {
           align-items: start;
         }
 
-        @media (max-width: 640px) {
+        @media (max-width: 760px) {
           .category-actions {
             grid-template-columns: 1fr;
           }
@@ -796,6 +796,12 @@ export default function CategoriesPage() {
           width: 120px;
         }
 
+        @media (max-width: 640px) {
+          .archived-actions {
+            width: 100%;
+          }
+        }
+
         @media (max-width: 760px) {
           .categories-page {
             padding: 18px 12px 40px;
@@ -809,6 +815,15 @@ export default function CategoriesPage() {
           .filter-grid .primary-button,
           .filter-grid .secondary-button {
             width: 100%;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .create-grid {
+            grid-template-columns: 1fr;
+          }
+          .filter-grid {
+            grid-template-columns: 1fr;
           }
         }
 
