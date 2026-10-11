@@ -155,7 +155,7 @@ export default async function AuditLogPage({ searchParams }: Props) {
               className="card audit-row"
               style={{ textDecoration: "none", color: "inherit" }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
                 <span className={`badge ${getBadgeColor(event.event_type)}`}>
                   {EVENT_TYPE_LABELS[event.event_type]}
                 </span>
