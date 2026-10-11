@@ -228,137 +228,165 @@ export default async function AuditLogPage() {
 
   return (
     <div className="audit-log-page">
-      <div style={{ marginBottom: 28 }}>
-        <Link
-          href="/dashboard"
-          className="muted"
-          style={{ fontSize: 14 }}
-        >
-          ← Dashboard
-        </Link>
+      <div className="audit-log-container">
+        <div style={{ marginBottom: 28 }}>
+          <Link
+            href="/dashboard"
+            className="muted"
+            style={{ fontSize: 14 }}
+          >
+            ← Dashboard
+          </Link>
 
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-start",
-            gap: 16,
-            flexWrap: "wrap",
-            marginTop: 12,
-          }}
-        >
-          <div>
-            <p
-              className="muted"
-              style={{
-                margin: "0 0 6px",
-                fontSize: 14,
-              }}
-            >
-              Audit Log
-            </p>
-            <h1 style={{ marginBottom: 6 }}>
-              Financial history timeline
-            </h1>
-            <p className="muted" style={{ margin: 0 }}>
-              A chronological view of ledger events (voids, reversals, and cancellations).
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {events.length === 0 ? (
-        <section
-          style={{
-            padding: 48,
-            border: "1px dashed #cbd5e1",
-            borderRadius: 12,
-          }}
-        >
-          <p className="muted" style={{ margin: 0 }}>
-            No audit events found.
-          </p>
-        </section>
-      ) : (
-        <section>
           <div
             style={{
-              display: "grid",
-              gap: 10,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start",
+              gap: 16,
+              flexWrap: "wrap",
+              marginTop: 12,
             }}
           >
-            {events.map((event) => {
-              const relatedTx =
-                event.related_transaction_id;
+            <div>
+              <p
+                className="muted"
+                style={{
+                  margin: "0 0 6px",
+                  fontSize: 14,
+                }}
+              >
+                Audit Log
+              </p>
+              <h1 style={{ marginBottom: 6 }}>
+                Financial history timeline
+              </h1>
+              <p className="muted" style={{ margin: 0 }}>
+                A chronological view of ledger events (voids, reversals, and cancellations).
+              </p>
+            </div>
+          </div>
+        </div>
 
-              return (
-                <div
-                  key={event.id}
-                  className="card"
-                  style={{
-                    padding: 16,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 16,
-                    alignItems: "flex-start",
-                  }}
-                >
-                  <div style={{ flex: 1 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        flexWrap: "wrap",
-                        marginBottom: 6,
-                      }}
-                    >
-                      <span className={typeBadgeClass(event.type)}>
-                        {event.type.replaceAll("_", " ")}
-                      </span>
+        {events.length === 0 ? (
+          <section
+            style={{
+              padding: 48,
+              border: "1px dashed #cbd5e1",
+              borderRadius: 12,
+            }}
+          >
+            <p className="muted" style={{ margin: 0 }}>
+              No audit events found.
+            </p>
+          </section>
+        ) : (
+          <section>
+            <div style={{ display: "grid", gap: 10 }}>
+              {events.map((event) => {
+                const relatedTx =
+                  event.related_transaction_id;
 
-                      <div style={{ fontWeight: 700 }}>
-                        {relatedTx ? (
-                          <Link
-                            href={`/transactions/${relatedTx}`}
-                            style={{
-                              textDecoration: "none",
-                              color: "inherit",
-                            }}
-                          >
-                            {event.title}
-                          </Link>
-                        ) : (
-                          event.title
-                        )}
+                return (
+                  <div
+                    key={event.id}
+                    className="card"
+                    style={{
+                      padding: 16,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      gap: 16,
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          flexWrap: "wrap",
+                          marginBottom: 6,
+                        }}
+                      >
+                        <span className={typeBadgeClass(event.type)} style={{ flexShrink: 0 }}>
+                          {event.type.replaceAll("_", " ")}
+                        </span>
+
+                        <div style={{ fontWeight: 700, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                          {relatedTx ? (
+                            <Link
+                              href={`/transactions/${relatedTx}`}
+                              style={{
+                                textDecoration: "none",
+                                color: "inherit",
+                              }}
+                            >
+                              {event.title}
+                            </Link>
+                          ) : (
+                            event.title
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="muted" style={{ fontSize: 13, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {event.description}
+                      </div>
+
+                      <div className="muted" style={{ marginTop: 8, fontSize: 12, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {formatDateTimeBD(event.happened_at)}
                       </div>
                     </div>
 
-                    <div className="muted" style={{ fontSize: 13 }}>
-                      {event.description}
-                    </div>
-
-                    <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-                      {formatDateTimeBD(event.happened_at)}
-                    </div>
+                    {typeof event.amount === "number" && (
+                      <div style={{ textAlign: "right", flexShrink: 0 }}>
+                        <strong style={{ fontSize: 16 }}>
+                          {formatMoney(
+                            event.amount,
+                            event.currency ?? "BDT",
+                          )}
+                        </strong>
+                      </div>
+                    )}
                   </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+      </div>
 
-                  {typeof event.amount === "number" && (
-                    <div style={{ textAlign: "right" }}>
-                      <strong style={{ fontSize: 16 }}>
-                        {formatMoney(
-                          event.amount,
-                          event.currency ?? "BDT",
-                        )}
-                      </strong>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+      <style>{`
+        .audit-log-page {
+          min-height: 100vh;
+          background: var(--background);
+          padding: 32px 36px 48px;
+        }
+
+        .audit-log-container {
+          max-width: 1152px;
+          margin: 0 auto;
+        }
+
+        @media (max-width: 900px) {
+          .audit-log-page {
+            padding: 28px 24px 40px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .audit-log-page {
+            padding: 24px 16px 40px;
+          }
+        }
+
+        @media (max-width: 480px) {
+          .audit-log-page {
+            padding: 20px 12px 36px;
+          }
+        }
+      `}</style>
     </div>
   );
 }
