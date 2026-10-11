@@ -322,7 +322,7 @@ export default async function AuditLogPage() {
                           {event.type.replaceAll("_", " ")}
                         </span>
 
-                        <div style={{ fontWeight: 700, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                        <div style={{ fontWeight: 700, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {relatedTx ? (
                             <Link
                               href={`/transactions/${relatedTx}`}
@@ -339,11 +339,11 @@ export default async function AuditLogPage() {
                         </div>
                       </div>
 
-                      <div className="muted" style={{ fontSize: 13, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div className="muted" style={{ fontSize: 13, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {event.description}
                       </div>
 
-                      <div className="muted" style={{ marginTop: 8, fontSize: 12, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis" }}>
+                      <div className="muted" style={{ marginTop: 8, fontSize: 12, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {formatDateTimeBD(event.happened_at)}
                       </div>
                     </div>
