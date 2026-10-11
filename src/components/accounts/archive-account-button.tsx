@@ -31,24 +31,12 @@ export function ArchiveAccountButton({
     setLoading(true);
     setMessage("");
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    console.log("Archive user:", user?.id);
-    console.log("Account:", accountId);
-    console.log("Auth error:", authError);
-
     const { data, error } = await supabase.rpc(
       "archive_account",
       {
         p_account_id: accountId,
       },
     );
-
-    console.log("Archive RPC data:", data);
-    console.log("Archive RPC error:", error);
 
     if (error) {
       setMessage(

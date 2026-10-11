@@ -71,13 +71,6 @@ export default function NewLoanPage() {
 
       setAccounts(data ?? []);
 
-      console.log(
-        "LOAN ACCOUNTS:",
-        data,
-        "ERROR:",
-        error,
-      );
-
       setStartDateTime(getLocalDateTime());
     }
 
