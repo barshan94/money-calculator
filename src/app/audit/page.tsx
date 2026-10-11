@@ -32,32 +32,37 @@ const EVENT_TYPE_LABELS: Record<AuditEvent["event_type"], string> = {
   payment_cancelled: "Payment Cancelled",
 };
 
-function getBadgeColor(event_type: AuditEvent["event_type"]): string {
-  switch (event_type) {
+function getBadgeColor(eventType: AuditEvent["event_type"]): string {
+  switch (eventType) {
     case "posted":
     case "loan_created":
     case "loan_settled":
     case "asset_purchased":
     case "payment_recorded":
-      return "badge-green";
+      return "audit-badge-green";
+
     case "reversed":
     case "voided":
     case "loan_cancelled":
     case "asset_cancelled":
     case "payment_cancelled":
-      return "badge-red";
+      return "audit-badge-red";
+
     case "opening_balance":
     case "asset_sold":
-      return "badge-amber";
+      return "audit-badge-amber";
+
     default:
-      return "badge-neutral";
+      return "audit-badge-neutral";
   }
 }
 
 function formatTimestamp(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("en-BD", {
+  const date = new Date(iso);
+
+  if (Number.isNaN(date.getTime())) return iso;
+
+  return date.toLocaleString("en-BD", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -69,7 +74,6 @@ function formatTimestamp(iso: string): string {
 
 export default async function AuditLogPage({ searchParams }: Props) {
   const { kind: kindParam } = await searchParams;
-
   const supabase = await createClient();
 
   const {
@@ -83,240 +87,477 @@ export default async function AuditLogPage({ searchParams }: Props) {
   const allEvents = await getAuditLog(supabase, user.id);
 
   const activeKind: Kind =
-    kindParam && KINDS.some((k) => k.value === kindParam)
+    kindParam && KINDS.some((kind) => kind.value === kindParam)
       ? (kindParam as Kind)
       : "all";
 
   const events =
     activeKind === "all"
       ? allEvents
-      : allEvents.filter((e) => e.entity_type === activeKind);
+      : allEvents.filter((event) => event.entity_type === activeKind);
 
   return (
-    <div>
-      <div style={{ marginBottom: 28 }}>
-        <p className="muted" style={{ margin: "0 0 6px", fontSize: 14 }}>
-          Activity
+    <main className="audit-page">
+      <header className="audit-header">
+        <p className="audit-eyebrow">Activity</p>
+        <h1>Audit Log</h1>
+        <p className="audit-subtitle">
+          A record of important actions across your financial data.
         </p>
+      </header>
 
-        <h1 style={{ marginBottom: 6 }}>Audit Log</h1>
+      <nav className="audit-filters" aria-label="Filter audit events">
+        {KINDS.map((kind) => {
+          const selected = activeKind === kind.value;
+          const href =
+            kind.value === "all" ? "/audit" : `/audit?kind=${kind.value}`;
 
-        <p className="muted" style={{ margin: 0 }}>
-          A record of important actions across your financial data
-        </p>
-      </div>
-
-      {/* Kind filter tabs */}
-      <div className="kind-tabs" role="tablist" aria-label="Filter by type">
-        {KINDS.map((k) => (
-          <Link
-            key={k.value}
-            href={k.value === "all" ? "/audit" : `/audit?kind=${k.value}`}
-            role="tab"
-            aria-selected={activeKind === k.value}
-            className={
-              activeKind === k.value ? "kind-tab kind-tab-active" : "kind-tab"
-            }
-          >
-            {k.label}
-          </Link>
-        ))}
-      </div>
-
-      {/* Count */}
-      <p
-        className="muted"
-        style={{ margin: "0 0 16px", fontSize: 13 }}
-      >
-        {events.length === 0
-          ? "No events"
-          : `${events.length} event${events.length === 1 ? "" : "s"}`}
-      </p>
-
-      {/* Event list */}
-      {events.length === 0 ? (
-        <div
-          style={{
-            padding: "32px 24px",
-            border: "1px dashed var(--border)",
-            borderRadius: 12,
-            textAlign: "center",
-            color: "var(--muted)",
-          }}
-        >
-          No audit events found.
-        </div>
-      ) : (
-        <div style={{ display: "grid", gap: 8 }}>
-          {events.map((event) => (
+          return (
             <Link
-              key={event.id}
-              href={event.href}
-              className="card audit-row"
-              style={{ textDecoration: "none", color: "inherit" }}
+              key={kind.value}
+              href={href}
+              aria-current={selected ? "page" : undefined}
+              className={`audit-filter${selected ? " audit-filter-active" : ""}`}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 0 }}>
-                <span className={`badge ${getBadgeColor(event.event_type)}`}>
-                  {EVENT_TYPE_LABELS[event.event_type]}
-                </span>
+              {kind.label}
+            </Link>
+          );
+        })}
+      </nav>
 
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontWeight: 600,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    }}
+      <section className="audit-events" aria-label="Audit events">
+        <div className="audit-list-header">
+          <h2>Recent activity</h2>
+          <span className="audit-count">
+            {events.length} {events.length === 1 ? "event" : "events"}
+          </span>
+        </div>
+
+        {events.length === 0 ? (
+          <div className="audit-empty">
+            <span className="audit-empty-icon" aria-hidden="true">
+              ✓
+            </span>
+            <h3>No audit events found</h3>
+            <p>Important financial actions will appear here when recorded.</p>
+          </div>
+        ) : (
+          <div className="audit-list">
+            {events.map((event) => (
+              <Link
+                key={event.id}
+                href={event.href}
+                className="card audit-event"
+              >
+                <div className="audit-event-top">
+                  <span
+                    className={`audit-badge ${getBadgeColor(event.event_type)}`}
                   >
-                    {event.description}
-                  </p>
+                    {EVENT_TYPE_LABELS[event.event_type]}
+                  </span>
+
+                  <time className="audit-timestamp" dateTime={event.timestamp}>
+                    {formatTimestamp(event.timestamp)}
+                  </time>
+                </div>
+
+                <div className="audit-event-content">
+                  <p className="audit-description">{event.description}</p>
 
                   {event.meta && (
-                    <p
-                      className="muted"
-                      style={{ margin: "2px 0 0", fontSize: 13 }}
-                    >
-                      {event.meta}
-                    </p>
+                    <p className="audit-meta">{event.meta}</p>
                   )}
                 </div>
 
-                <p
-                  className="muted"
-                  style={{
-                    margin: 0,
-                    fontSize: 12,
-                    flexShrink: 0,
-                    textAlign: "right",
-                  }}
-                >
-                  {formatTimestamp(event.timestamp)}
-                </p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
+                <span className="audit-event-arrow" aria-hidden="true">
+                  →
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
+      </section>
 
       <style>{`
-        .kind-tabs {
-          display: flex;
-          gap: 6px;
-          flex-wrap: wrap;
-          margin-bottom: 20px;
-        }
-
-        .kind-tab {
-          padding: 6px 14px;
-          border-radius: 999px;
-          border: 1px solid var(--border);
-          font-size: 13px;
-          font-weight: 600;
-          text-decoration: none;
-          color: var(--muted);
-          background: transparent;
-          transition: background 0.1s, color 0.1s;
-        }
-
-        .kind-tab:hover {
+        .audit-page {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+          box-sizing: border-box;
           color: var(--foreground);
         }
 
-        .kind-tab-active {
+        .audit-page *,
+        .audit-page *::before,
+        .audit-page *::after {
+          box-sizing: border-box;
+        }
+
+        .audit-header {
+          width: 100%;
+          min-width: 0;
+          margin: 0 0 24px;
+        }
+
+        .audit-eyebrow {
+          margin: 0 0 6px;
+          color: var(--muted);
+          font-size: 13px;
+          font-weight: 600;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .audit-header h1 {
+          margin: 0;
+          font-size: clamp(24px, 4vw, 32px);
+          line-height: 1.2;
+          overflow-wrap: anywhere;
+        }
+
+        .audit-subtitle {
+          margin: 8px 0 0;
+          max-width: 620px;
+          color: var(--muted);
+          font-size: 14px;
+          line-height: 1.6;
+          overflow-wrap: anywhere;
+        }
+
+        .audit-filters {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 8px;
+          width: 100%;
+          min-width: 0;
+          margin: 0 0 24px;
+          padding: 0 0 16px;
+          border-bottom: 1px solid var(--border);
+        }
+
+        .audit-filter {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 36px;
+          padding: 7px 14px;
+          border: 1px solid var(--border);
+          border-radius: 9px;
+          background: transparent;
+          color: var(--muted);
+          font-size: 13px;
+          font-weight: 600;
+          line-height: 1.2;
+          text-decoration: none;
+          white-space: nowrap;
+          transition:
+            background 0.15s ease,
+            color 0.15s ease,
+            border-color 0.15s ease;
+        }
+
+        .audit-filter:hover {
+          color: var(--foreground);
+          border-color: var(--muted);
+        }
+
+        .audit-filter-active {
           background: var(--foreground);
           color: var(--background);
           border-color: var(--foreground);
         }
 
-        .audit-row {
-          display: block;
-          padding: 14px 16px;
+        .audit-filter-active:hover {
+          color: var(--background);
         }
 
-        .audit-row:hover {
-          opacity: 0.85;
+        .audit-events {
+          width: 100%;
+          min-width: 0;
         }
 
-        .badge {
-          display: inline-block;
-          padding: 3px 8px;
-          border-radius: 999px;
+        .audit-list-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin: 0 0 12px;
+        }
+
+        .audit-list-header h2 {
+          margin: 0;
+          font-size: 16px;
+          font-weight: 700;
+          line-height: 1.4;
+        }
+
+        .audit-count {
+          color: var(--muted);
+          font-size: 12px;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .audit-list {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr);
+          gap: 10px;
+          width: 100%;
+          min-width: 0;
+        }
+
+        .audit-event {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) auto;
+          grid-template-areas:
+            "top top"
+            "content arrow";
+          align-items: start;
+          gap: 12px 16px;
+          width: 100%;
+          min-width: 0;
+          margin: 0;
+          padding: 16px;
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          color: inherit;
+          text-decoration: none;
+          overflow-wrap: anywhere;
+          transition:
+            border-color 0.15s ease,
+            background 0.15s ease,
+            transform 0.15s ease;
+        }
+
+        .audit-event:hover {
+          border-color: var(--muted);
+          transform: translateY(-1px);
+        }
+
+        .audit-event:focus-visible,
+        .audit-filter:focus-visible {
+          outline: 2px solid var(--foreground);
+          outline-offset: 3px;
+        }
+
+        .audit-event-top {
+          grid-area: top;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 8px 12px;
+          width: 100%;
+          min-width: 0;
+        }
+
+        .audit-badge {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex: 0 0 auto;
+          max-width: 100%;
+          padding: 4px 9px;
+          border-radius: 6px;
           font-size: 11px;
           font-weight: 700;
-          white-space: nowrap;
-          flex-shrink: 0;
+          line-height: 1.3;
+          white-space: normal;
+          overflow-wrap: anywhere;
         }
 
-        .badge-green {
+        .audit-badge-green {
           background: #dcfce7;
-          color: #15803d;
+          color: #166534;
         }
 
-        .badge-red {
+        .audit-badge-red {
           background: #fee2e2;
-          color: #dc2626;
+          color: #b91c1c;
         }
 
-        .badge-amber {
+        .audit-badge-amber {
           background: #fef3c7;
-          color: #b45309;
+          color: #92400e;
         }
 
-        .badge-neutral {
+        .audit-badge-neutral {
           background: #f1f5f9;
-          color: var(--muted);
+          color: #475569;
         }
 
-        @media (max-width: 760px) {
-          .kind-tabs {
-            gap: 4px;
+        .audit-timestamp {
+          display: block;
+          max-width: 100%;
+          color: var(--muted);
+          font-size: 12px;
+          line-height: 1.5;
+          text-align: right;
+          overflow-wrap: anywhere;
+        }
+
+        .audit-event-content {
+          grid-area: content;
+          min-width: 0;
+          width: 100%;
+        }
+
+        .audit-description {
+          margin: 0;
+          color: var(--foreground);
+          font-size: 14px;
+          font-weight: 600;
+          line-height: 1.5;
+          overflow-wrap: anywhere;
+          word-break: normal;
+        }
+
+        .audit-meta {
+          margin: 5px 0 0;
+          color: var(--muted);
+          font-size: 12px;
+          line-height: 1.55;
+          overflow-wrap: anywhere;
+          word-break: normal;
+        }
+
+        .audit-event-arrow {
+          grid-area: arrow;
+          align-self: center;
+          color: var(--muted);
+          font-size: 18px;
+          line-height: 1;
+          transition: transform 0.15s ease;
+        }
+
+        .audit-event:hover .audit-event-arrow {
+          transform: translateX(2px);
+        }
+
+        .audit-empty {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          min-width: 0;
+          min-height: 190px;
+          padding: 28px 20px;
+          border: 1px dashed var(--border);
+          border-radius: 12px;
+          text-align: center;
+        }
+
+        .audit-empty-icon {
+          display: grid;
+          place-items: center;
+          width: 38px;
+          height: 38px;
+          margin-bottom: 12px;
+          border: 1px solid var(--border);
+          border-radius: 50%;
+          color: var(--muted);
+          font-size: 18px;
+        }
+
+        .audit-empty h3 {
+          margin: 0;
+          font-size: 15px;
+        }
+
+        .audit-empty p {
+          max-width: 360px;
+          margin: 7px 0 0;
+          color: var(--muted);
+          font-size: 13px;
+          line-height: 1.55;
+        }
+
+        @media (max-width: 600px) {
+          .audit-header {
+            margin-bottom: 20px;
           }
 
-          .kind-tab {
-            padding: 5px 10px;
+          .audit-filters {
+            gap: 6px;
+            margin-bottom: 20px;
+            padding-bottom: 14px;
+          }
+
+          .audit-filter {
+            min-height: 34px;
+            padding: 7px 10px;
+            font-size: 12px;
+          }
+
+          .audit-list {
+            gap: 8px;
+          }
+
+          .audit-event {
+            gap: 10px;
+            padding: 13px;
+            border-radius: 10px;
+          }
+
+          .audit-event-top {
+            align-items: flex-start;
+          }
+
+          .audit-timestamp {
+            text-align: left;
+          }
+
+          .audit-description {
+            font-size: 13px;
+          }
+
+          .audit-meta {
             font-size: 12px;
           }
         }
 
-        @media (max-width: 600px) {
-          .audit-row {
-            padding: 12px;
-          }
-
-          .audit-row > div {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
-          }
-
-          .audit-row .badge {
-            align-self: flex-start;
-          }
-
-          .audit-row > div > div:last-child {
-            width: 100%;
-            text-align: left;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .audit-row {
-            padding: 10px 8px;
-          }
-
-          .kind-tab {
-            padding: 4px 8px;
+        @media (max-width: 380px) {
+          .audit-filter {
+            min-height: 32px;
+            padding: 6px 9px;
             font-size: 11px;
           }
 
-          .badge {
-            padding: 2px 6px;
-            font-size: 10px;
+          .audit-event {
+            grid-template-columns: minmax(0, 1fr) 14px;
+            gap: 9px;
+            padding: 11px;
+          }
+
+          .audit-event-top {
+            flex-direction: column;
+            gap: 6px;
+          }
+
+          .audit-timestamp {
+            font-size: 11px;
+          }
+
+          .audit-empty {
+            padding: 24px 14px;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .audit-event,
+          .audit-filter,
+          .audit-event-arrow {
+            transition: none;
+          }
+
+          .audit-event:hover {
+            transform: none;
           }
         }
       `}</style>
-    </div>
+    </main>
   );
 }
+
