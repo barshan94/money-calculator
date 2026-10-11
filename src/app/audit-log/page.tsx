@@ -229,15 +229,15 @@ export default async function AuditLogPage() {
   return (
     <>
       <style>{`
-        .audit-log-content {
-          max-width: 860px;
-          width: 100%;
-          margin: 0 auto;
-          box-sizing: border-box;
+        .audit-log-card {
+          min-width: 0;
+        }
+        .audit-log-card > div:first-child {
+          min-width: 0;
         }
       `}</style>
 
-      <div className="audit-log-content">
+      <div>
         <div style={{ marginBottom: 28 }}>
           <Link
             href="/dashboard"
@@ -299,7 +299,7 @@ export default async function AuditLogPage() {
                 return (
                   <div
                     key={event.id}
-                    className="card"
+                    className="card audit-log-card"
                     style={{
                       padding: 16,
                       display: "flex",
