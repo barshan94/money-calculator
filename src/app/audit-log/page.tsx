@@ -227,7 +227,7 @@ export default async function AuditLogPage() {
   );
 
   return (
-    <div className="audit-log-page">
+    <div>
       <div className="audit-log-container">
         <div style={{ marginBottom: 28 }}>
           <Link
@@ -358,33 +358,8 @@ export default async function AuditLogPage() {
       </div>
 
       <style>{`
-        .audit-log-page {
-          min-height: 100vh;
-          background: var(--background);
-          padding: 32px 36px 48px;
-        }
-
         .audit-log-container {
-          max-width: 1152px;
-          margin: 0 auto;
-        }
-
-        @media (max-width: 900px) {
-          .audit-log-page {
-            padding: 28px 24px 40px;
-          }
-        }
-
-        @media (max-width: 768px) {
-          .audit-log-page {
-            padding: 24px 16px 40px;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .audit-log-page {
-            padding: 20px 12px 36px;
-          }
+          max-width: 860px;
         }
       `}</style>
     </div>
