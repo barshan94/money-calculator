@@ -31,7 +31,7 @@ export function ArchiveAccountButton({
     setLoading(true);
     setMessage("");
 
-    const { data, error } = await supabase.rpc(
+    const { error } = await supabase.rpc(
       "archive_account",
       {
         p_account_id: accountId,
