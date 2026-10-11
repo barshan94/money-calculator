@@ -227,8 +227,17 @@ export default async function AuditLogPage() {
   );
 
   return (
-    <div>
-      <div className="audit-log-container">
+    <>
+      <style>{`
+        .audit-log-content {
+          max-width: 860px;
+          width: 100%;
+          margin: 0 auto;
+          box-sizing: border-box;
+        }
+      `}</style>
+
+      <div className="audit-log-content">
         <div style={{ marginBottom: 28 }}>
           <Link
             href="/dashboard"
@@ -356,12 +365,6 @@ export default async function AuditLogPage() {
           </section>
         )}
       </div>
-
-      <style>{`
-        .audit-log-container {
-          max-width: 860px;
-        }
-      `}</style>
-    </div>
+    </>
   );
 }
