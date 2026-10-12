@@ -88,7 +88,7 @@ return new Response(new Uint8Array(buffer), {
 
 }
 
-return new Response("Unsupported format "${format}"", {
+return new Response(`Unsupported format "${format}"`, {
 status: 400,
 statusText: "Bad Request",
 });
