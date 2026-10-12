@@ -373,6 +373,38 @@ export default async function TransactionsPage({
           opacity: 0.9;
         }
 
+        .mc-export-buttons {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+        }
+
+        .mc-export-button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          min-height: 42px;
+          padding: 10px 16px;
+          border-radius: 8px;
+          font-size: 14px;
+          font-weight: 600;
+          text-decoration: none;
+          color: #fff;
+          background: var(--primary);
+          transition: opacity 120ms ease;
+        }
+
+        .mc-export-button:hover {
+          opacity: 0.9;
+        }
+
+        @media (max-width: 520px) {
+          .mc-export-button {
+            width: 100%;
+          }
+        }
+
         .mc-transaction-controls {
           display: grid;
           grid-template-columns:
@@ -692,6 +724,23 @@ export default async function TransactionsPage({
             + Add Transaction
           </Link>
         </header>
+
+        <div className="mc-export-buttons">
+          <a
+            href="/api/export?format=csv&page=1&size=50"
+            download
+            className="mc-export-button"
+          >
+            Export CSV
+          </a>
+          <a
+            href="/api/export?format=excel&page=1&size=50"
+            download
+            className="mc-export-button"
+          >
+            Export Excel
+          </a>
+        </div>
 
         {transactions.length === 0 ? (
           <section className="mc-transaction-empty">
