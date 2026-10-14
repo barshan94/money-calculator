@@ -1,3 +1,4 @@
+
 import Link from "next/link";
 import { getLoanBalances } from "@/lib/finance/get-loan-balances";
 import LoanWhatsAppButton from "@/components/loans/loan-whatsapp-button";
@@ -58,10 +59,7 @@ function getDueTimestamp(dueDate: string | null) {
   return Number.isNaN(timestamp) ? null : timestamp;
 }
 
-function isOverdue(
-  dueDate: string | null,
-  remainingAmount: number,
-) {
+function isOverdue(dueDate: string | null, remainingAmount: number) {
   if (!dueDate || remainingAmount <= 0) {
     return false;
   }
@@ -75,10 +73,7 @@ function isOverdue(
   return due < today;
 }
 
-function isDueSoon(
-  dueDate: string | null,
-  remainingAmount: number,
-) {
+function isDueSoon(dueDate: string | null, remainingAmount: number) {
   if (!dueDate || remainingAmount <= 0) {
     return false;
   }
@@ -90,17 +85,13 @@ function isDueSoon(
   due.setHours(0, 0, 0, 0);
 
   const difference = Math.ceil(
-    (due.getTime() - today.getTime()) /
-      (1000 * 60 * 60 * 24),
+    (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
   );
 
   return difference >= 0 && difference <= 7;
 }
 
-function getDueStatus(
-  dueDate: string | null,
-  remainingAmount: number,
-) {
+function getDueStatus(dueDate: string | null, remainingAmount: number) {
   if (!dueDate || remainingAmount <= 0) {
     return {
       label: "No due date",
@@ -115,8 +106,7 @@ function getDueStatus(
   due.setHours(0, 0, 0, 0);
 
   const difference = Math.ceil(
-    (due.getTime() - today.getTime()) /
-      (1000 * 60 * 60 * 24),
+    (due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
   );
 
   if (difference < 0) {
@@ -153,13 +143,8 @@ function getDueStatus(
   };
 }
 
-export default async function LoansPage({
-  searchParams,
-}: Props) {
-  const {
-    sort = "newest",
-    filter = "all",
-  } = await searchParams;
+export default async function LoansPage({ searchParams }: Props) {
+  const { sort = "newest", filter = "all" } = await searchParams;
 
   const loans = await getLoanBalances();
 
@@ -176,48 +161,40 @@ export default async function LoansPage({
       Number(loan.remaining_amount) <= 0,
   );
 
-  const overdueLoans = activeLoans.filter(
-    (loan) =>
-      isOverdue(
-        loan.due_date,
-        Number(loan.remaining_amount),
-      ),
+  const overdueLoans = activeLoans.filter((loan) =>
+    isOverdue(loan.due_date, Number(loan.remaining_amount)),
   );
 
-  const filteredActiveLoans = activeLoans.filter(
-    (loan) => {
-      switch (filter) {
-        case "lent":
-          return loan.loan_type === "lent";
+  const filteredActiveLoans = activeLoans.filter((loan) => {
+    switch (filter) {
+      case "lent":
+        return loan.loan_type === "lent";
 
-        case "borrowed":
-          return loan.loan_type === "borrowed";
+      case "borrowed":
+        return loan.loan_type === "borrowed";
 
-        case "overdue":
-          return isOverdue(
-            loan.due_date,
-            Number(loan.remaining_amount),
-          );
+      case "overdue":
+        return isOverdue(
+          loan.due_date,
+          Number(loan.remaining_amount),
+        );
 
-        case "due-soon":
-          return isDueSoon(
-            loan.due_date,
-            Number(loan.remaining_amount),
-          );
+      case "due-soon":
+        return isDueSoon(
+          loan.due_date,
+          Number(loan.remaining_amount),
+        );
 
-        case "no-due-date":
-          return !loan.due_date;
+      case "no-due-date":
+        return !loan.due_date;
 
-        case "all":
-        default:
-          return true;
-      }
-    },
-  );
+      case "all":
+      default:
+        return true;
+    }
+  });
 
-  const sortedActiveLoans = [
-    ...filteredActiveLoans,
-  ].sort((a, b) => {
+  const sortedActiveLoans = [...filteredActiveLoans].sort((a, b) => {
     switch (sort) {
       case "oldest":
         return (
@@ -242,7 +219,6 @@ export default async function LoansPage({
           a.due_date,
           Number(a.remaining_amount),
         );
-
         const bOverdue = isOverdue(
           b.due_date,
           Number(b.remaining_amount),
@@ -255,10 +231,7 @@ export default async function LoansPage({
         const aDue = getDueTimestamp(a.due_date);
         const bDue = getDueTimestamp(b.due_date);
 
-        if (aDue === null && bDue === null) {
-          return 0;
-        }
-
+        if (aDue === null && bDue === null) return 0;
         if (aDue === null) return 1;
         if (bDue === null) return -1;
 
@@ -269,10 +242,7 @@ export default async function LoansPage({
         const aDue = getDueTimestamp(a.due_date);
         const bDue = getDueTimestamp(b.due_date);
 
-        if (aDue === null && bDue === null) {
-          return 0;
-        }
-
+        if (aDue === null && bDue === null) return 0;
         if (aDue === null) return 1;
         if (bDue === null) return -1;
 
@@ -283,10 +253,7 @@ export default async function LoansPage({
         const aDue = getDueTimestamp(a.due_date);
         const bDue = getDueTimestamp(b.due_date);
 
-        if (aDue === null && bDue === null) {
-          return 0;
-        }
-
+        if (aDue === null && bDue === null) return 0;
         if (aDue === null) return 1;
         if (bDue === null) return -1;
 
@@ -294,14 +261,10 @@ export default async function LoansPage({
       }
 
       case "name-az":
-        return a.person_name.localeCompare(
-          b.person_name,
-        );
+        return a.person_name.localeCompare(b.person_name);
 
       case "name-za":
-        return b.person_name.localeCompare(
-          a.person_name,
-        );
+        return b.person_name.localeCompare(a.person_name);
 
       case "newest":
       default:
@@ -312,146 +275,148 @@ export default async function LoansPage({
     }
   });
 
-  const currencies = Array.from(
-    new Set(
-      loans.map((loan) => loan.currency),
+  // Group active loans by normalized person name, loan type, and currency.
+  // Each original loan remains separate for individual actions and details.
+  const groupedActiveLoans = sortedActiveLoans.reduce<
+    Array<{
+      key: string;
+      personName: string;
+      loanType: (typeof sortedActiveLoans)[number]["loan_type"];
+      currency: string;
+      loans: typeof sortedActiveLoans;
+    }>
+  >(
+    (groups, loan) => {
+      const normalizedName = loan.person_name.trim().toLocaleLowerCase();
+      const key = [
+        normalizedName,
+        loan.loan_type,
+        loan.currency,
+      ].join("::");
+
+      const existing = groups.find((group) => group.key === key);
+
+      if (existing) {
+        existing.loans.push(loan);
+      } else {
+        groups.push({
+          key,
+          personName: loan.person_name.trim(),
+          loanType: loan.loan_type,
+          currency: loan.currency,
+          loans: [loan],
+        });
+      }
+
+      return groups;
+    },
+    [],
+  ).map((group) => ({
+    ...group,
+    principalAmount: group.loans.reduce(
+      (sum, loan) => sum + Number(loan.principal_amount),
+      0,
     ),
+    repaidAmount: group.loans.reduce(
+      (sum, loan) => sum + Number(loan.repaid_amount),
+      0,
+    ),
+    remainingAmount: group.loans.reduce(
+      (sum, loan) => sum + Number(loan.remaining_amount),
+      0,
+    ),
+  }));
+
+  const currencies = Array.from(
+    new Set(loans.map((loan) => loan.currency)),
   );
 
-  const lentByCurrency = currencies.map(
-    (currency) => ({
-      currency,
-      amount: activeLoans
-        .filter(
-          (loan) =>
-            loan.loan_type === "lent" &&
-            loan.currency === currency,
-        )
-        .reduce(
-          (sum, loan) =>
-            sum +
-            Number(loan.remaining_amount),
-          0,
-        ),
-    }),
-  );
+  const lentByCurrency = currencies.map((currency) => ({
+    currency,
+    amount: activeLoans
+      .filter(
+        (loan) =>
+          loan.loan_type === "lent" &&
+          loan.currency === currency,
+      )
+      .reduce((sum, loan) => sum + Number(loan.remaining_amount), 0),
+  }));
 
-  const borrowedByCurrency = currencies.map(
-    (currency) => ({
-      currency,
-      amount: activeLoans
-        .filter(
-          (loan) =>
-            loan.loan_type === "borrowed" &&
-            loan.currency === currency,
-        )
-        .reduce(
-          (sum, loan) =>
-            sum +
-            Number(loan.remaining_amount),
-          0,
-        ),
-    }),
-  );
+  const borrowedByCurrency = currencies.map((currency) => ({
+    currency,
+    amount: activeLoans
+      .filter(
+        (loan) =>
+          loan.loan_type === "borrowed" &&
+          loan.currency === currency,
+      )
+      .reduce((sum, loan) => sum + Number(loan.remaining_amount), 0),
+  }));
 
   return (
     <main>
       <div className="loan-page-header">
         <div>
-          <p className="loan-eyebrow">
-            Money lent & borrowed
-          </p>
-
+          <p className="loan-eyebrow">Money lent & borrowed</p>
           <h1>Loans</h1>
-
           <p className="loan-page-subtitle">
-            Track what you owe, what others owe
-            you, and repayment progress.
+            Track what you owe, what others owe you, and repayment progress.
           </p>
         </div>
 
-        <Link
-          href="/loans/new"
-          className="loan-primary-button"
-        >
+        <Link href="/loans/new" className="loan-primary-button">
           + New Loan
         </Link>
       </div>
 
       <section className="loan-summary-grid">
         <div className="loan-summary-card">
-          <span className="loan-summary-label">
-            Money Lent
-          </span>
-
+          <span className="loan-summary-label">Money Lent</span>
           <div className="loan-summary-values">
             {lentByCurrency.length === 0 ? (
               <strong>—</strong>
             ) : (
               lentByCurrency.map((item) => (
                 <strong key={item.currency}>
-                  {formatAmount(
-                    item.amount,
-                    item.currency,
-                  )}
+                  {formatAmount(item.amount, item.currency)}
                 </strong>
               ))
             )}
           </div>
-
-          <span className="loan-summary-note">
-            Still owed to you
-          </span>
+          <span className="loan-summary-note">Still owed to you</span>
         </div>
 
         <div className="loan-summary-card">
-          <span className="loan-summary-label">
-            Money Borrowed
-          </span>
-
+          <span className="loan-summary-label">Money Borrowed</span>
           <div className="loan-summary-values">
             {borrowedByCurrency.length === 0 ? (
               <strong>—</strong>
             ) : (
               borrowedByCurrency.map((item) => (
                 <strong key={item.currency}>
-                  {formatAmount(
-                    item.amount,
-                    item.currency,
-                  )}
+                  {formatAmount(item.amount, item.currency)}
                 </strong>
               ))
             )}
           </div>
-
-          <span className="loan-summary-note">
-            Still owed by you
-          </span>
+          <span className="loan-summary-note">Still owed by you</span>
         </div>
 
         <div className="loan-summary-card">
-          <span className="loan-summary-label">
-            Active Loans
-          </span>
-
+          <span className="loan-summary-label">Active Loans</span>
           <strong className="loan-summary-number">
             {activeLoans.length}
           </strong>
-
           <span className="loan-summary-note">
             Currently outstanding
           </span>
         </div>
 
         <div className="loan-summary-card">
-          <span className="loan-summary-label">
-            Overdue
-          </span>
-
+          <span className="loan-summary-label">Overdue</span>
           <strong className="loan-summary-number">
             {overdueLoans.length}
           </strong>
-
           <span className="loan-summary-note">
             Active loans past due
           </span>
@@ -462,111 +427,47 @@ export default async function LoansPage({
         <div className="loan-section-header">
           <div>
             <h2>Active Loans</h2>
-
             <p>
-              {filteredActiveLoans.length} of{" "}
-              {activeLoans.length} currently
-              outstanding
+              {filteredActiveLoans.length} of {activeLoans.length} currently
+              outstanding · {groupedActiveLoans.length} grouped entries
             </p>
           </div>
 
-          <form
-            method="GET"
-            className="loan-filter-sort-form"
-          >
+          <form method="GET" className="loan-filter-sort-form">
             <div className="loan-filter-control">
-              <label htmlFor="loan-filter">
-                Filter
-              </label>
-
+              <label htmlFor="loan-filter">Filter</label>
               <select
                 id="loan-filter"
                 name="filter"
                 defaultValue={filter}
               >
-                <option value="all">
-                  All loans
-                </option>
-
-                <option value="lent">
-                  You lent
-                </option>
-
-                <option value="borrowed">
-                  You borrowed
-                </option>
-
-                <option value="overdue">
-                  Overdue
-                </option>
-
-                <option value="due-soon">
-                  Due soon — 7 days
-                </option>
-
-                <option value="no-due-date">
-                  No due date
-                </option>
+                <option value="all">All loans</option>
+                <option value="lent">You lent</option>
+                <option value="borrowed">You borrowed</option>
+                <option value="overdue">Overdue</option>
+                <option value="due-soon">Due soon — 7 days</option>
+                <option value="no-due-date">No due date</option>
               </select>
             </div>
 
             <div className="loan-filter-control">
-              <label htmlFor="loan-sort">
-                Sort
-              </label>
-
-              <select
-                id="loan-sort"
-                name="sort"
-                defaultValue={sort}
-              >
-                <option value="newest">
-                  Newest first
-                </option>
-
-                <option value="oldest">
-                  Oldest first
-                </option>
-
-                <option value="highest">
-                  Highest outstanding
-                </option>
-
-                <option value="lowest">
-                  Lowest outstanding
-                </option>
-
-                <option value="overdue">
-                  Overdue first
-                </option>
-
-                <option value="due-earliest">
-                  Due date — earliest
-                </option>
-
-                <option value="due-latest">
-                  Due date — latest
-                </option>
-
-                <option value="name-az">
-                  Name A–Z
-                </option>
-
-                <option value="name-za">
-                  Name Z–A
-                </option>
+              <label htmlFor="loan-sort">Sort</label>
+              <select id="loan-sort" name="sort" defaultValue={sort}>
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="highest">Highest outstanding</option>
+                <option value="lowest">Lowest outstanding</option>
+                <option value="overdue">Overdue first</option>
+                <option value="due-earliest">Due date — earliest</option>
+                <option value="due-latest">Due date — latest</option>
+                <option value="name-az">Name A–Z</option>
+                <option value="name-za">Name Z–A</option>
               </select>
             </div>
 
             <div className="loan-filter-actions">
-              <button type="submit">
-                Apply
-              </button>
-
-              <Link
-                href="/loans"
-                className="loan-reset-button"
-              >
+              <button type="submit">Apply</button>
+              <Link href="/loans" className="loan-reset-button">
                 Reset
               </Link>
             </div>
@@ -576,143 +477,87 @@ export default async function LoansPage({
         {activeLoans.length === 0 ? (
           <div className="loan-empty-state">
             <h3>No active loans</h3>
-
-            <p>
-              Loans you lend or borrow will
-              appear here.
-            </p>
-
-            <Link
-              href="/loans/new"
-              className="loan-secondary-button"
-            >
+            <p>Loans you lend or borrow will appear here.</p>
+            <Link href="/loans/new" className="loan-secondary-button">
               Create your first loan
             </Link>
           </div>
         ) : sortedActiveLoans.length === 0 ? (
           <div className="loan-empty-state">
-            <h3>
-              No loans match this filter
-            </h3>
-
-            <p>
-              Try another filter or reset the
-              loan list.
-            </p>
-
-            <Link
-              href="/loans"
-              className="loan-secondary-button"
-            >
+            <h3>No loans match this filter</h3>
+            <p>Try another filter or reset the loan list.</p>
+            <Link href="/loans" className="loan-secondary-button">
               Reset filters
             </Link>
           </div>
         ) : (
           <div className="loan-list">
-            {sortedActiveLoans.map((loan) => {
-              const dueStatus = getDueStatus(
-                loan.due_date,
-                Number(
-                  loan.remaining_amount,
-                ),
-              );
-
+            {groupedActiveLoans.map((group) => {
               const repaymentPercent =
-                Math.min(
-                  100,
-                  Math.max(
-                    0,
-                    (Number(
-                      loan.repaid_amount,
-                    ) /
-                      Number(
-                        loan.principal_amount,
-                      )) *
+                group.principalAmount > 0
+                  ? Math.min(
                       100,
-                  ),
-                );
+                      Math.max(
+                        0,
+                        (group.repaidAmount / group.principalAmount) * 100,
+                      ),
+                    )
+                  : 0;
 
               return (
                 <article
-                  key={loan.id}
-                  className="loan-card"
+                  key={group.key}
+                  className="loan-card loan-group-card"
                 >
                   <div className="loan-card-top">
                     <div>
-                      <Link
-                        href={`/loans/${loan.id}`}
-                        className="loan-person-name"
-                      >
-                        {loan.person_name}
-                      </Link>
-
+                      <span className="loan-person-name loan-group-name">
+                        {group.personName}
+                      </span>
                       <span className="loan-type">
-                        {loan.loan_type ===
-                        "lent"
+                        {group.loanType === "lent"
                           ? "You lent"
                           : "You borrowed"}
+                        {" · "}
+                        {group.loans.length} active{" "}
+                        {group.loans.length === 1 ? "loan" : "loans"}
                       </span>
                     </div>
 
-                    <span
-                      className={`loan-due-status ${dueStatus.className}`}
-                    >
-                      {dueStatus.label}
+                    <span className="loan-due-status loan-status-neutral">
+                      {group.loans.length === 1
+                        ? "1 loan"
+                        : `${group.loans.length} loans`}
                     </span>
-                  </div>
-
-                  <div className="loan-card-started">
-                    <span>Started</span>
-
-                    <strong>
-                      {formatDateTime(
-                        loan.start_datetime,
-                      )}
-                    </strong>
                   </div>
 
                   <div className="loan-card-financial">
                     <div>
-                      <span>
-                        Outstanding
-                      </span>
-
+                      <span>Outstanding total</span>
                       <strong>
                         {formatAmount(
-                          Number(
-                            loan.remaining_amount,
-                          ),
-                          loan.currency,
+                          group.remainingAmount,
+                          group.currency,
                         )}
                       </strong>
                     </div>
 
                     <div>
-                      <span>
-                        Principal
-                      </span>
-
+                      <span>Principal total</span>
                       <strong>
                         {formatAmount(
-                          Number(
-                            loan.principal_amount,
-                          ),
-                          loan.currency,
+                          group.principalAmount,
+                          group.currency,
                         )}
                       </strong>
                     </div>
 
                     <div>
-                      <span>
-                        Repaid
-                      </span>
-
+                      <span>Repaid total</span>
                       <strong>
                         {formatAmount(
-                          Number(
-                            loan.repaid_amount,
-                          ),
-                          loan.currency,
+                          group.repaidAmount,
+                          group.currency,
                         )}
                       </strong>
                     </div>
@@ -722,53 +567,135 @@ export default async function LoansPage({
                     <div className="loan-progress-track">
                       <div
                         className="loan-progress-fill"
-                        style={{
-                          width: `${repaymentPercent}%`,
-                        }}
+                        style={{ width: `${repaymentPercent}%` }}
                       />
                     </div>
-
                     <span>
-                      {Math.round(
-                        repaymentPercent,
-                      )}
-                      % repaid
+                      {Math.round(repaymentPercent)}% repaid overall
                     </span>
                   </div>
 
-                  <div className="loan-card-footer">
-                    <Link
-                      href={`/loans/${loan.id}`}
-                      className="loan-action-link"
-                    >
-                      View
-                    </Link>
+                  <div className="group-loan-list">
+                    {group.loans.map((loan) => {
+                      const dueStatus = getDueStatus(
+                        loan.due_date,
+                        Number(loan.remaining_amount),
+                      );
 
-                    <Link
-                      href={`/loans/${loan.id}/repay`}
-                      className="loan-action-primary"
-                    >
-                      Repay
-                    </Link>
+                      const loanRepaymentPercent =
+                        Number(loan.principal_amount) > 0
+                          ? Math.min(
+                              100,
+                              Math.max(
+                                0,
+                                (Number(loan.repaid_amount) /
+                                  Number(loan.principal_amount)) *
+                                  100,
+                              ),
+                            )
+                          : 0;
 
-                    {loan.whatsapp_number && (
-                      <div className="loan-whatsapp-action">
-                        <LoanWhatsAppButton
-                          personName={
-                            loan.person_name
-                          }
-                          phoneNumber={
-                            loan.whatsapp_number
-                          }
-                          currency={
-                            loan.currency
-                          }
-                          remainingAmount={Number(
-                            loan.remaining_amount,
-                          )}
-                        />
-                      </div>
-                    )}
+                      return (
+                        <div key={loan.id} className="group-loan-row">
+                          <div className="group-loan-row-top">
+                            <div>
+                              <strong>
+                                Loan started:{" "}
+                                {formatDateTime(loan.start_datetime)}
+                              </strong>
+                              <span>
+                                Due: {formatDate(loan.due_date)}
+                              </span>
+                            </div>
+
+                            <span
+                              className={`loan-due-status ${dueStatus.className}`}
+                            >
+                              {dueStatus.label}
+                            </span>
+                          </div>
+
+                          <div className="loan-card-financial group-loan-financial">
+                            <div>
+                              <span>Outstanding</span>
+                              <strong>
+                                {formatAmount(
+                                  Number(loan.remaining_amount),
+                                  loan.currency,
+                                )}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <span>Principal</span>
+                              <strong>
+                                {formatAmount(
+                                  Number(loan.principal_amount),
+                                  loan.currency,
+                                )}
+                              </strong>
+                            </div>
+
+                            <div>
+                              <span>Repaid</span>
+                              <strong>
+                                {formatAmount(
+                                  Number(loan.repaid_amount),
+                                  loan.currency,
+                                )}
+                              </strong>
+                            </div>
+                          </div>
+
+                          <div className="loan-progress group-loan-progress">
+                            <div className="loan-progress-track">
+                              <div
+                                className="loan-progress-fill"
+                                style={{
+                                  width: `${loanRepaymentPercent}%`,
+                                }}
+                              />
+                            </div>
+                            <span>
+                              {Math.round(loanRepaymentPercent)}% repaid
+                            </span>
+                          </div>
+
+                          <div className="group-loan-actions">
+                            <Link
+                              href={`/loans/${loan.id}`}
+                              className="loan-action-link"
+                            >
+                              View
+                            </Link>
+
+                            <Link
+                              href={`/loans/${loan.id}/repay`}
+                              className="loan-action-primary"
+                            >
+                              Repay
+                            </Link>
+
+                            {loan.whatsapp_number ? (
+                              <div className="loan-whatsapp-action">
+                                <LoanWhatsAppButton
+                                  personName={loan.person_name}
+                                  phoneNumber={loan.whatsapp_number}
+                                  currency={loan.currency}
+                                  remainingAmount={Number(
+                                    loan.remaining_amount,
+                                  )}
+                                />
+                              </div>
+                            ) : (
+                              <span className="group-loan-no-whatsapp">
+                                No WhatsApp
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </article>
               );
@@ -781,10 +708,7 @@ export default async function LoansPage({
         <div className="loan-section-header">
           <div>
             <h2>Completed Loans</h2>
-
-            <p>
-              {completedLoans.length} completed
-            </p>
+            <p>{completedLoans.length} completed</p>
           </div>
         </div>
 
@@ -801,13 +725,9 @@ export default async function LoansPage({
                 className="loan-completed-row"
               >
                 <div>
-                  <strong>
-                    {loan.person_name}
-                  </strong>
-
+                  <strong>{loan.person_name}</strong>
                   <span>
-                    {loan.loan_type ===
-                    "lent"
+                    {loan.loan_type === "lent"
                       ? "You lent"
                       : "You borrowed"}
                   </span>
@@ -815,12 +735,9 @@ export default async function LoansPage({
 
                 <div>
                   <span>Principal</span>
-
                   <strong>
                     {formatAmount(
-                      Number(
-                        loan.principal_amount,
-                      ),
+                      Number(loan.principal_amount),
                       loan.currency,
                     )}
                   </strong>
@@ -828,16 +745,12 @@ export default async function LoansPage({
 
                 <span
                   className={
-                    loan.status ===
-                    "cancelled"
+                    loan.status === "cancelled"
                       ? "badge-cancelled"
                       : "badge-success"
                   }
                 >
-                  {loan.status ===
-                  "cancelled"
-                    ? "Cancelled"
-                    : "Settled"}
+                  {loan.status === "cancelled" ? "Cancelled" : "Settled"}
                 </span>
               </Link>
             ))}
@@ -847,19 +760,11 @@ export default async function LoansPage({
 
       <section className="loan-reliability-link">
         <div>
-          <strong>
-            Loan Reliability
-          </strong>
-
-          <span>
-            See repayment history and
-            reliability scores.
-          </span>
+          <strong>Loan Reliability</strong>
+          <span>See repayment history and reliability scores.</span>
         </div>
 
-        <Link href="/loans/reliability">
-          View Reliability →
-        </Link>
+        <Link href="/loans/reliability">View Reliability →</Link>
       </section>
 
       <style>{`
@@ -1052,15 +957,20 @@ export default async function LoansPage({
 
         .loan-list {
           display: grid;
-          grid-template-columns: repeat(2, 1fr);
+          grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 14px;
         }
 
         .loan-card {
+          min-width: 0;
           padding: 18px;
           border: 1px solid var(--border);
           border-radius: 12px;
           background: var(--card);
+        }
+
+        .loan-group-card {
+          min-width: 0;
         }
 
         .loan-card-top {
@@ -1076,6 +986,10 @@ export default async function LoansPage({
           font-size: 16px;
           font-weight: 700;
           text-decoration: none;
+        }
+
+        .loan-group-name {
+          overflow-wrap: anywhere;
         }
 
         .loan-type {
@@ -1108,21 +1022,6 @@ export default async function LoansPage({
           color: var(--danger);
         }
 
-        .loan-card-started {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          margin-top: 12px;
-          color: var(--muted);
-          font-size: 10px;
-        }
-
-        .loan-card-started strong {
-          color: var(--foreground);
-          font-size: 11px;
-          font-weight: 600;
-        }
-
         .loan-card-financial {
           display: grid;
           grid-template-columns: 1.4fr 1fr 1fr;
@@ -1139,6 +1038,7 @@ export default async function LoansPage({
 
         .loan-card-financial strong {
           font-size: 13px;
+          overflow-wrap: anywhere;
         }
 
         .loan-card-financial > div:first-child strong {
@@ -1172,19 +1072,67 @@ export default async function LoansPage({
           white-space: nowrap;
         }
 
-        .loan-card-footer {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          align-items: stretch;
-          gap: 8px;
-          width: 100%;
-          margin-top: 18px;
-          padding-top: 14px;
+        .group-loan-list {
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          margin-top: 20px;
+          padding-top: 16px;
           border-top: 1px solid var(--border);
         }
 
-        .loan-card-footer > * {
-          width: 100%;
+        .group-loan-row {
+          min-width: 0;
+          padding: 12px;
+          border: 1px solid var(--border);
+          border-radius: 10px;
+          background: var(--background);
+        }
+
+        .group-loan-row-top {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 10px;
+        }
+
+        .group-loan-row-top > div {
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
+          min-width: 0;
+        }
+
+        .group-loan-row-top strong {
+          font-size: 11px;
+          overflow-wrap: anywhere;
+        }
+
+        .group-loan-row-top > div > span {
+          color: var(--muted);
+          font-size: 11px;
+        }
+
+        .group-loan-financial {
+          margin-top: 14px;
+        }
+
+        .group-loan-financial > div:first-child strong {
+          font-size: 15px;
+        }
+
+        .group-loan-progress {
+          margin-top: 12px;
+        }
+
+        .group-loan-actions {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+          margin-top: 12px;
+        }
+
+        .group-loan-actions > * {
           min-width: 0;
         }
 
@@ -1223,6 +1171,32 @@ export default async function LoansPage({
         .loan-whatsapp-action > * {
           width: 100% !important;
           min-width: 0 !important;
+        }
+
+        .group-loan-no-whatsapp {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          min-width: 0;
+          color: var(--muted);
+          font-size: 10px;
+          text-align: center;
+        }
+
+        .loan-card-footer {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          align-items: stretch;
+          gap: 8px;
+          width: 100%;
+          margin-top: 18px;
+          padding-top: 14px;
+          border-top: 1px solid var(--border);
+        }
+
+        .loan-card-footer > * {
+          width: 100%;
+          min-width: 0;
         }
 
         .loan-empty-state,
@@ -1428,14 +1402,21 @@ export default async function LoansPage({
             grid-column: 1 / -1;
           }
 
-          .loan-card-footer {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+          .group-loan-row {
+            padding: 10px;
+          }
+
+          .group-loan-row-top {
+            flex-direction: column;
+          }
+
+          .group-loan-actions {
             gap: 6px;
           }
 
-          .loan-action-link,
-          .loan-action-primary,
-          .loan-whatsapp-action {
+          .group-loan-actions .loan-action-link,
+          .group-loan-actions .loan-action-primary,
+          .group-loan-actions .loan-whatsapp-action {
             min-height: 38px;
             font-size: 11px;
           }
@@ -1457,3 +1438,4 @@ export default async function LoansPage({
     </main>
   );
 }
+
